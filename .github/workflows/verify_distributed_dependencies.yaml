@@ -1,0 +1,97 @@
+name: Verify distributed dependencies
+
+on:
+  push:
+    branches:
+      - tms-dependency-admin_*
+    paths:
+      - buildSrc/src/main/kotlin/default/dependencies.kt
+      - buildSrc/src/main/kotlin/groups.kt
+
+jobs:
+  check-validity-and-merge:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+      packages: write
+    steps:
+      - name: Sjekk ut branch
+        uses: 'actions/checkout@v4'
+        with:
+          fetch-depth: 2
+
+      - name: Sett opp java
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: 'temurin'
+
+      - name: Sett opp gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Bygg og kjør tester for å sjekke at nye versjoner er kompatible
+        run: ./gradlew build
+
+      - name: Build og push docker-image
+        uses: nais/docker-build-push@v0
+        id: docker-build-push
+        with:
+          team: min-side
+          identity_provider: ${{ secrets.NAIS_WORKLOAD_IDENTITY_PROVIDER }}
+          project_id: ${{ vars.NAIS_MANAGEMENT_PROJECT_ID }}
+
+      - name: Sjekk om deploy til dev-gcp er mulig
+        run: echo "CAN_DEPLOY_DEV=$([[ -f ./nais/dev-gcp/nais.yaml ]] && echo 'true' || echo 'false')" >> $GITHUB_ENV
+
+      - name: Deploy-er til dev-gcp for å sjekke viability
+        if: env.CAN_DEPLOY_DEV == 'true'
+        uses: nais/deploy/actions/deploy@v2
+        env:
+          REF: ${{ github.sha }}
+          CLUSTER: dev-gcp
+          RESOURCE: ./nais/dev-gcp/nais.yaml
+          VAR: version=${{ steps.docker-build-push.outputs.image }}
+          PRINT_PAYLOAD: true
+
+      - name: Sjekk om deploy til prod-gcp er mulig
+        run: echo "CAN_DEPLOY_PROD=$([[ -f ./nais/prod-gcp/nais.yaml ]] && echo 'true' || echo 'false')" >> $GITHUB_ENV
+
+      - name: Deploy-er til prod-gcp for å sjekke viability
+        if: env.CAN_DEPLOY_PROD == 'true'
+        uses: nais/deploy/actions/deploy@v2
+        env:
+          CLUSTER: prod-gcp
+          RESOURCE: ./nais/prod-gcp/nais.yaml
+          VAR: version=${{ steps.docker-build-push.outputs.image }}
+          PRINT_PAYLOAD: true
+
+      - name: 'Merge kode fra branch og push til main'
+        run: |
+          git fetch
+          git checkout main
+          git merge ${{ github.ref_name }}
+          git push
+          git push origin --delete ${{ github.ref_name }}
+
+  open-pull-request-if-failed:
+    needs: check-validity-and-merge
+    if: always() && needs.check-validity-and-merge.result == 'failure'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: 'Åpner PR for manuell behandling'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { repo, owner } = context.repo;
+            const branch = context.ref;
+            const result = await github.rest.pulls.create({
+              title: 'Dependencies - manuelle endringer kreves',
+              owner,
+              repo,
+              head: branch,
+              base: 'main',
+              body: 'Nye versjoner av dependencies krever manuell behandling'
+            });

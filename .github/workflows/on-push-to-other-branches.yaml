@@ -1,0 +1,32 @@
+name: Bygg branch
+
+on:
+  push:
+    branches-ignore:
+      - master
+      - main
+      - tms-dependency-admin_*
+    paths-ignore:
+      - .github/workflows/**
+      - README.md
+      - howto.md
+
+jobs:
+  build-branch:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Sjekk ut koden
+        uses: actions/checkout@v4
+
+      - name: Sett opp java
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: 'temurin'
+
+      - name: Sett opp gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Bygg og test prosjekt
+        run: ./gradlew build
