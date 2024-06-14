@@ -1,4 +1,4 @@
-package no.nav.tms.ekstern.varsling.setup.database
+package no.nav.tms.ekstern.varsling.setup
 
 import org.flywaydb.core.Flyway
 import org.flywaydb.core.api.configuration.FluentConfiguration

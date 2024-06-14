@@ -1,4 +1,4 @@
-package no.nav.tms.ekstern.varsling.setup.database
+package no.nav.tms.ekstern.varsling.setup
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.zaxxer.hikari.HikariDataSource

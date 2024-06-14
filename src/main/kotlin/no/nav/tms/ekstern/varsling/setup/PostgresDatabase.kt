@@ -1,4 +1,4 @@
-package no.nav.tms.ekstern.varsling.setup.database
+package no.nav.tms.ekstern.varsling.setup
 
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource

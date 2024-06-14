@@ -23,7 +23,7 @@ class OpprettetVarselSubscriber(private val repository: EksternVarselRepository)
             ident = jsonMessage["ident"].asText(),
             erBatch = false,
             erUtsattVarsel = false,
-            varsler = listOf(),
+            varsler = listOf(varsel),
             utsending = null,
             kanal = varsel.prefererteKanaler.find { it == Kanal.SMS } ?: Kanal.EPOST,
             sendt = null,

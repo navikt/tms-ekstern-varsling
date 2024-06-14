@@ -2,8 +2,8 @@ package no.nav.tms.ekstern.varsling
 
 import no.nav.tms.ekstern.varsling.bestilling.EksternVarselRepository
 import no.nav.tms.ekstern.varsling.bestilling.OpprettetVarselSubscriber
-import no.nav.tms.ekstern.varsling.setup.database.Flyway
-import no.nav.tms.ekstern.varsling.setup.database.PostgresDatabase
+import no.nav.tms.ekstern.varsling.setup.Flyway
+import no.nav.tms.ekstern.varsling.setup.PostgresDatabase
 import no.nav.tms.kafka.application.KafkaApplication
 
 
@@ -24,3 +24,4 @@ fun main() {
 
     }.start()
 }
+

@@ -1,9 +1,14 @@
 package no.nav.tms.ekstern.varsling.bestilling
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import kotlinx.serialization.json.Json
+import kotliquery.Row
 import kotliquery.queryOf
-import no.nav.tms.ekstern.varsling.setup.database.Database
-import no.nav.tms.ekstern.varsling.setup.database.defaultObjectMapper
-import no.nav.tms.ekstern.varsling.setup.database.toJsonb
+import no.nav.tms.ekstern.varsling.setup.Database
+import no.nav.tms.ekstern.varsling.setup.defaultObjectMapper
+import no.nav.tms.ekstern.varsling.setup.json
+import no.nav.tms.ekstern.varsling.setup.toJsonb
+import java.time.ZonedDateTime
 
 class EksternVarselRepository(val database: Database) {
 
@@ -49,4 +54,55 @@ class EksternVarselRepository(val database: Database) {
             )
         }
     }
+
+    fun nextInVarselQueue(batchSize:Int = 20): List<EksternVarsling>{
+        return database.list {
+            queryOf(
+                """
+                    select 
+                        sendingsId,
+                        ident,
+                        erBatch,
+                        erUtsattVarsel,
+                        varsler,
+                        utsending,
+                        kanal,
+                        sendt,
+                        opprettet
+                    from 
+                        eksterne_varsler
+                    where sendt is null and (utsending is null or utsending < :now) 
+                    limit :antall
+                   """.trimIndent(),
+                mapOf("antall" to batchSize, "now" to ZonedDateTime.now())
+            ).map {row ->
+                EksternVarsling(
+                    sendingsId = row.string("sendingsId"),
+                    ident = row.string("ident"),
+                    erBatch = row.boolean("erBatch"),
+                    erUtsattVarsel = row.boolean("erBatch"),
+                    varsler = row.json<List<Varsel>>("varsler", objectMapper),
+                    utsending = null,
+                    kanal = Kanal.valueOf(row.string("kanal")),
+                    sendt = row.zonedDateTimeOrNull("sendt"),
+                    opprettet = row.zonedDateTime("opprettet"),
+                )
+            }.asList
+        }
+    }
+
+    fun markAsSent(sendingsId: String, ident: String, sendtDate: ZonedDateTime) {
+        database.update {
+            queryOf(
+                "update eksterne_varsler set sendt = : sendtDate,",
+                "update eksterne_varsler set behandlet = true, ferdigstilt = :ferdigstilt, varselId = :varselId, status = :status where alert_ref = :referenceId and ident = :ident",
+                mapOf(
+                    "ident" to ident,
+                    "sendingsId" to sendingsId,
+                    "sendtDate" to sendtDate,
+                )
+            )
+        }
+    }
+
 }

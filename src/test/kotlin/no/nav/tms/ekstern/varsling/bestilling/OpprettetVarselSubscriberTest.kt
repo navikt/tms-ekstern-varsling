@@ -2,7 +2,7 @@ package no.nav.tms.ekstern.varsling.bestilling
 
 import io.kotest.matchers.shouldBe
 import kotliquery.queryOf
-import no.nav.tms.ekstern.varsling.setup.database.LocalPostgresDatabase
+import no.nav.tms.ekstern.varsling.setup.LocalPostgresDatabase
 import no.nav.tms.kafka.application.MessageBroadcaster
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
@@ -56,3 +56,4 @@ class OpprettetVarselSubscriberTest {
         } shouldBe 2
     }
 }
+
