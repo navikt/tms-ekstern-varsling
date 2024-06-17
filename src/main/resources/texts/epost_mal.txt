@@ -1,0 +1,1 @@
+<!DOCTYPE html><html><head><title>Varsel</title></head><body>{{VARSELTEKST}}</body></html>

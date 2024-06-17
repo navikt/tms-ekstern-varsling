@@ -1,0 +1,1 @@
+<!DOCTYPE html><html><head><title>Varsel</title></head><body><p>Hei!</p><p>Du har fått en ny beskjed fra NAV. Logg inn på NAV for å se hva beskjeden gjelder.</p><p>Vennlig hilsen</p><p>NAV</p></body></html>

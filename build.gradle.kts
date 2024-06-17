@@ -46,9 +46,6 @@ dependencies {
     implementation(Logstash.logbackEncoder)
     implementation(Postgresql.postgresql)
     implementation(TmsCommonLib.utils)
-    implementation(TmsKtorTokenSupport.azureValidation)
-    implementation(TmsVarselBuilder.kotlinBuilder)
-    implementation(TmsKtorTokenSupport.azureValidation)
     implementation(TmsKafkaTools.kafkaApplication)
 
     testRuntimeOnly(Junit.engine)

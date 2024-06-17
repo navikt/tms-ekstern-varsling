@@ -8,7 +8,17 @@ import java.util.*
 
 
 class OpprettetVarselSubscriber(private val repository: EksternVarselRepository) : Subscriber() {
+
+    override fun subscribe() = Subscription.forEvent("opprettet")
+        .withFields("type", "varselId", "ident", "eksternVarslingBestilling", "opprettet", "produsent")
+
     override suspend fun receive(jsonMessage: JsonMessage) {
+        val produsent = Produsent(
+            cluster = jsonMessage["cluster"].asText(),
+            namespace = jsonMessage["namespace"].asText(),
+            appnavn = jsonMessage["appnavn"].asText()
+        )
+
         val varsel = Varsel(
             varseltype = jsonMessage["type"].asText(),
             varselId = jsonMessage["varselId"].asText(),
@@ -16,6 +26,7 @@ class OpprettetVarselSubscriber(private val repository: EksternVarselRepository)
             smsVarslingstekst = jsonMessage["eksternVarslingBestilling"]["smsVarslingstekst"].asText(),
             epostVarslingstittel = jsonMessage["eksternVarslingBestilling"]["epostVarslingstittel"].asText(),
             epostVarslingstekst = jsonMessage["eksternVarslingBestilling"]["epostVarslingstekst"].asText(),
+            produsent = produsent
         )
 
         val eksternVarsling = EksternVarsling(
@@ -31,7 +42,4 @@ class OpprettetVarselSubscriber(private val repository: EksternVarselRepository)
         )
         repository.insertEksternVarsling(eksternVarsling)
     }
-
-    override fun subscribe() = Subscription.forEvent("opprettet")
-        .withFields("type", "varselId", "ident", "eksternVarslingBestilling", "opprettet")
 }
