@@ -14,13 +14,13 @@ class OpprettetVarselSubscriber(private val repository: EksternVarselRepository)
 
     override suspend fun receive(jsonMessage: JsonMessage) {
         val produsent = Produsent(
-            cluster = jsonMessage["cluster"].asText(),
-            namespace = jsonMessage["namespace"].asText(),
-            appnavn = jsonMessage["appnavn"].asText()
+            cluster = jsonMessage["produsent"]["cluster"].asText(),
+            namespace = jsonMessage["produsent"]["namespace"].asText(),
+            appnavn = jsonMessage["produsent"]["appnavn"].asText()
         )
 
         val varsel = Varsel(
-            varseltype = jsonMessage["type"].asText(),
+            varseltype = jsonMessage["type"].asText().let(::parseVarseltype),
             varselId = jsonMessage["varselId"].asText(),
             prefererteKanaler = jsonMessage["eksternVarslingBestilling"]["prefererteKanaler"].map { Kanal.valueOf(it.asText()) },
             smsVarslingstekst = jsonMessage["eksternVarslingBestilling"]["smsVarslingstekst"].asText(),
@@ -38,8 +38,13 @@ class OpprettetVarselSubscriber(private val repository: EksternVarselRepository)
             utsending = null,
             kanal = varsel.prefererteKanaler.find { it == Kanal.SMS } ?: Kanal.EPOST,
             sendt = null,
-            opprettet = jsonMessage["opprettet"].asText().let { ZonedDateTime.parse(it) }
+            opprettet = jsonMessage["opprettet"].asText().let(ZonedDateTime::parse)
         )
         repository.insertEksternVarsling(eksternVarsling)
+    }
+
+    fun parseVarseltype(type: String): Varseltype {
+        return Varseltype.entries.find { it.name.lowercase() == type.lowercase() }
+            ?: throw IllegalArgumentException("Fant ikke varsel type med type: $type")
     }
 }

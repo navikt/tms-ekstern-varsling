@@ -104,18 +104,20 @@ fun createEksternVarslingDBRow(
     varsler: List<Varsel> = listOf(
         Varsel(
             varselId = "11111",
-            varseltype = "oppgave",
+            varseltype = Varseltype.Oppgave,
             prefererteKanaler = listOf(Kanal.SMS),
             smsVarslingstekst = null,
             epostVarslingstittel = null,
-            epostVarslingstekst = null
-        ), Varsel(
+            epostVarslingstekst = null,
+            produsent = Produsent("test-clsuter","test-namespace","test-app")
+    ), Varsel(
             varselId = "22222",
-            varseltype = "oppgave",
+            varseltype = Varseltype.Oppgave,
             prefererteKanaler = listOf(Kanal.SMS),
             smsVarslingstekst = null,
             epostVarslingstittel = null,
-            epostVarslingstekst = null
+            epostVarslingstekst = null,
+            produsent = Produsent("test-clsuter","test-namespace","test-app")
         )
     ),
     utsending: ZonedDateTime? = null,

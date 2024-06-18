@@ -1,13 +1,16 @@
 package no.nav.tms.ekstern.varsling.bestilling
 
 import no.nav.tms.common.util.scheduling.PeriodicJob
-import no.nav.tms.varsel.action.EksternVarslingBestilling
+import no.nav.tms.ekstern.varsling.setup.defaultObjectMapper
 import org.apache.kafka.clients.producer.Producer
+import org.apache.kafka.clients.producer.ProducerRecord
 import java.time.Duration
+import java.time.ZonedDateTime
 
 class PeriodicVarselSender(
-    val repository: EksternVarselRepository,
-    val kafkaProducer: Producer<String, String>,
+    private val repository: EksternVarselRepository,
+    private val kafkaProducer: Producer<String, String>,
+    private val kafkaTopic: String
 ) : PeriodicJob(Duration.ofMinutes(1)) {
 
     val isLeader = true
@@ -18,8 +21,9 @@ class PeriodicVarselSender(
                 .forEach(::processRequest)
         }
     }
+    private val objectMapper = defaultObjectMapper()
 
-    private fun processRequest(eksternVarsling: EksternVarsling) = try {
+    private fun processRequest(eksternVarsling: EksternVarsling) {
 
         val tekster = bestemTekster(eksternVarsling)
 
@@ -34,29 +38,13 @@ class PeriodicVarselSender(
             epostVarslingstekst = tekster.epostTekst,
             antallRevarslinger = revarsling.antallRevarslinger,
             revarslingsIntervall = revarsling.revarslingsIntervall,
-            produsent = eksternVarsling.produsent,
+            produsent = Produsent("todo-gcp", "min-side", "tms-ekstern-varsling"),
+        ).let { objectMapper.writeValueAsString(it) }
+
+        kafkaProducer.send(ProducerRecord(kafkaTopic, eksternVarsling.sendingsId, sending))
+        repository.markAsSent(
+            sendingsId = eksternVarsling.sendingsId, sendt = ZonedDateTime.now()
         )
-
-            val varselId = eksternVarsling.sendingsId
-                kafkaProducer.send()
-            EksternVarslingBestilling()
-
-            repository.markAsSent(
-                referenceId = eksternVarsling.referenceId,
-                ident = eksternVarsling.ident,
-                varselId = varselId
-            )
-        } catch (e: VarselValidationException) {
-            repository.markAsFailed(
-                referenceId = eksternVarsling.referenceId,
-                ident = eksternVarsling.ident,
-                feilkilde = Feilkilde(
-                    melding = e.message ?: "Feil i validering av varsel",
-                    forklaring = e.explanation
-                )
-            )
-    } catch (e: Exception) {
-
     }
 }
 
@@ -76,7 +64,7 @@ private fun bestemRevarsling(eksternVarsling: EksternVarsling): Revarsling {
 
     val varsel = eksternVarsling.varsler.first()
 
-    return when(varsel.varseltype) {
+    return when (varsel.varseltype) {
         Varseltype.Beskjed -> Revarsling.ingen()
         Varseltype.Innboks -> Revarsling(antallRevarslinger = 1, revarslingsIntervall = 4)
         Varseltype.Oppgave -> Revarsling(antallRevarslinger = 1, revarslingsIntervall = 7)

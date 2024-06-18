@@ -91,16 +91,15 @@ class EksternVarselRepository(val database: Database) {
         }
     }
 
-    fun markAsSent(sendingsId: String, ident: String, sendtDate: ZonedDateTime) {
+    fun markAsSent(sendingsId: String, sendt: ZonedDateTime) {
         database.update {
             queryOf(
-                "update eksterne_varsler set sendt = : sendtDate,",
-                "update eksterne_varsler set behandlet = true, ferdigstilt = :ferdigstilt, varselId = :varselId, status = :status where alert_ref = :referenceId and ident = :ident",
+                "update eksterne_varsler set sendt = :sendt where sendingsId = :sendingsId",
                 mapOf(
-                    "ident" to ident,
+                    "sendt" to sendt,
                     "sendingsId" to sendingsId,
-                    "sendtDate" to sendtDate,
-                )
+
+                    )
             )
         }
     }

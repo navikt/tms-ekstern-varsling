@@ -12,6 +12,7 @@ import org.apache.kafka.common.serialization.StringSerializer
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import java.time.ZonedDateTime
 import java.util.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -35,17 +36,62 @@ class PeriodicVarselSenderTest {
     }
 
     @Test
-    fun `behandler batch og sender ekstern varsel på kafka`() = runBlocking<Unit>{
-        database.insertEksternVarsling(createEksternVarslingDBRow(UUID.randomUUID().toString(),testFnr))
-        database.insertEksternVarsling(createEksternVarslingDBRow(UUID.randomUUID().toString(),testFnr))
-        database.insertEksternVarsling(createEksternVarslingDBRow(UUID.randomUUID().toString(),testFnr))
-        val periodicVarselSender = PeriodicVarselSender(repository, mockProducer)
+    fun `behandler batch og sender ekstern varsel på kafka`() = runBlocking<Unit> {
+        database.insertEksternVarsling(createEksternVarslingDBRow(UUID.randomUUID().toString(), testFnr))
+        database.insertEksternVarsling(createEksternVarslingDBRow(UUID.randomUUID().toString(), testFnr))
+        database.insertEksternVarsling(createEksternVarslingDBRow(UUID.randomUUID().toString(), testFnr))
+        val periodicVarselSender = PeriodicVarselSender(repository, mockProducer, "test-topic")
         periodicVarselSender.start()
         delay(2000)
         mockProducer.history().size shouldBe 3
+        database.tellAntallSendt() shouldBe 3
+    }
+
+
+    @Test
+    fun `behnadle kun batch som ikke har blitt behandlet`() = runBlocking<Unit> {
+        val tidligereBehandletDato = ZonedDateTime.parse("2024-05-24T15:05:24.119492+02:00[Europe/Oslo]")
+        database.insertEksternVarsling(
+            createEksternVarslingDBRow(
+                UUID.randomUUID().toString(),
+                testFnr,
+                sendt = tidligereBehandletDato
+            )
+        )
+        database.insertEksternVarsling(
+            createEksternVarslingDBRow(
+                UUID.randomUUID().toString(), testFnr, sendt = tidligereBehandletDato
+            )
+        )
+        database.insertEksternVarsling(
+            createEksternVarslingDBRow(
+                UUID.randomUUID().toString(), testFnr, sendt = tidligereBehandletDato
+            )
+        )
+        database.insertEksternVarsling(createEksternVarslingDBRow(UUID.randomUUID().toString(), testFnr))
+        database.insertEksternVarsling(createEksternVarslingDBRow(UUID.randomUUID().toString(), testFnr))
+        val periodicVarselSender = PeriodicVarselSender(repository, mockProducer, "test-topic")
+        periodicVarselSender.start()
+        delay(2000)
+        mockProducer.history().size shouldBe 2
+        database.tellAntallSendtFørDato(tidligereBehandletDato.plusHours(2)) shouldBe 3
     }
 
 }
+
+private fun Database.tellAntallSendt() = singleOrNull {
+    queryOf(
+        "select count(*) as antall from eksterne_varsler where sendt is not Null"
+    ).map { it.int("antall") }.asSingle
+}
+
+private fun Database.tellAntallSendtFørDato(sendtEtterDato: ZonedDateTime) = singleOrNull {
+    queryOf(
+        "select count(*) as antall from eksterne_varsler where sendt < :sendtEtterDato",
+        mapOf("sendtEtterDato" to sendtEtterDato)
+    ).map { it.int("antall") }.asSingle
+}
+
 
 private fun Database.insertEksternVarsling(eksternVarsling: EksternVarsling) {
     update {

@@ -3,37 +3,27 @@ package no.nav.tms.ekstern.varsling.bestilling
 import com.fasterxml.jackson.annotation.JsonValue
 import java.time.ZonedDateTime
 
-enum class Kanal{
+enum class Kanal {
     EPOST, SMS
 }
 
-enum class Varseltype(val alias: String, val emailTitle: String, val smsText: String, emailTextFile: String) {
+enum class Varseltype(val alias: String) {
     Oppgave(
-        alias = "oppgave",
-        emailTitle = "Du har fått en oppgave fra NAV",
-        smsText = "Hei! Du har fått en ny oppgave fra NAV. Logg inn på NAV for å se hva oppgaven gjelder. Vennlig hilsen NAV",
-        emailTextFile = "epost_oppgave.txt",
+        alias = "oppgave"
     ),
     Beskjed(
-        alias = "beskjed",
-        emailTitle = "Beskjed fra NAV",
-        smsText = "Hei! Du har fått en ny beskjed fra NAV. Logg inn på NAV for å se hva beskjeden gjelder. Vennlig hilsen NAV",
-        emailTextFile = "epost_beskjed.txt",
+        alias = "beskjed"
     ),
     Innboks(
-        alias = "beskjed",
-        emailTitle = "Du har fått en melding fra NAV",
-        smsText = "Hei! Du har fått en ny melding fra NAV. Logg inn på NAV for å lese meldingen. Vennlig hilsen NAV",
-        emailTextFile = "epost_innboks.txt",
+        alias = "beskjed"
     );
 
-    val emailText = this::class.java.getResource("/texts/$emailTextFile")!!.readText(Charsets.UTF_8)
 
     @JsonValue
     fun lowercaseName() = name.lowercase()
 }
 
-data class Produsent (
+data class Produsent(
     val cluster: String,
     val namespace: String,
     val appnavn: String
