@@ -76,7 +76,6 @@ class PeriodicVarselSenderTest {
         mockProducer.history().size shouldBe 2
         database.tellAntallSendtFørDato(tidligereBehandletDato.plusHours(2)) shouldBe 3
     }
-
 }
 
 private fun Database.tellAntallSendt() = singleOrNull {

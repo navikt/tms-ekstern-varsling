@@ -29,9 +29,9 @@ fun bestemTekster(eksternVarsling: EksternVarsling): Tekster {
 }
 
 private fun addMarkupIfMissing(epostTekst: String): String {
-    val markupPattern = "^<!DOCTYPE html>.*<body>".toRegex()
+    val markupPattern = "<!DOCTYPE html>".toRegex()
 
-    return if (markupPattern.matches(epostTekst)) {
+    return if (markupPattern.containsMatchIn(epostTekst)) {
         epostTekst
     } else {
         EpostMal.leggTilMarkup(epostTekst)
