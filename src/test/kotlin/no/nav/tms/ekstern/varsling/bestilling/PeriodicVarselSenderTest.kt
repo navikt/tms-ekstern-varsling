@@ -50,7 +50,7 @@ class PeriodicVarselSenderTest {
 
     @Test
     fun `behnadle kun batch som ikke har blitt behandlet`() = runBlocking<Unit> {
-        val tidligereBehandletDato = ZonedDateTime.parse("2024-05-24T15:05:24.119492+02:00[Europe/Oslo]")
+        val tidligereBehandletDato = ZonedDateTime.now().minusDays(3)
         database.insertEksternVarsling(
             createEksternVarslingDBRow(
                 UUID.randomUUID().toString(),
