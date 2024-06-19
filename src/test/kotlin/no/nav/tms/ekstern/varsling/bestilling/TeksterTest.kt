@@ -45,11 +45,27 @@ class TeksterTest {
             smsVarslingstekst,
             epostVarslingstittel,
             epostVarslingstekst
-        ).let { createEksternVarsling(it) }.let { bestemTekster(it) }
+        )
+            .let { createEksternVarsling(it) }
+            .let { bestemTekster(it) }
 
         varselTekst.epostTekst shouldBe epostVarslingstekst
         varselTekst.epostTittel shouldBe epostVarslingstittel
         varselTekst.smsTekst shouldBe smsVarslingstekst
+    }
+
+    @Test
+    fun `wrapper eposttekst med markup dersom det mangler`() {
+        val originalEpostTekst = "Overskrevet epost-tekst uten markup"
+        val epostTekstMedMarkup =
+            "<!DOCTYPE html><html><head><title>Varsel</title></head><body>$originalEpostTekst</body></html>\n"
+
+        val varselTekst =
+            createVarsel(Varseltype.Oppgave, epostVarslingstekst = originalEpostTekst)
+                .let { createEksternVarsling(it) }
+                .let { bestemTekster(it) }
+
+        varselTekst.epostTekst shouldBe epostTekstMedMarkup
     }
 }
 
