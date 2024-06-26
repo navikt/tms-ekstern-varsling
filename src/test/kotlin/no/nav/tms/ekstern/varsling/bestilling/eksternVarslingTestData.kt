@@ -20,7 +20,7 @@ fun createEksternVarslingEvent(
     epostVarslingstekst: String? = null,
     opprettet: ZonedDateTime = ZonedDateTime.now(),
     erBatch: Boolean? = null,
-    erUtsattVarsel: Boolean? = null,
+    utsettSendingTil: ZonedDateTime? = null,
 ) = """
     {
         "type": "$type",
@@ -51,7 +51,7 @@ fun createEksternVarslingEvent(
         "epostVarslingstittel": ${epostVarslingstittel.nullableTextToJson()},
         "epostVarslingstekst": ${epostVarslingstekst.nullableTextToJson()},
         "erBatch": $erBatch,
-        "erUtsattVarsel": $erUtsattVarsel
+        "utsettSendingTil": ${utsettSendingTil?.toString().nullableTextToJson()}
     },
         "opprettet": "$opprettet",
         "aktivFremTil": "2024-01-01T11:11:11.111Z",

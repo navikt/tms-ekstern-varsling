@@ -1,8 +1,5 @@
 package no.nav.tms.ekstern.varsling.bestilling
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import kotlinx.serialization.json.Json
-import kotliquery.Row
 import kotliquery.queryOf
 import no.nav.tms.ekstern.varsling.setup.Database
 import no.nav.tms.ekstern.varsling.setup.defaultObjectMapper
@@ -39,8 +36,7 @@ class EksternVarselRepository(val database: Database) {
                         :sendt,
                         :opprettet
                     )
-                """,
-                mapOf(
+                """, mapOf(
                     "sendingsId" to dbVarsel.sendingsId,
                     "ident" to dbVarsel.ident,
                     "erBatch" to dbVarsel.erBatch,
@@ -55,7 +51,57 @@ class EksternVarselRepository(val database: Database) {
         }
     }
 
-    fun nextInVarselQueue(batchSize:Int = 20): List<EksternVarsling>{
+    fun findExistingBatch(ident: String): EksternVarsling? = database.singleOrNull {
+        queryOf(
+            """
+                select 
+                    sendingsId,
+                    ident,
+                    erBatch,
+                    erUtsattVarsel,
+                    varsler,
+                    utsending,
+                    kanal,
+                    sendt,
+                    opprettet
+                from 
+                    eksterne_varsler
+                where
+                    ident = :ident and
+                    erBatch and
+                    sendt is null
+                    
+        """, mapOf("ident" to ident)
+        ).map { it ->
+            EksternVarsling(
+                sendingsId = it.string("sendingsId"),
+                ident = it.string("ident"),
+                erBatch = it.boolean("erBatch"),
+                erUtsattVarsel = it.boolean("erBatch"),
+                varsler = it.json<List<Varsel>>("varsler", objectMapper),
+                utsending = it.zonedDateTimeOrNull("utsending"),
+                kanal = Kanal.valueOf(it.string("kanal")),
+                sendt = it.zonedDateTimeOrNull("sendt"),
+                opprettet = it.zonedDateTime("opprettet"),
+            )
+        }.asSingle
+    }
+
+    fun addVarselToExisting(sendingsId: String, varsel: Varsel, kanal: Kanal) {
+        database.update {
+            queryOf(
+                """
+                    update eksterne_varsler set kanal = :kanal, varsler = :varsel || varsler where sendingsId = :sendingsId 
+                """, mapOf(
+                    "sendingsId" to sendingsId,
+                    "varsel" to listOf(varsel).toJsonb(objectMapper),
+                    "kanal" to kanal.name,
+                )
+            )
+        }
+    }
+
+    fun nextInVarselQueue(batchSize: Int = 20): List<EksternVarsling> {
         return database.list {
             queryOf(
                 """
@@ -73,9 +119,8 @@ class EksternVarselRepository(val database: Database) {
                         eksterne_varsler
                     where sendt is null and (utsending is null or utsending < :now) 
                     limit :antall
-                   """.trimIndent(),
-                mapOf("antall" to batchSize, "now" to ZonedDateTime.now())
-            ).map {row ->
+                   """.trimIndent(), mapOf("antall" to batchSize, "now" to ZonedDateTime.now())
+            ).map { row ->
                 EksternVarsling(
                     sendingsId = row.string("sendingsId"),
                     ident = row.string("ident"),
@@ -94,8 +139,7 @@ class EksternVarselRepository(val database: Database) {
     fun markAsSent(sendingsId: String, sendt: ZonedDateTime) {
         database.update {
             queryOf(
-                "update eksterne_varsler set sendt = :sendt where sendingsId = :sendingsId",
-                mapOf(
+                "update eksterne_varsler set sendt = :sendt where sendingsId = :sendingsId", mapOf(
                     "sendt" to sendt,
                     "sendingsId" to sendingsId,
 
