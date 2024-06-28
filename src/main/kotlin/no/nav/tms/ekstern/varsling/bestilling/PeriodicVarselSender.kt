@@ -1,5 +1,6 @@
 package no.nav.tms.ekstern.varsling.bestilling
 
+import com.fasterxml.jackson.annotation.JsonAlias
 import no.nav.tms.common.util.scheduling.PeriodicJob
 import no.nav.tms.ekstern.varsling.setup.defaultObjectMapper
 import org.apache.kafka.clients.producer.Producer
@@ -81,4 +82,7 @@ private data class SendEksternVarsling(
     val antallRevarslinger: Int,
     val revarslingsIntervall: Int,
     val produsent: Produsent
-)
+) {
+    @JsonAlias("@event_name")
+    val eventName: String = "sendEksternVarsling"
+}

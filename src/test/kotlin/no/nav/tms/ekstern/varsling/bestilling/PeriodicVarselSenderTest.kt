@@ -6,6 +6,7 @@ import kotlinx.coroutines.runBlocking
 import kotliquery.queryOf
 import no.nav.tms.ekstern.varsling.setup.Database
 import no.nav.tms.ekstern.varsling.setup.LocalPostgresDatabase
+import no.nav.tms.ekstern.varsling.setup.defaultObjectMapper
 import no.nav.tms.ekstern.varsling.setup.toJsonb
 import org.apache.kafka.clients.producer.MockProducer
 import org.apache.kafka.common.serialization.StringSerializer
@@ -75,6 +76,31 @@ class PeriodicVarselSenderTest {
         delay(2000)
         mockProducer.history().size shouldBe 2
         database.tellAntallSendtFørDato(tidligereBehandletDato.plusHours(2)) shouldBe 3
+    }
+
+    @Test
+    fun `riktig format på utsendt event`() = runBlocking<Unit>{
+        val eksternVarslingData = createEksternVarslingDBRow(UUID.randomUUID().toString(), testFnr)
+        database.insertEksternVarsling(eksternVarslingData)
+        val periodicVarselSender = PeriodicVarselSender(repository, mockProducer, "test-topic")
+        periodicVarselSender.start()
+        delay(500)
+        mockProducer.history().size shouldBe 1
+
+        val objectMapper = defaultObjectMapper()
+        val jsonTree = mockProducer.history().first().let { objectMapper.readTree(it.value()) }
+        val tekster = bestemTekster(eksternVarslingData)
+        jsonTree["sendingsId"].asText() shouldBe eksternVarslingData.sendingsId
+        jsonTree["ident"].asText() shouldBe eksternVarslingData.ident
+        jsonTree["kanal"].asText() shouldBe eksternVarslingData.kanal.name
+        jsonTree["smsVarslingstekst"].asText() shouldBe tekster.smsTekst
+        jsonTree["epostVarslingstittel"].asText() shouldBe tekster.epostTittel
+        jsonTree["epostVarslingstekst"].asText() shouldBe tekster.epostTekst
+        jsonTree["antallRevarslinger"].asInt() shouldBe 0
+        jsonTree["revarslingsIntervall"].asInt() shouldBe 0
+        jsonTree["produsent"]["cluster"].asText() shouldBe "todo-gcp"
+        jsonTree["produsent"]["appnavn"].asText() shouldBe "tms-ekstern-varsling"
+        jsonTree["produsent"]["namespace"].asText() shouldBe "min-side"
     }
 }
 

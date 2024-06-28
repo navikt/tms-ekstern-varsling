@@ -69,6 +69,7 @@ class EksternVarselRepository(val database: Database) {
                 where
                     ident = :ident and
                     erBatch and
+                    not erUtsattVarsel and
                     sendt is null
                     
         """, mapOf("ident" to ident)
@@ -77,7 +78,7 @@ class EksternVarselRepository(val database: Database) {
                 sendingsId = it.string("sendingsId"),
                 ident = it.string("ident"),
                 erBatch = it.boolean("erBatch"),
-                erUtsattVarsel = it.boolean("erBatch"),
+                erUtsattVarsel = it.boolean("erUtsattVarsel"),
                 varsler = it.json<List<Varsel>>("varsler", objectMapper),
                 utsending = it.zonedDateTimeOrNull("utsending"),
                 kanal = Kanal.valueOf(it.string("kanal")),

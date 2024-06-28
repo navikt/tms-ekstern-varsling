@@ -109,5 +109,18 @@ class OpprettetVarselSubscriberTest {
         } shouldBe utsettSendingTil
     }
 
-}
+    @Test
+    fun `ikke bruk utsattsending til batch`(){
 
+        val utsettSendingTil = ZonedDateTime.now().plusDays(7)
+
+        broadcaster.broadcastJson(createEksternVarslingEvent(id = UUID.randomUUID().toString(), utsettSendingTil = utsettSendingTil,ident = testFnr))
+        broadcaster.broadcastJson(createEksternVarslingEvent(id = UUID.randomUUID().toString(),ident = testFnr))
+
+        database.singleOrNull {
+            queryOf("select count(*) as antall from eksterne_varsler")
+                .map { it.int("antall") }
+                .asSingle
+        } shouldBe 2
+    }
+}
