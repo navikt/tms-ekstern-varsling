@@ -47,6 +47,8 @@ dependencies {
     implementation(Postgresql.postgresql)
     implementation(TmsCommonLib.utils)
     implementation(TmsKafkaTools.kafkaApplication)
+    implementation(Prometheus.common)
+    implementation(Prometheus.simpleClient)
 
     testRuntimeOnly(Junit.engine)
     testImplementation(Junit.api)

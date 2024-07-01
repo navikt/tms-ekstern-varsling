@@ -1,6 +1,7 @@
 package no.nav.tms.ekstern.varsling.bestilling
 
 import com.fasterxml.jackson.annotation.JsonAlias
+import io.prometheus.client.Counter
 import no.nav.tms.common.util.scheduling.PeriodicJob
 import no.nav.tms.ekstern.varsling.setup.defaultObjectMapper
 import org.apache.kafka.clients.producer.Producer
@@ -46,6 +47,12 @@ class PeriodicVarselSender(
         repository.markAsSent(
             sendingsId = eksternVarsling.sendingsId, sendt = ZonedDateTime.now()
         )
+
+        EKSTERN_VARSLING_SENDT.labels(
+            eksternVarsling.erBatch.toString(),
+            eksternVarsling.kanal.name,
+            eksternVarsling.erUtsattVarsel.toString()
+        ).inc()
     }
 }
 
@@ -86,3 +93,10 @@ private data class SendEksternVarsling(
     @JsonAlias("@event_name")
     val eventName: String = "sendEksternVarsling"
 }
+
+private val EKSTERN_VARSLING_SENDT: Counter = Counter.build()
+    .name("ekstern_varsling_sendt")
+    .namespace("tms_ekstern_varsling_v1")
+    .help("Ekstern varsling sendt")
+    .labelNames("er_batch","kanal", "er_utsatt")
+    .register()
