@@ -102,6 +102,17 @@ class EksternVarselRepository(val database: Database) {
         }
     }
 
+    fun varselExists(varselId: String): Boolean {
+        return database.singleOrNull {
+            queryOf(
+                "select sendingsId from ekstern_varsling where varsler @> :varsel",
+                mapOf("varsel" to varselId.toParam())
+            ).map {
+                true
+            }.asSingle
+        } ?: false
+    }
+
     fun nextInVarselQueue(batchSize: Int = 20): List<EksternVarsling> {
         return database.list {
             queryOf(
@@ -149,4 +160,5 @@ class EksternVarselRepository(val database: Database) {
         }
     }
 
+    private fun String.toParam() = listOf(mapOf("varselId" to this)).toJsonb(objectMapper)
 }

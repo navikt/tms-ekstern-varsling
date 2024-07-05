@@ -30,10 +30,17 @@ class OpprettetVarselSubscriber(private val repository: EksternVarselRepository)
             produsent = produsent
         )
 
+        if (isDuplicate(varsel)) {
+            return
+        }
+
         findExistingBatch(jsonMessage)
             ?.let { addToExistingBatch(varsel, it) }
             ?: createNewEksternVarsling(varsel, jsonMessage)
+    }
 
+    fun isDuplicate(varsel: Varsel): Boolean {
+        return repository.varselExists(varsel.varselId)
     }
 
     fun addToExistingBatch(varsel: Varsel, existingBatch: EksternVarsling) {
@@ -43,7 +50,7 @@ class OpprettetVarselSubscriber(private val repository: EksternVarselRepository)
             kanal = varsel.prefererteKanaler.find { it == Kanal.SMS } ?: existingBatch.kanal)
     }
 
-    fun createNewEksternVarsling(varsel: Varsel, jsonMessage: JsonMessage) { 
+    fun createNewEksternVarsling(varsel: Varsel, jsonMessage: JsonMessage) {
         val erBatch = jsonMessage["eksternVarslingBestilling"]["erBatch"].asBooleanOrNull() ?: false
         val utsettSendingTil = jsonMessage["eksternVarslingBestilling"]["utsettSendingTil"].asTextOrNull()?.let { ZonedDateTime.parse(it) }
 

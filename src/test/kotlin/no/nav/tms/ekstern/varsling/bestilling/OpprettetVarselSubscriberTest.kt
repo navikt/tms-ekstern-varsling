@@ -122,4 +122,24 @@ class OpprettetVarselSubscriberTest {
                 .asSingle
         } shouldBe 2
     }
+
+    @Test
+    fun `ignorerer duplikate varsler`() {
+        val eventId = UUID.randomUUID().toString()
+
+        broadcaster.broadcastJson(createEksternVarslingEvent(id = eventId, ident = testFnr))
+        broadcaster.broadcastJson(createEksternVarslingEvent(id = eventId, ident = testFnr))
+
+        database.singleOrNull {
+            queryOf("select count(*) as antall from ekstern_varsling")
+                .map { it.int("antall") }
+                .asSingle
+        } shouldBe 1
+
+        database.singleOrNull {
+            queryOf("select varsler from ekstern_varsling")
+                .map { it.json<List<Varsel>>("varsler").size }
+                .asSingle
+        } shouldBe 1
+    }
 }
