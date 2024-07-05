@@ -1,4 +1,4 @@
-create table eksterne_varsler(
+create table ekstern_varsling(
     sendingsId text primary key,
     ident text not null,
     erBatch bool not null,
@@ -11,8 +11,8 @@ create table eksterne_varsler(
 );
 
 
-create index eksterne_varsler_ident on eksterne_varsler(ident);
-create index eksterne_varsler_fremtidig_utsending on eksterne_varsler(utsending)
+create index ekstern_varsling_ident on ekstern_varsling(ident);
+create index ekstern_varsling_fremtidig_utsending on ekstern_varsling(utsending)
     where sendt is null;
 
-create index eksterne_varsler_varsler on eksterne_varsler using gin(varsler);
+create index ekstern_varsling_varsler on ekstern_varsling using gin(varsler);

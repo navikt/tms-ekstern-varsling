@@ -23,8 +23,8 @@ spec:
     pool: nav-dev
   gcp:
     sqlInstances:
-      - name: tms-ekstern-varsling
-        type: POSTGRES_16
+      - name: ekstern-varsling
+        type: POSTGRES_15
         tier: db-f1-micro
         diskType: SSD
         diskSize: 10

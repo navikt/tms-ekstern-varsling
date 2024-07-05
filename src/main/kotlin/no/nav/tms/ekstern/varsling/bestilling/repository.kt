@@ -15,7 +15,7 @@ class EksternVarselRepository(val database: Database) {
         database.update {
             queryOf(
                 """
-                    insert into eksterne_varsler(
+                    insert into ekstern_varsling(
                         sendingsId,
                         ident,
                         erBatch,
@@ -65,7 +65,7 @@ class EksternVarselRepository(val database: Database) {
                     sendt,
                     opprettet
                 from 
-                    eksterne_varsler
+                    ekstern_varsling
                 where
                     ident = :ident and
                     erBatch and
@@ -92,7 +92,7 @@ class EksternVarselRepository(val database: Database) {
         database.update {
             queryOf(
                 """
-                    update eksterne_varsler set kanal = :kanal, varsler = :varsel || varsler where sendingsId = :sendingsId 
+                    update ekstern_varsling set kanal = :kanal, varsler = :varsel || varsler where sendingsId = :sendingsId 
                 """, mapOf(
                     "sendingsId" to sendingsId,
                     "varsel" to listOf(varsel).toJsonb(objectMapper),
@@ -117,7 +117,7 @@ class EksternVarselRepository(val database: Database) {
                         sendt,
                         opprettet
                     from 
-                        eksterne_varsler
+                        ekstern_varsling
                     where sendt is null and (utsending is null or utsending < :now) 
                     limit :antall
                    """.trimIndent(), mapOf("antall" to batchSize, "now" to ZonedDateTime.now())
@@ -140,7 +140,7 @@ class EksternVarselRepository(val database: Database) {
     fun markAsSent(sendingsId: String, sendt: ZonedDateTime) {
         database.update {
             queryOf(
-                "update eksterne_varsler set sendt = :sendt where sendingsId = :sendingsId", mapOf(
+                "update ekstern_varsling set sendt = :sendt where sendingsId = :sendingsId", mapOf(
                     "sendt" to sendt,
                     "sendingsId" to sendingsId,
 

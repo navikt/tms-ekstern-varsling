@@ -31,7 +31,7 @@ class PeriodicVarselSenderTest {
     @AfterEach
     fun cleanup() {
         database.update {
-            queryOf("delete from eksterne_varsler")
+            queryOf("delete from ekstern_varsling")
         }
         mockProducer.clear()
     }
@@ -106,13 +106,13 @@ class PeriodicVarselSenderTest {
 
 private fun Database.tellAntallSendt() = singleOrNull {
     queryOf(
-        "select count(*) as antall from eksterne_varsler where sendt is not Null"
+        "select count(*) as antall from ekstern_varsling where sendt is not Null"
     ).map { it.int("antall") }.asSingle
 }
 
 private fun Database.tellAntallSendtFørDato(sendtEtterDato: ZonedDateTime) = singleOrNull {
     queryOf(
-        "select count(*) as antall from eksterne_varsler where sendt < :sendtEtterDato",
+        "select count(*) as antall from ekstern_varsling where sendt < :sendtEtterDato",
         mapOf("sendtEtterDato" to sendtEtterDato)
     ).map { it.int("antall") }.asSingle
 }
@@ -122,7 +122,7 @@ private fun Database.insertEksternVarsling(eksternVarsling: EksternVarsling) {
     update {
         queryOf(
             """
-                insert into eksterne_varsler(sendingsId, ident, erBatch, erUtsattVarsel, varsler, utsending, kanal, sendt, opprettet)
+                insert into ekstern_varsling(sendingsId, ident, erBatch, erUtsattVarsel, varsler, utsending, kanal, sendt, opprettet)
                 values (:sendingsId, :ident, :erBatch, :erUtsattVarsel, :varsler, :utsending, :kanal, :sendt, :opprettet)
             """,
             mapOf(

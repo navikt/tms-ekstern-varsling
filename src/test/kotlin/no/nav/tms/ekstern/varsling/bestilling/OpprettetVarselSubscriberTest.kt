@@ -24,7 +24,7 @@ class OpprettetVarselSubscriberTest {
     @AfterEach
     fun cleanup() {
         database.update {
-            queryOf("delete from eksterne_varsler")
+            queryOf("delete from ekstern_varsling")
         }
     }
 
@@ -38,7 +38,7 @@ class OpprettetVarselSubscriberTest {
         broadcaster.broadcastJson(createEksternVarslingEvent(id = UUID.randomUUID().toString(), ident = testFnr))
 
         database.singleOrNull {
-            queryOf("select count(*) as antall from eksterne_varsler")
+            queryOf("select count(*) as antall from ekstern_varsling")
                 .map { it.int("antall") }
                 .asSingle
         } shouldBe 5
@@ -57,19 +57,19 @@ class OpprettetVarselSubscriberTest {
 
 
         database.singleOrNull {
-            queryOf("select count(*) as antall from eksterne_varsler")
+            queryOf("select count(*) as antall from ekstern_varsling")
                 .map { it.int("antall") }
                 .asSingle
         } shouldBe 3
 
         database.singleOrNull {
-            queryOf("select varsler from eksterne_varsler where erBatch")
+            queryOf("select varsler from ekstern_varsling where erBatch")
                 .map { it.json<List<Varsel>>("varsler").size }
                 .asSingle
         } shouldBe 5
 
         val utsending = database.singleOrNull {
-            queryOf("select utsending from eksterne_varsler where erBatch")
+            queryOf("select utsending from ekstern_varsling where erBatch")
                 .map { it.zonedDateTimeOrNull("utsending") }
                 .asSingle
         }
@@ -89,7 +89,7 @@ class OpprettetVarselSubscriberTest {
         broadcaster.broadcastJson(opprettetEventUtenEksternVarsling(id = UUID.randomUUID().toString(), ident = testFnr))
 
         database.singleOrNull {
-            queryOf("select count(*) as antall from eksterne_varsler")
+            queryOf("select count(*) as antall from ekstern_varsling")
                 .map { it.int("antall") }
                 .asSingle
         } shouldBe 2
@@ -103,7 +103,7 @@ class OpprettetVarselSubscriberTest {
         broadcaster.broadcastJson(createEksternVarslingEvent(id = UUID.randomUUID().toString(), utsettSendingTil = utsettSendingTil,ident = testFnr))
 
         database.singleOrNull {
-            queryOf("select utsending from eksterne_varsler where utsending is not null ")
+            queryOf("select utsending from ekstern_varsling where utsending is not null ")
                 .map { it.zonedDateTime("utsending") }
                 .asSingle
         } shouldBe utsettSendingTil
@@ -118,7 +118,7 @@ class OpprettetVarselSubscriberTest {
         broadcaster.broadcastJson(createEksternVarslingEvent(id = UUID.randomUUID().toString(),ident = testFnr))
 
         database.singleOrNull {
-            queryOf("select count(*) as antall from eksterne_varsler")
+            queryOf("select count(*) as antall from ekstern_varsling")
                 .map { it.int("antall") }
                 .asSingle
         } shouldBe 2
