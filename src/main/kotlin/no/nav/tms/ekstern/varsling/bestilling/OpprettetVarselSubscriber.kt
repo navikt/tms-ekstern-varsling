@@ -24,9 +24,9 @@ class OpprettetVarselSubscriber(private val repository: EksternVarselRepository)
             varseltype = jsonMessage["type"].asText().let(::parseVarseltype),
             varselId = jsonMessage["varselId"].asText(),
             prefererteKanaler = jsonMessage["eksternVarslingBestilling"]["prefererteKanaler"].map { Kanal.valueOf(it.asText()) },
-            smsVarslingstekst = jsonMessage["eksternVarslingBestilling"]["smsVarslingstekst"].asText(),
-            epostVarslingstittel = jsonMessage["eksternVarslingBestilling"]["epostVarslingstittel"].asText(),
-            epostVarslingstekst = jsonMessage["eksternVarslingBestilling"]["epostVarslingstekst"].asText(),
+            smsVarslingstekst = jsonMessage["eksternVarslingBestilling"]["smsVarslingstekst"].asTextOrNull(),
+            epostVarslingstittel = jsonMessage["eksternVarslingBestilling"]["epostVarslingstittel"].asTextOrNull(),
+            epostVarslingstekst = jsonMessage["eksternVarslingBestilling"]["epostVarslingstekst"].asTextOrNull(),
             produsent = produsent
         )
 
