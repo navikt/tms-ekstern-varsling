@@ -22,21 +22,7 @@ class PostgresDatabase : Database {
 
     companion object {
 
-        private val dbUser: String = StringEnvVar.getEnvVar("DB_USERNAME")
-        private val dbPassword: String = StringEnvVar.getEnvVar("DB_PASSWORD")
-        private val dbUrl: String = getDbUrl(
-            StringEnvVar.getEnvVar("DB_HOST"),
-            StringEnvVar.getEnvVar("DB_PORT"),
-            StringEnvVar.getEnvVar("DB_DATABASE")
-        )
-
-        fun getDbUrl(host: String, port: String, name: String): String {
-            return if (host.endsWith(":$port")) {
-                "jdbc:postgresql://${host}/$name"
-            } else {
-                "jdbc:postgresql://${host}:${port}/${name}"
-            }
-        }
+        private val dbUrl: String = StringEnvVar.getEnvVar("DB_URL")
 
         fun hikariFromLocalDb(): HikariDataSource {
             val config = hikariCommonConfig()
@@ -56,8 +42,6 @@ class PostgresDatabase : Database {
                 idleTimeout = 30000
                 isAutoCommit = true
                 transactionIsolation = "TRANSACTION_REPEATABLE_READ"
-                username = dbUser
-                password = dbPassword
             }
             return config
         }
