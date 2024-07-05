@@ -1,6 +1,7 @@
 package no.nav.tms.ekstern.varsling.bestilling
 
 import com.fasterxml.jackson.annotation.JsonAlias
+import com.fasterxml.jackson.annotation.JsonProperty
 import io.prometheus.client.Counter
 import no.nav.tms.common.util.scheduling.PeriodicJob
 import no.nav.tms.ekstern.varsling.setup.defaultObjectMapper
@@ -90,7 +91,7 @@ private data class SendEksternVarsling(
     val revarslingsIntervall: Int,
     val produsent: Produsent
 ) {
-    @JsonAlias("@event_name")
+    @JsonProperty("@event_name")
     val eventName: String = "sendEksternVarsling"
 }
 
