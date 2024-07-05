@@ -123,7 +123,7 @@ private fun createEksternVarsling(
     utsending = null,
     kanal = Kanal.SMS,
     sendt = null,
-    opprettet = ZonedDateTime.now()
+    opprettet = ZonedDateTimeHelper.nowAtUtc()
 )
 
 private object ForventetDefaultOppgaveTekst {

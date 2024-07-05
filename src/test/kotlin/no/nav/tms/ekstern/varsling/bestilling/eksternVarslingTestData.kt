@@ -18,7 +18,7 @@ fun createEksternVarslingEvent(
     smsVarslingstekst: String? = null,
     epostVarslingstittel: String? = null,
     epostVarslingstekst: String? = null,
-    opprettet: ZonedDateTime = ZonedDateTime.now(),
+    opprettet: ZonedDateTime = ZonedDateTimeHelper.nowAtUtc(),
     erBatch: Boolean? = null,
     utsettSendingTil: ZonedDateTime? = null,
 ) = """
@@ -64,7 +64,7 @@ fun opprettetEventUtenEksternVarsling(
     id: String,
     ident: String,
     type: String = "oppgave",
-    opprettet: ZonedDateTime = ZonedDateTime.now(),
+    opprettet: ZonedDateTime = ZonedDateTimeHelper.nowAtUtc(),
 ) = """
     {
         "type": "$type",
@@ -123,7 +123,7 @@ fun createEksternVarslingDBRow(
     utsending: ZonedDateTime? = null,
     kanal: Kanal = Kanal.SMS,
     sendt: ZonedDateTime? = null,
-    opprettet: ZonedDateTime = ZonedDateTime.now().minusSeconds(30),
+    opprettet: ZonedDateTime = ZonedDateTimeHelper.nowAtUtc().minusSeconds(30),
 ) = EksternVarsling(
     sendingsId = sendingsId,
     ident = ident,

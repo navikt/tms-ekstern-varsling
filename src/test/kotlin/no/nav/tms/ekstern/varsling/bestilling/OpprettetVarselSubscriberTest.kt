@@ -10,7 +10,6 @@ import no.nav.tms.kafka.application.MessageBroadcaster
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
-import java.time.ZonedDateTime
 import java.util.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -75,7 +74,7 @@ class OpprettetVarselSubscriberTest {
         }
 
         utsending.shouldNotBeNull()
-        utsending.shouldBeBetween(ZonedDateTime.now().plusMinutes(59), ZonedDateTime.now().plusMinutes(60))
+        utsending.shouldBeBetween(ZonedDateTimeHelper.nowAtUtc().plusMinutes(59), ZonedDateTimeHelper.nowAtUtc().plusMinutes(60))
 
     }
 
@@ -98,7 +97,7 @@ class OpprettetVarselSubscriberTest {
     @Test
     fun `bruker dato i utsettSendingTil til å sette utsendingsdato på ekstern varsling`(){
 
-        val utsettSendingTil = ZonedDateTime.now().plusDays(7)
+        val utsettSendingTil = ZonedDateTimeHelper.nowAtUtc().plusDays(7)
 
         broadcaster.broadcastJson(createEksternVarslingEvent(id = UUID.randomUUID().toString(), utsettSendingTil = utsettSendingTil,ident = testFnr))
 
@@ -106,13 +105,13 @@ class OpprettetVarselSubscriberTest {
             queryOf("select utsending from ekstern_varsling where utsending is not null ")
                 .map { it.zonedDateTime("utsending") }
                 .asSingle
-        } shouldBe utsettSendingTil
+        }?.toEpochSecond() shouldBe utsettSendingTil.toEpochSecond()
     }
 
     @Test
     fun `ikke bruk utsattsending til batch`(){
 
-        val utsettSendingTil = ZonedDateTime.now().plusDays(7)
+        val utsettSendingTil = ZonedDateTimeHelper.nowAtUtc().plusDays(7)
 
         broadcaster.broadcastJson(createEksternVarslingEvent(id = UUID.randomUUID().toString(), utsettSendingTil = utsettSendingTil,ident = testFnr))
         broadcaster.broadcastJson(createEksternVarslingEvent(id = UUID.randomUUID().toString(),ident = testFnr))

@@ -50,7 +50,7 @@ class OpprettetVarselSubscriber(private val repository: EksternVarselRepository)
         val utsending = if (utsettSendingTil != null) {
             utsettSendingTil
         } else if (erBatch){
-            ZonedDateTime.now().plusHours(1)
+            ZonedDateTimeHelper.nowAtUtc().plusHours(1)
         } else {
             null
         }

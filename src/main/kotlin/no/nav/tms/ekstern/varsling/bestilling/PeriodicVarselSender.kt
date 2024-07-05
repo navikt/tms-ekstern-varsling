@@ -45,7 +45,7 @@ class PeriodicVarselSender(
 
         kafkaProducer.send(ProducerRecord(kafkaTopic, eksternVarsling.sendingsId, sending))
         repository.markAsSent(
-            sendingsId = eksternVarsling.sendingsId, sendt = ZonedDateTime.now()
+            sendingsId = eksternVarsling.sendingsId, sendt = ZonedDateTimeHelper.nowAtUtc()
         )
 
         EKSTERN_VARSLING_SENDT.labels(

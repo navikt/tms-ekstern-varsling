@@ -28,7 +28,6 @@ repositories {
 dependencies {
     implementation(Flyway.core)
     implementation(Hikari.cp)
-    implementation(Caffeine.caffeine)
     implementation(JacksonDatatype.datatypeJsr310)
     implementation(JacksonDatatype.moduleKotlin)
     implementation(Kafka.clients)
