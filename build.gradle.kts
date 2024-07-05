@@ -58,7 +58,7 @@ dependencies {
 }
 
 application {
-    mainClass.set("no.nav.tms.brannslukning.ApplicationKt")
+    mainClass.set("no.nav.tms.ekstern.varsling.ApplicationKt")
 }
 
 tasks {
