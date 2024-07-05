@@ -14,6 +14,9 @@ spec:
   readiness:
     path: /isready
     initialDelay: 5
+  prometheus:
+    enabled: true
+    path: /metrics
   leaderElection: true
   replicas:
     min: 2

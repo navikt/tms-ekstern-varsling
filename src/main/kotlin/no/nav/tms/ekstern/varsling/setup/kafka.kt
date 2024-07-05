@@ -9,7 +9,7 @@ import org.apache.kafka.common.config.SslConfigs
 import org.apache.kafka.common.serialization.StringSerializer
 import java.util.*
 
-private fun initializeKafkaProducer(): KafkaProducer<String, String> {
+fun initializeKafkaProducer(): KafkaProducer<String, String> {
     val environment = KafkaEnvironment()
     return KafkaProducer<String, String>(
         Properties().apply {
@@ -37,9 +37,7 @@ private fun initializeKafkaProducer(): KafkaProducer<String, String> {
     )
 }
 
-private data
-
-class KafkaEnvironment(
+private data class KafkaEnvironment(
     val kafkaBrokers: String = StringEnvVar.getEnvVar("KAFKA_BROKERS"),
     val kafkaSchemaRegistry: String = StringEnvVar.getEnvVar("KAFKA_SCHEMA_REGISTRY"),
     val kafkaTruststorePath: String = StringEnvVar.getEnvVar("KAFKA_TRUSTSTORE_PATH"),
