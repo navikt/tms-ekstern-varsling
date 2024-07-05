@@ -22,7 +22,7 @@ class PostgresDatabase : Database {
 
     companion object {
 
-        private val dbUrl: String = StringEnvVar.getEnvVar("DB_URL")
+        private val dbUrl: String = StringEnvVar.getEnvVar("DB_JDBC_URL")
 
         fun hikariFromLocalDb(): HikariDataSource {
             val config = hikariCommonConfig()
