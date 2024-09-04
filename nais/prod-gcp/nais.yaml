@@ -1,0 +1,48 @@
+apiVersion: "nais.io/v1alpha1"
+kind: "Application"
+metadata:
+  name: tms-ekstern-varsling
+  namespace: min-side
+  labels:
+    team: min-side
+spec:
+  image: "{{ version }}"
+  port: 8080
+  liveness:
+    path: /isalive
+    initialDelay: 30
+  readiness:
+    path: /isready
+    initialDelay: 5
+  prometheus:
+    enabled: true
+    path: /metrics
+  leaderElection: true
+  replicas:
+    min: 2
+    max: 4
+    cpuThresholdPercentage: 50
+  kafka:
+    pool: nav-prod
+  gcp:
+    sqlInstances:
+      - name: ekstern-varsling
+        type: POSTGRES_15
+        tier: db-custom-1-3840
+        diskType: SSD
+        diskSize: 50
+        diskAutoresize: true
+        autoBackupHour: 3
+        databases:
+          - name: ekstern-varsling
+            envVarPrefix: DB
+        maintenance:
+          day: 1
+          hour: 4
+        cascadingDelete: false
+  resources:
+    limits:
+      memory: 1024Mi
+    requests:
+      cpu: "20m"
+      memory: 256Mi

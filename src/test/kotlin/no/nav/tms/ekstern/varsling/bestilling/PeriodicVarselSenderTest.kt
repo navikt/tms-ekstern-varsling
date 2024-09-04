@@ -1,9 +1,12 @@
 package no.nav.tms.ekstern.varsling.bestilling
 
 import io.kotest.matchers.shouldBe
+import io.mockk.coEvery
+import io.mockk.mockk
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotliquery.queryOf
+import no.nav.tms.common.kubernetes.PodLeaderElection
 import no.nav.tms.ekstern.varsling.setup.Database
 import no.nav.tms.ekstern.varsling.setup.LocalPostgresDatabase
 import no.nav.tms.ekstern.varsling.setup.defaultObjectMapper
@@ -28,6 +31,8 @@ class PeriodicVarselSenderTest {
         StringSerializer()
     )
 
+    private val leaderElection: PodLeaderElection = mockk()
+
     @AfterEach
     fun cleanup() {
         database.update {
@@ -41,7 +46,11 @@ class PeriodicVarselSenderTest {
         database.insertEksternVarsling(createEksternVarslingDBRow(UUID.randomUUID().toString(), testFnr))
         database.insertEksternVarsling(createEksternVarslingDBRow(UUID.randomUUID().toString(), testFnr))
         database.insertEksternVarsling(createEksternVarslingDBRow(UUID.randomUUID().toString(), testFnr))
-        val periodicVarselSender = PeriodicVarselSender(repository, mockProducer, "test-topic")
+
+        val periodicVarselSender = PeriodicVarselSender(repository, mockProducer, "test-topic", leaderElection)
+
+        coEvery { leaderElection.isLeader() } returns true
+
         periodicVarselSender.start()
         delay(2000)
         mockProducer.history().size shouldBe 3
@@ -71,7 +80,11 @@ class PeriodicVarselSenderTest {
         )
         database.insertEksternVarsling(createEksternVarslingDBRow(UUID.randomUUID().toString(), testFnr))
         database.insertEksternVarsling(createEksternVarslingDBRow(UUID.randomUUID().toString(), testFnr))
-        val periodicVarselSender = PeriodicVarselSender(repository, mockProducer, "test-topic")
+
+        val periodicVarselSender = PeriodicVarselSender(repository, mockProducer, "test-topic", leaderElection)
+
+        coEvery { leaderElection.isLeader() } returns true
+
         periodicVarselSender.start()
         delay(2000)
         mockProducer.history().size shouldBe 2
@@ -82,7 +95,10 @@ class PeriodicVarselSenderTest {
     fun `riktig format på utsendt event`() = runBlocking<Unit>{
         val eksternVarslingData = createEksternVarslingDBRow(UUID.randomUUID().toString(), testFnr)
         database.insertEksternVarsling(eksternVarslingData)
-        val periodicVarselSender = PeriodicVarselSender(repository, mockProducer, "test-topic")
+        val periodicVarselSender = PeriodicVarselSender(repository, mockProducer, "test-topic", leaderElection)
+
+        coEvery { leaderElection.isLeader() } returns true
+
         periodicVarselSender.start()
         delay(500)
         mockProducer.history().size shouldBe 1

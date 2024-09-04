@@ -46,6 +46,7 @@ dependencies {
     implementation(Logstash.logbackEncoder)
     implementation(Postgresql.postgresql)
     implementation(TmsCommonLib.utils)
+    implementation(TmsCommonLib.kubernetes)
     implementation(TmsKafkaTools.kafkaApplication)
     implementation(Prometheus.common)
     implementation(Prometheus.simpleClient)

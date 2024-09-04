@@ -8,16 +8,9 @@ enum class Kanal {
 }
 
 enum class Varseltype(val alias: String) {
-    Oppgave(
-        alias = "oppgave"
-    ),
-    Beskjed(
-        alias = "beskjed"
-    ),
-    Innboks(
-        alias = "beskjed"
-    );
-
+    Oppgave(alias = "oppgave"),
+    Beskjed(alias = "beskjed"),
+    Innboks(alias = "beskjed");
 
     @JsonValue
     fun lowercaseName() = name.lowercase()

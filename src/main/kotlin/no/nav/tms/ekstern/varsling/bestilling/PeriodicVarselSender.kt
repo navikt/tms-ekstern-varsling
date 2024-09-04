@@ -1,8 +1,8 @@
 package no.nav.tms.ekstern.varsling.bestilling
 
-import com.fasterxml.jackson.annotation.JsonAlias
 import com.fasterxml.jackson.annotation.JsonProperty
 import io.prometheus.client.Counter
+import no.nav.tms.common.kubernetes.PodLeaderElection
 import no.nav.tms.common.util.scheduling.PeriodicJob
 import no.nav.tms.ekstern.varsling.setup.defaultObjectMapper
 import org.apache.kafka.clients.producer.Producer
@@ -13,12 +13,12 @@ import java.time.ZonedDateTime
 class PeriodicVarselSender(
     private val repository: EksternVarselRepository,
     private val kafkaProducer: Producer<String, String>,
-    private val kafkaTopic: String
+    private val kafkaTopic: String,
+    private val leaderElection: PodLeaderElection
 ) : PeriodicJob(Duration.ofMinutes(1)) {
 
-    val isLeader = true
     override val job = initializeJob {
-        if (isLeader) {
+        if (leaderElection.isLeader()) {
             repository
                 .nextInVarselQueue()
                 .forEach(::processRequest)

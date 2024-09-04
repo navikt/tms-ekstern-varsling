@@ -1,6 +1,7 @@
 package no.nav.tms.ekstern.varsling
 
 import kotlinx.coroutines.runBlocking
+import no.nav.tms.common.kubernetes.PodLeaderElection
 import no.nav.tms.ekstern.varsling.bestilling.EksternVarselRepository
 import no.nav.tms.ekstern.varsling.bestilling.OpprettetVarselSubscriber
 import no.nav.tms.ekstern.varsling.bestilling.PeriodicVarselSender
@@ -18,7 +19,8 @@ fun main() {
     val varselSender = PeriodicVarselSender(
         repository = eksternVarselRepository,
         kafkaProducer = initializeKafkaProducer(),
-        kafkaTopic = environment.varselTopic
+        kafkaTopic = environment.varselTopic,
+        leaderElection = PodLeaderElection()
     )
 
     KafkaApplication.build {
