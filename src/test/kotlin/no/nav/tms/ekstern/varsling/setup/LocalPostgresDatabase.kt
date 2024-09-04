@@ -10,12 +10,12 @@ import org.testcontainers.containers.PostgreSQLContainer
 class LocalPostgresDatabase private constructor() : Database {
 
     private val memDataSource: HikariDataSource
-    private val container = PostgreSQLContainer("postgres:16")
+    private val container = PostgreSQLContainer("postgres:15")
 
     companion object {
         private val instance by lazy {
             LocalPostgresDatabase().also {
-                it.migrate()
+                it.migrate(expectedMigrations = 1)
             }
         }
 
@@ -43,11 +43,14 @@ class LocalPostgresDatabase private constructor() : Database {
         }
     }
 
-    private fun migrate() {
+    private fun migrate(expectedMigrations: Int) {
         Flyway.configure()
             .connectRetries(3)
+            .validateMigrationNaming(true)
             .dataSource(dataSource)
             .load()
             .migrate()
+            .let { assert(it.migrationsExecuted == expectedMigrations) }
+
     }
 }
