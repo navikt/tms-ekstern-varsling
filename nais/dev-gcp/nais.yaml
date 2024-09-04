@@ -46,3 +46,6 @@ spec:
     requests:
       cpu: "20m"
       memory: 256Mi
+  env:
+    - name: KAFKA_GROUP_ID
+      value: "ekstern-varsling-02"
