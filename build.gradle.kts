@@ -24,12 +24,6 @@ repositories {
     mavenLocal()
 }
 
-tasks {
-    shadowJar {
-        mergeServiceFiles()
-    }
-}
-
 dependencies {
     implementation(Flyway.core)
     implementation(Flyway.postgres)
