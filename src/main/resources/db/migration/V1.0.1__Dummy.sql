@@ -1,1 +1,3 @@
-select 1;
+create table dummy (
+    id serial
+);
