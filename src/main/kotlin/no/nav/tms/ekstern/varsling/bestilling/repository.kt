@@ -129,7 +129,7 @@ class EksternVarselRepository(val database: Database) {
                         opprettet
                     from 
                         ekstern_varsling
-                    where sendt is null and (utsending is null or utsending < :now) 
+                    where sendt is null and (utsending is null or utsending < :now)
                     limit :antall
                    """.trimIndent(), mapOf("antall" to batchSize, "now" to ZonedDateTimeHelper.nowAtUtc())
             ).map { row ->

@@ -16,6 +16,7 @@ import org.apache.kafka.common.serialization.StringSerializer
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import java.time.Duration
 import java.time.ZonedDateTime
 import java.util.*
 
@@ -47,7 +48,7 @@ class PeriodicVarselSenderTest {
         database.insertEksternVarsling(createEksternVarslingDBRow(UUID.randomUUID().toString(), testFnr))
         database.insertEksternVarsling(createEksternVarslingDBRow(UUID.randomUUID().toString(), testFnr))
 
-        val periodicVarselSender = PeriodicVarselSender(repository, mockProducer, "test-topic", leaderElection)
+        val periodicVarselSender = PeriodicVarselSender(repository, mockProducer, "test-topic", leaderElection, interval = Duration.ofMinutes(1))
 
         coEvery { leaderElection.isLeader() } returns true
 
@@ -81,7 +82,7 @@ class PeriodicVarselSenderTest {
         database.insertEksternVarsling(createEksternVarslingDBRow(UUID.randomUUID().toString(), testFnr))
         database.insertEksternVarsling(createEksternVarslingDBRow(UUID.randomUUID().toString(), testFnr))
 
-        val periodicVarselSender = PeriodicVarselSender(repository, mockProducer, "test-topic", leaderElection)
+        val periodicVarselSender = PeriodicVarselSender(repository, mockProducer, "test-topic", leaderElection, interval = Duration.ofMinutes(1))
 
         coEvery { leaderElection.isLeader() } returns true
 
@@ -95,7 +96,7 @@ class PeriodicVarselSenderTest {
     fun `riktig format på utsendt event`() = runBlocking<Unit>{
         val eksternVarslingData = createEksternVarslingDBRow(UUID.randomUUID().toString(), testFnr)
         database.insertEksternVarsling(eksternVarslingData)
-        val periodicVarselSender = PeriodicVarselSender(repository, mockProducer, "test-topic", leaderElection)
+        val periodicVarselSender = PeriodicVarselSender(repository, mockProducer, "test-topic", leaderElection, interval = Duration.ofMinutes(1))
 
         coEvery { leaderElection.isLeader() } returns true
 

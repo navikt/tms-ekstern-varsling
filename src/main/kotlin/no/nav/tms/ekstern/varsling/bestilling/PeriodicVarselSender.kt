@@ -14,8 +14,9 @@ class PeriodicVarselSender(
     private val repository: EksternVarselRepository,
     private val kafkaProducer: Producer<String, String>,
     private val kafkaTopic: String,
-    private val leaderElection: PodLeaderElection
-) : PeriodicJob(Duration.ofSeconds(1)) {
+    private val leaderElection: PodLeaderElection,
+    interval: Duration = Duration.ofSeconds(1)
+) : PeriodicJob(interval) {
 
     override val job = initializeJob {
         if (leaderElection.isLeader()) {
