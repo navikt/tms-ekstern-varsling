@@ -113,7 +113,7 @@ class EksternVarselRepository(val database: Database) {
         } ?: false
     }
 
-    fun nextInVarselQueue(batchSize: Int = 20): List<EksternVarsling> {
+    fun nextInVarselQueue(batchSize: Int = 100): List<EksternVarsling> {
         return database.list {
             queryOf(
                 """

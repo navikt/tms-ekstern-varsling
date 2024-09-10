@@ -15,7 +15,7 @@ class PeriodicVarselSender(
     private val kafkaProducer: Producer<String, String>,
     private val kafkaTopic: String,
     private val leaderElection: PodLeaderElection
-) : PeriodicJob(Duration.ofMinutes(1)) {
+) : PeriodicJob(Duration.ofSeconds(1)) {
 
     override val job = initializeJob {
         if (leaderElection.isLeader()) {
