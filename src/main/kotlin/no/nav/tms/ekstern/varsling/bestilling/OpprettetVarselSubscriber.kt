@@ -51,7 +51,7 @@ class OpprettetVarselSubscriber(private val repository: EksternVarselRepository)
     }
 
     fun createNewEksternVarsling(varsel: Varsel, jsonMessage: JsonMessage) {
-        val erBatch = jsonMessage["eksternVarslingBestilling"]["erBatch"].asBooleanOrNull() ?: false
+        val erBatch = jsonMessage["eksternVarslingBestilling"]["kanBatches"].asBooleanOrNull() ?: false
         val utsettSendingTil = jsonMessage["eksternVarslingBestilling"]["utsettSendingTil"].asTextOrNull()?.let { ZonedDateTime.parse(it) }
 
         val utsending = if (utsettSendingTil != null) {
@@ -78,7 +78,7 @@ class OpprettetVarselSubscriber(private val repository: EksternVarselRepository)
     }
 
     fun findExistingBatch(jsonMessage: JsonMessage): EksternVarsling? {
-        val erBatch = jsonMessage["eksternVarslingBestilling"]["erBatch"]?.asBoolean() ?: false
+        val erBatch = jsonMessage["eksternVarslingBestilling"]["kanBatches"]?.asBoolean() ?: false
 
         return if (erBatch) {
             repository.findExistingBatch(jsonMessage["ident"].asText())

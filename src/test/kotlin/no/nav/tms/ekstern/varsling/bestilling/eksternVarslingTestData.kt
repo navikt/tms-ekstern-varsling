@@ -50,7 +50,7 @@ fun createEksternVarslingEvent(
         "smsVarslingstekst": ${smsVarslingstekst.nullableTextToJson()},
         "epostVarslingstittel": ${epostVarslingstittel.nullableTextToJson()},
         "epostVarslingstekst": ${epostVarslingstekst.nullableTextToJson()},
-        "erBatch": $erBatch,
+        "kanBatches": $erBatch,
         "utsettSendingTil": ${utsettSendingTil?.toString().nullableTextToJson()}
     },
         "opprettet": "$opprettet",
