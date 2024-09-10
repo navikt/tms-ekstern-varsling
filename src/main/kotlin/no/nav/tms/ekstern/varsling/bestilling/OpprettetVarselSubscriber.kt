@@ -27,7 +27,8 @@ class OpprettetVarselSubscriber(private val repository: EksternVarselRepository)
             smsVarslingstekst = jsonMessage["eksternVarslingBestilling"]["smsVarslingstekst"].asTextOrNull(),
             epostVarslingstittel = jsonMessage["eksternVarslingBestilling"]["epostVarslingstittel"].asTextOrNull(),
             epostVarslingstekst = jsonMessage["eksternVarslingBestilling"]["epostVarslingstekst"].asTextOrNull(),
-            produsent = produsent
+            produsent = produsent,
+            aktiv = true,
         )
 
         if (isDuplicate(varsel)) {
@@ -70,7 +71,8 @@ class OpprettetVarselSubscriber(private val repository: EksternVarselRepository)
             varsler = listOf(varsel),
             utsending = utsending,
             kanal = varsel.prefererteKanaler.find { it == Kanal.SMS } ?: Kanal.EPOST,
-            sendt = null,
+            ferdigstilt = null,
+            status = Sendingsstatus.Venter,
             opprettet = jsonMessage["opprettet"].asText().let(ZonedDateTime::parse)
         )
 

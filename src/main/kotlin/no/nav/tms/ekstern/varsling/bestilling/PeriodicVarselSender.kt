@@ -8,7 +8,6 @@ import no.nav.tms.ekstern.varsling.setup.defaultObjectMapper
 import org.apache.kafka.clients.producer.Producer
 import org.apache.kafka.clients.producer.ProducerRecord
 import java.time.Duration
-import java.time.ZonedDateTime
 
 class PeriodicVarselSender(
     private val repository: EksternVarselRepository,
@@ -47,7 +46,7 @@ class PeriodicVarselSender(
 
         kafkaProducer.send(ProducerRecord(kafkaTopic, eksternVarsling.sendingsId, sending))
         repository.markAsSent(
-            sendingsId = eksternVarsling.sendingsId, sendt = ZonedDateTimeHelper.nowAtUtc()
+            sendingsId = eksternVarsling.sendingsId, ferdigstilt = ZonedDateTimeHelper.nowAtUtc()
         )
 
         EKSTERN_VARSLING_SENDT.labels(

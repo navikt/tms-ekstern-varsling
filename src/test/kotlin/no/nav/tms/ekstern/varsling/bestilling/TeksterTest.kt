@@ -2,7 +2,6 @@ package no.nav.tms.ekstern.varsling.bestilling
 
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
-import java.time.ZonedDateTime
 
 class TeksterTest {
 
@@ -101,6 +100,7 @@ private fun createVarsel(
     smsVarslingstekst: String? = null,
     epostVarslingstittel: String? = null,
     epostVarslingstekst: String? = null,
+    aktiv: Boolean = true,
 ) = Varsel(
     varselId = "1234",
     varseltype = varseltype,
@@ -108,7 +108,8 @@ private fun createVarsel(
     smsVarslingstekst = smsVarslingstekst,
     epostVarslingstittel = epostVarslingstittel,
     epostVarslingstekst = epostVarslingstekst,
-    produsent = Produsent(cluster = "cluster", namespace = "namespace", appnavn = "appnavn")
+    produsent = Produsent(cluster = "cluster", namespace = "namespace", appnavn = "appnavn"),
+    aktiv = aktiv
 )
 
 
@@ -122,8 +123,9 @@ private fun createEksternVarsling(
     varsler = varsler.asList(),
     utsending = null,
     kanal = Kanal.SMS,
-    sendt = null,
-    opprettet = ZonedDateTimeHelper.nowAtUtc()
+    ferdigstilt = null,
+    opprettet = ZonedDateTimeHelper.nowAtUtc(),
+    status = Sendingsstatus.Venter
 )
 
 private object ForventetDefaultOppgaveTekst {

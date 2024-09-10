@@ -23,7 +23,8 @@ class EksternVarselRepository(val database: Database) {
                         varsler,
                         utsending,
                         kanal,
-                        sendt,
+                        ferdigstilt,
+                        status,
                         opprettet
                     ) values (
                         :sendingsId,
@@ -33,7 +34,8 @@ class EksternVarselRepository(val database: Database) {
                         :varsler,
                         :utsending,
                         :kanal,
-                        :sendt,
+                        :ferdigstilt,
+                        :status,
                         :opprettet
                     )
                 """, mapOf(
@@ -44,8 +46,9 @@ class EksternVarselRepository(val database: Database) {
                     "varsler" to dbVarsel.varsler.toJsonb(objectMapper),
                     "utsending" to dbVarsel.utsending,
                     "kanal" to dbVarsel.kanal.name,
-                    "sendt" to dbVarsel.sendt,
-                    "opprettet" to dbVarsel.opprettet
+                    "ferdigstilt" to dbVarsel.ferdigstilt,
+                    "opprettet" to dbVarsel.opprettet,
+                    "status" to dbVarsel.status.name
                 )
             )
         }
@@ -62,15 +65,16 @@ class EksternVarselRepository(val database: Database) {
                     varsler,
                     utsending,
                     kanal,
-                    sendt,
-                    opprettet
+                    ferdigstilt,
+                    opprettet,
+                    status
                 from 
                     ekstern_varsling
                 where
                     ident = :ident and
                     erBatch and
                     not erUtsattVarsel and
-                    sendt is null
+                    ferdigstilt is null
                     
         """, mapOf("ident" to ident)
         ).map { it ->
@@ -82,8 +86,9 @@ class EksternVarselRepository(val database: Database) {
                 varsler = it.json<List<Varsel>>("varsler", objectMapper),
                 utsending = it.zonedDateTimeOrNull("utsending"),
                 kanal = Kanal.valueOf(it.string("kanal")),
-                sendt = it.zonedDateTimeOrNull("sendt"),
+                ferdigstilt = it.zonedDateTimeOrNull("ferdigstilt"),
                 opprettet = it.zonedDateTime("opprettet"),
+                status = it.string("status").let { Sendingsstatus.valueOf(it) }
             )
         }.asSingle
     }
@@ -125,11 +130,12 @@ class EksternVarselRepository(val database: Database) {
                         varsler,
                         utsending,
                         kanal,
-                        sendt,
+                        ferdigstilt,
+                        status,
                         opprettet
                     from 
                         ekstern_varsling
-                    where sendt is null and (utsending is null or utsending < :now)
+                    where ferdigstilt is null and (utsending is null or utsending < :now)
                     limit :antall
                    """.trimIndent(), mapOf("antall" to batchSize, "now" to ZonedDateTimeHelper.nowAtUtc())
             ).map { row ->
@@ -141,20 +147,21 @@ class EksternVarselRepository(val database: Database) {
                     varsler = row.json<List<Varsel>>("varsler", objectMapper),
                     utsending = null,
                     kanal = Kanal.valueOf(row.string("kanal")),
-                    sendt = row.zonedDateTimeOrNull("sendt"),
+                    ferdigstilt = row.zonedDateTimeOrNull("ferdigstilt"),
                     opprettet = row.zonedDateTime("opprettet"),
+                    status = row.string("status").let { Sendingsstatus.valueOf(it) }
                 )
             }.asList
         }
     }
 
-    fun markAsSent(sendingsId: String, sendt: ZonedDateTime) {
+    fun markAsSent(sendingsId: String, ferdigstilt: ZonedDateTime) {
         database.update {
             queryOf(
-                "update ekstern_varsling set sendt = :sendt where sendingsId = :sendingsId", mapOf(
-                    "sendt" to sendt,
+                "update ekstern_varsling set ferdigstilt = :ferdigstilt, status = :status where sendingsId = :sendingsId", mapOf(
+                    "ferdigstilt" to ferdigstilt,
                     "sendingsId" to sendingsId,
-
+                    "status" to Sendingsstatus.Sendt.name
                     )
             )
         }

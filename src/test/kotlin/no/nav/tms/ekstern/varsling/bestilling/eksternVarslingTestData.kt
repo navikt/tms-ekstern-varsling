@@ -109,7 +109,8 @@ fun createEksternVarslingDBRow(
             smsVarslingstekst = null,
             epostVarslingstittel = null,
             epostVarslingstekst = null,
-            produsent = Produsent("test-clsuter","test-namespace","test-app")
+            produsent = Produsent("test-clsuter","test-namespace","test-app"),
+            aktiv = true
     ), Varsel(
             varselId = "22222",
             varseltype = Varseltype.Oppgave,
@@ -117,13 +118,15 @@ fun createEksternVarslingDBRow(
             smsVarslingstekst = null,
             epostVarslingstittel = null,
             epostVarslingstekst = null,
-            produsent = Produsent("test-clsuter","test-namespace","test-app")
+            produsent = Produsent("test-clsuter","test-namespace","test-app"),
+            aktiv = true
         )
     ),
     utsending: ZonedDateTime? = null,
     kanal: Kanal = Kanal.SMS,
-    sendt: ZonedDateTime? = null,
+    ferdigstilt: ZonedDateTime? = null,
     opprettet: ZonedDateTime = ZonedDateTimeHelper.nowAtUtc().minusSeconds(30),
+    status: Sendingsstatus = Sendingsstatus.Venter
 ) = EksternVarsling(
     sendingsId = sendingsId,
     ident = ident,
@@ -132,6 +135,7 @@ fun createEksternVarslingDBRow(
     varsler = varsler,
     utsending = utsending,
     kanal = kanal,
-    sendt = sendt,
-    opprettet = opprettet
+    ferdigstilt = ferdigstilt,
+    opprettet = opprettet,
+    status = status
 )
