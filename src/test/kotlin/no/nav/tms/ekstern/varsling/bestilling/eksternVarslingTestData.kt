@@ -95,6 +95,17 @@ fun opprettetEventUtenEksternVarsling(
     }
     """
 
+fun createInaktiverEvent(id: String) = """
+    {
+        "@event_name": "inaktivert",
+        "varselId": "$id",
+        "produsent": {
+            "cluster": "dev-gcp",
+            "namespace": "dummy",
+            "appnavn": "dummy-app"
+        }
+    }
+    """
 
 fun createEksternVarslingDBRow(
     sendingsId: String,
@@ -109,16 +120,16 @@ fun createEksternVarslingDBRow(
             smsVarslingstekst = null,
             epostVarslingstittel = null,
             epostVarslingstekst = null,
-            produsent = Produsent("test-clsuter","test-namespace","test-app"),
+            produsent = Produsent("test-clsuter", "test-namespace", "test-app"),
             aktiv = true
-    ), Varsel(
+        ), Varsel(
             varselId = "22222",
             varseltype = Varseltype.Oppgave,
             prefererteKanaler = listOf(Kanal.SMS),
             smsVarslingstekst = null,
             epostVarslingstittel = null,
             epostVarslingstekst = null,
-            produsent = Produsent("test-clsuter","test-namespace","test-app"),
+            produsent = Produsent("test-clsuter", "test-namespace", "test-app"),
             aktiv = true
         )
     ),

@@ -3,6 +3,7 @@ package no.nav.tms.ekstern.varsling
 import kotlinx.coroutines.runBlocking
 import no.nav.tms.common.kubernetes.PodLeaderElection
 import no.nav.tms.ekstern.varsling.bestilling.EksternVarselRepository
+import no.nav.tms.ekstern.varsling.bestilling.InaktivertVarselSubscriber
 import no.nav.tms.ekstern.varsling.bestilling.OpprettetVarselSubscriber
 import no.nav.tms.ekstern.varsling.bestilling.PeriodicVarselSender
 import no.nav.tms.ekstern.varsling.setup.Flyway
@@ -29,7 +30,8 @@ fun main() {
             readTopics(environment.varselTopic)
         }
         subscribers(
-            OpprettetVarselSubscriber(eksternVarselRepository)
+            OpprettetVarselSubscriber(eksternVarselRepository),
+            InaktivertVarselSubscriber(eksternVarselRepository),
         )
         onStartup {
             Flyway.runFlywayMigrations()

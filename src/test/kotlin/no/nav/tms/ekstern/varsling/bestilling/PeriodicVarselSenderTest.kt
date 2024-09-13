@@ -123,7 +123,8 @@ class PeriodicVarselSenderTest {
 
 private fun Database.tellAntallSendt() = singleOrNull {
     queryOf(
-        "select count(*) as antall from ekstern_varsling where ferdigstilt is not Null"
+        "select count(*) filter(where status = :status) as antall from ekstern_varsling where ferdigstilt is not Null",
+        mapOf("status" to Sendingsstatus.Sendt.name)
     ).map { it.int("antall") }.asSingle
 }
 

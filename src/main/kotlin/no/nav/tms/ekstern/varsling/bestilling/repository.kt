@@ -103,7 +103,40 @@ class EksternVarselRepository(val database: Database) {
                     "varsel" to listOf(varsel).toJsonb(objectMapper),
                     "kanal" to kanal.name,
                 )
+
             )
+        }
+    }
+
+    fun findSendingForVarsel(varselId: String): EksternVarsling?{
+        return database.singleOrNull {
+            queryOf(
+                """select 
+                    sendingsId,
+                    ident,
+                    erBatch,
+                    erUtsattVarsel,
+                    varsler,
+                    utsending,
+                    kanal,
+                    ferdigstilt,
+                    opprettet,
+                    status from ekstern_varsling where varsler @> :varsel""",
+                mapOf("varsel" to varselId.toParam())
+            ).map { it ->
+            EksternVarsling(
+                sendingsId = it.string("sendingsId"),
+                ident = it.string("ident"),
+                erBatch = it.boolean("erBatch"),
+                erUtsattVarsel = it.boolean("erUtsattVarsel"),
+                varsler = it.json<List<Varsel>>("varsler", objectMapper),
+                utsending = it.zonedDateTimeOrNull("utsending"),
+                kanal = Kanal.valueOf(it.string("kanal")),
+                ferdigstilt = it.zonedDateTimeOrNull("ferdigstilt"),
+                opprettet = it.zonedDateTime("opprettet"),
+                status = it.string("status").let { Sendingsstatus.valueOf(it) }
+            )
+        }.asSingle
         }
     }
 
@@ -137,7 +170,7 @@ class EksternVarselRepository(val database: Database) {
                         ekstern_varsling
                     where ferdigstilt is null and (utsending is null or utsending < :now)
                     limit :antall
-                   """.trimIndent(), mapOf("antall" to batchSize, "now" to ZonedDateTimeHelper.nowAtUtc())
+                """.trimIndent(), mapOf("antall" to batchSize, "now" to ZonedDateTimeHelper.nowAtUtc())
             ).map { row ->
                 EksternVarsling(
                     sendingsId = row.string("sendingsId"),
@@ -158,14 +191,24 @@ class EksternVarselRepository(val database: Database) {
     fun markAsSent(sendingsId: String, ferdigstilt: ZonedDateTime) {
         database.update {
             queryOf(
-                "update ekstern_varsling set ferdigstilt = :ferdigstilt, status = :status where sendingsId = :sendingsId", mapOf(
+                "update ekstern_varsling set ferdigstilt = :ferdigstilt, status = :status where sendingsId = :sendingsId",
+                mapOf(
                     "ferdigstilt" to ferdigstilt,
                     "sendingsId" to sendingsId,
                     "status" to Sendingsstatus.Sendt.name
-                    )
+                )
             )
         }
     }
 
     private fun String.toParam() = listOf(mapOf("varselId" to this)).toJsonb(objectMapper)
+
+    fun updateVarsler(sendingsId: String, varsler: List<Varsel>){
+        database.update {
+            queryOf(
+                "update ekstern_varsling set varsler = :varsler where sendingsId = :sendingsId",
+                mapOf("sendingsId" to sendingsId, "varsler" to varsler.toJsonb(objectMapper))
+            )
+        }
+    }
 }
