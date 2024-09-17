@@ -211,4 +211,15 @@ class EksternVarselRepository(val database: Database) {
             )
         }
     }
+
+    fun kansellerSending(ferdigstilt: ZonedDateTime, sendingsId: String) {
+        database.update {
+            queryOf(
+                "update ekstern_varsling set ferdigstilt = :ferdigstilt, status = :status where sendingsId = :sendingsId",
+                mapOf(                    "ferdigstilt" to ferdigstilt,
+                    "sendingsId" to sendingsId,
+                    "status" to Sendingsstatus.Kanselert.name)
+            )
+        }
+    }
 }

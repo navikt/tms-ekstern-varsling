@@ -27,17 +27,17 @@ class InaktivertVarselSubscriberTest{
 
     @Test
     fun `Plukker opp inaktiver kafka-eventer og inaktiverer varsler i basen`(){
-        val arkivertVarselIdEn = UUID.randomUUID().toString()
-        val arkivertVarselIdTwo = UUID.randomUUID().toString()
+        val inarkivertVarselIdEn= UUID.randomUUID().toString()
+        val inarkivertVarselIdTwo = UUID.randomUUID().toString()
 
         opprettetVarselBroadcaster.broadcastJson(createEksternVarslingEvent(id = UUID.randomUUID().toString(), erBatch=true, ident = testFnr))
         opprettetVarselBroadcaster.broadcastJson(createEksternVarslingEvent(id = UUID.randomUUID().toString(), erBatch=true, ident = testFnr))
-        opprettetVarselBroadcaster.broadcastJson(createEksternVarslingEvent(id = arkivertVarselIdEn, erBatch=true, ident = testFnr))
-        opprettetVarselBroadcaster.broadcastJson(createEksternVarslingEvent(id = arkivertVarselIdTwo, erBatch=true, ident = testFnr))
+        opprettetVarselBroadcaster.broadcastJson(createEksternVarslingEvent(id = inarkivertVarselIdEn, erBatch=true, ident = testFnr))
+        opprettetVarselBroadcaster.broadcastJson(createEksternVarslingEvent(id = inarkivertVarselIdTwo, erBatch=true, ident = testFnr))
         opprettetVarselBroadcaster.broadcastJson(createEksternVarslingEvent(id = UUID.randomUUID().toString(), erBatch=true, ident = testFnr))
 
-        inaktiverVarselBroadcaster.broadcastJson(createInaktiverEvent(id = arkivertVarselIdEn))
-        inaktiverVarselBroadcaster.broadcastJson(createInaktiverEvent(id = arkivertVarselIdTwo))
+        inaktiverVarselBroadcaster.broadcastJson(createInaktiverEvent(id = inarkivertVarselIdEn))
+        inaktiverVarselBroadcaster.broadcastJson(createInaktiverEvent(id = inarkivertVarselIdTwo))
 
 
 

@@ -27,6 +27,15 @@ class PeriodicVarselSender(
     private val objectMapper = defaultObjectMapper()
 
     private fun processRequest(eksternVarsling: EksternVarsling) {
+        if (eksternVarsling.varsler.any{it.aktiv}) {
+            sendEksternVarsling(eksternVarsling)
+
+        } else {
+            repository.kansellerSending(ferdigstilt = ZonedDateTimeHelper.nowAtUtc(),eksternVarsling.sendingsId)
+        }
+    }
+
+    private fun sendEksternVarsling(eksternVarsling: EksternVarsling) {
 
         val tekster = bestemTekster(eksternVarsling)
 

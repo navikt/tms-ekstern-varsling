@@ -119,6 +119,25 @@ class PeriodicVarselSenderTest {
         jsonTree["produsent"]["appnavn"].asText() shouldBe "tms-ekstern-varsling"
         jsonTree["produsent"]["namespace"].asText() shouldBe "min-side"
     }
+
+    @Test
+    fun `ignorer batch som kun har inaktive varsler`() = runBlocking<Unit> {
+
+        database.insertEksternVarsling(createEksternVarslingDBRow(UUID.randomUUID().toString(), testFnr, varsler = listOf(createVarsel(aktiv = false), createVarsel(aktiv = false))))
+        database.insertEksternVarsling(createEksternVarslingDBRow(UUID.randomUUID().toString(), testFnr, varsler = listOf(createVarsel(aktiv = false), createVarsel(aktiv = true))))
+        database.insertEksternVarsling(createEksternVarslingDBRow(UUID.randomUUID().toString(), testFnr, varsler = listOf(createVarsel(aktiv = true), createVarsel(aktiv = true))))
+
+
+        val periodicVarselSender = PeriodicVarselSender(repository, mockProducer, "test-topic", leaderElection, interval = Duration.ofMinutes(1))
+
+        coEvery { leaderElection.isLeader() } returns true
+
+        periodicVarselSender.start()
+        delay(2000)
+        mockProducer.history().size shouldBe 2
+        database.tellAntallFeilet() shouldBe 1
+        database.tellAntallSendt() shouldBe 2
+    }
 }
 
 private fun Database.tellAntallSendt() = singleOrNull {
@@ -128,13 +147,19 @@ private fun Database.tellAntallSendt() = singleOrNull {
     ).map { it.int("antall") }.asSingle
 }
 
+private fun Database.tellAntallFeilet() = singleOrNull {
+    queryOf(
+        "select count(*) filter(where status = :status) as antall from ekstern_varsling where ferdigstilt is not Null",
+        mapOf("status" to Sendingsstatus.Kanselert.name)
+    ).map { it.int("antall") }.asSingle
+}
+
 private fun Database.tellAntallSendtFørDato(sendtEtterDato: ZonedDateTime) = singleOrNull {
     queryOf(
         "select count(*) as antall from ekstern_varsling where ferdigstilt < :sendtEtterDato",
         mapOf("sendtEtterDato" to sendtEtterDato)
     ).map { it.int("antall") }.asSingle
 }
-
 
 private fun Database.insertEksternVarsling(eksternVarsling: EksternVarsling) {
     update {

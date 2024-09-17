@@ -1,6 +1,7 @@
 package no.nav.tms.ekstern.varsling.bestilling
 
 import java.time.ZonedDateTime
+import java.util.UUID
 
 fun String?.nullableTextToJson(): String {
     return if (this == null) {
@@ -9,6 +10,27 @@ fun String?.nullableTextToJson(): String {
         "\"$this\""
     }
 }
+
+fun createVarsel(
+    varselId: String = UUID.randomUUID().toString(),
+    varseltype: Varseltype = Varseltype.Beskjed,
+    prefererteKanaler: List<Kanal> = listOf(Kanal.SMS),
+    smsVarslingstekst: String? = "Dummy tekst",
+    epostVarslingstittel: String? = "Dummy epost tittel",
+    epostVarslingstekst: String? = "Dummy epost tekst",
+    produsent: Produsent = Produsent("test-cluster", "test-namespace", "test-app"),
+    aktiv: Boolean = true
+) = Varsel(
+    varselId = varselId,
+    varseltype = varseltype,
+    prefererteKanaler = prefererteKanaler,
+    smsVarslingstekst = smsVarslingstekst,
+    epostVarslingstittel = epostVarslingstittel,
+    epostVarslingstekst = epostVarslingstekst,
+    produsent = produsent,
+    aktiv = aktiv
+)
+
 
 fun createEksternVarslingEvent(
     id: String,

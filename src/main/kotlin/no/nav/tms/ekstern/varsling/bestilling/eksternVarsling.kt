@@ -19,7 +19,7 @@ enum class Varseltype(val alias: String) {
 enum class Sendingsstatus() {
     Sendt,
     Venter,
-    Feilet,
+    Kanselert,
 }
 
 data class Produsent(
