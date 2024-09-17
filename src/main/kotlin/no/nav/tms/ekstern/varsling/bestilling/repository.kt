@@ -121,7 +121,7 @@ class EksternVarselRepository(val database: Database) {
                     kanal,
                     ferdigstilt,
                     opprettet,
-                    status from ekstern_varsling where varsler @> :varsel""",
+                    status from ekstern_varsling where varsler @> :varsel and ferdigstilt is null""",
                 mapOf("varsel" to varselId.toParam())
             ).map { it ->
             EksternVarsling(

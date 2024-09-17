@@ -161,7 +161,7 @@ private fun Database.tellAntallSendtFørDato(sendtEtterDato: ZonedDateTime) = si
     ).map { it.int("antall") }.asSingle
 }
 
-private fun Database.insertEksternVarsling(eksternVarsling: EksternVarsling) {
+fun Database.insertEksternVarsling(eksternVarsling: EksternVarsling) {
     update {
         queryOf(
             """
