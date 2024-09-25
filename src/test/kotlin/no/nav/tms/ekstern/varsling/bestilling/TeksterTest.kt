@@ -93,6 +93,23 @@ class TeksterTest {
         blandetVarsler.epostTittel shouldBe "Du har fått varsler fra NAV"
         blandetVarsler.epostTekst shouldBe "<!DOCTYPE html><html><head><title>Varsel</title></head><body><p>Hei!</p><p>Du har fått 3 beskjed(er) og 2 oppgave(er) fra NAV. Logg inn på NAV for å lese hva det gjelder.</p><p>Vennlig hilsen</p><p>NAV</p></body></html>\n"
     }
+
+    @Test
+    fun `inaktive varsler påvirker ikke tekst`() {
+        val oppgaver = createEksternVarsling(
+            createVarsel(Varseltype.Oppgave, aktiv = true),
+            createVarsel(Varseltype.Oppgave, aktiv = true),
+            createVarsel(Varseltype.Oppgave, aktiv = true),
+            createVarsel(Varseltype.Oppgave, aktiv = true),
+            createVarsel(Varseltype.Oppgave, aktiv = false),
+            createVarsel(Varseltype.Oppgave, aktiv = false)
+        ).let { bestemTekster(it) }
+
+        oppgaver.smsTekst shouldBe "Hei! Du har fått 4 oppgave(er) fra NAV. Logg inn på NAV for å se hva det gjelder. Vennlig hilsen NAV"
+        oppgaver.epostTittel shouldBe "Du har fått varsler fra NAV"
+        oppgaver.epostTekst shouldBe "<!DOCTYPE html><html><head><title>Varsel</title></head><body><p>Hei!</p><p>Du har fått 4 oppgave(er) fra NAV. Logg inn på NAV for å lese hva det gjelder.</p><p>Vennlig hilsen</p><p>NAV</p></body></html>\n"
+
+    }
 }
 
 private fun createVarsel(

@@ -45,7 +45,7 @@ class EksternVarselRepository(val database: Database) {
                     "erUtsattVarsel" to dbVarsel.erUtsattVarsel,
                     "varsler" to dbVarsel.varsler.toJsonb(objectMapper),
                     "utsending" to dbVarsel.utsending,
-                    "kanal" to dbVarsel.kanal.name,
+                    "kanal" to dbVarsel.kanal?.name,
                     "ferdigstilt" to dbVarsel.ferdigstilt,
                     "opprettet" to dbVarsel.opprettet,
                     "status" to dbVarsel.status.name
@@ -85,7 +85,7 @@ class EksternVarselRepository(val database: Database) {
                 erUtsattVarsel = it.boolean("erUtsattVarsel"),
                 varsler = it.json<List<Varsel>>("varsler", objectMapper),
                 utsending = it.zonedDateTimeOrNull("utsending"),
-                kanal = Kanal.valueOf(it.string("kanal")),
+                kanal = it.stringOrNull("kanal")?.let { Kanal.valueOf(it) },
                 ferdigstilt = it.zonedDateTimeOrNull("ferdigstilt"),
                 opprettet = it.zonedDateTime("opprettet"),
                 status = it.string("status").let { Sendingsstatus.valueOf(it) }
@@ -93,15 +93,14 @@ class EksternVarselRepository(val database: Database) {
         }.asSingle
     }
 
-    fun addVarselToExisting(sendingsId: String, varsel: Varsel, kanal: Kanal) {
+    fun addVarselToExisting(sendingsId: String, varsel: Varsel) {
         database.update {
             queryOf(
                 """
-                    update ekstern_varsling set kanal = :kanal, varsler = :varsel || varsler where sendingsId = :sendingsId 
+                    update ekstern_varsling set varsler = :varsel || varsler where sendingsId = :sendingsId 
                 """, mapOf(
                     "sendingsId" to sendingsId,
-                    "varsel" to listOf(varsel).toJsonb(objectMapper),
-                    "kanal" to kanal.name,
+                    "varsel" to listOf(varsel).toJsonb(objectMapper)
                 )
 
             )
@@ -131,7 +130,7 @@ class EksternVarselRepository(val database: Database) {
                 erUtsattVarsel = it.boolean("erUtsattVarsel"),
                 varsler = it.json<List<Varsel>>("varsler", objectMapper),
                 utsending = it.zonedDateTimeOrNull("utsending"),
-                kanal = Kanal.valueOf(it.string("kanal")),
+                kanal = it.stringOrNull("kanal")?.let { Kanal.valueOf(it) },
                 ferdigstilt = it.zonedDateTimeOrNull("ferdigstilt"),
                 opprettet = it.zonedDateTime("opprettet"),
                 status = it.string("status").let { Sendingsstatus.valueOf(it) }
@@ -179,7 +178,7 @@ class EksternVarselRepository(val database: Database) {
                     erUtsattVarsel = row.boolean("erBatch"),
                     varsler = row.json<List<Varsel>>("varsler", objectMapper),
                     utsending = null,
-                    kanal = Kanal.valueOf(row.string("kanal")),
+                    kanal = row.stringOrNull("kanal")?.let { Kanal.valueOf(it) },
                     ferdigstilt = row.zonedDateTimeOrNull("ferdigstilt"),
                     opprettet = row.zonedDateTime("opprettet"),
                     status = row.string("status").let { Sendingsstatus.valueOf(it) }
@@ -188,14 +187,15 @@ class EksternVarselRepository(val database: Database) {
         }
     }
 
-    fun markAsSent(sendingsId: String, ferdigstilt: ZonedDateTime) {
+    fun markAsSent(sendingsId: String, ferdigstilt: ZonedDateTime, kanal: Kanal) {
         database.update {
             queryOf(
-                "update ekstern_varsling set ferdigstilt = :ferdigstilt, status = :status where sendingsId = :sendingsId",
+                "update ekstern_varsling set ferdigstilt = :ferdigstilt, status = :status, kanal = :kanal where sendingsId = :sendingsId",
                 mapOf(
                     "ferdigstilt" to ferdigstilt,
                     "sendingsId" to sendingsId,
-                    "status" to Sendingsstatus.Sendt.name
+                    "status" to Sendingsstatus.Sendt.name,
+                    "kanal" to kanal.name
                 )
             )
         }

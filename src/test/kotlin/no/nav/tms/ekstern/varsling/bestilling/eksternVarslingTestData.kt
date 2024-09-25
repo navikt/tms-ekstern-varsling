@@ -156,7 +156,6 @@ fun createEksternVarslingDBRow(
         )
     ),
     utsending: ZonedDateTime? = null,
-    kanal: Kanal = Kanal.SMS,
     ferdigstilt: ZonedDateTime? = null,
     opprettet: ZonedDateTime = ZonedDateTimeHelper.nowAtUtc().minusSeconds(30),
     status: Sendingsstatus = Sendingsstatus.Venter
@@ -167,7 +166,7 @@ fun createEksternVarslingDBRow(
     erUtsattVarsel = erUtsattVarsel,
     varsler = varsler,
     utsending = utsending,
-    kanal = kanal,
+    kanal = null,
     ferdigstilt = ferdigstilt,
     opprettet = opprettet,
     status = status

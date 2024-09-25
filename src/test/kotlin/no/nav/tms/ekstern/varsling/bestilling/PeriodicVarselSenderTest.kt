@@ -1,5 +1,6 @@
 package no.nav.tms.ekstern.varsling.bestilling
 
+import io.kotest.matchers.collections.shouldBeIn
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
 import io.mockk.mockk
@@ -109,7 +110,7 @@ class PeriodicVarselSenderTest {
         val tekster = bestemTekster(eksternVarslingData)
         jsonTree["sendingsId"].asText() shouldBe eksternVarslingData.sendingsId
         jsonTree["ident"].asText() shouldBe eksternVarslingData.ident
-        jsonTree["kanal"].asText() shouldBe eksternVarslingData.kanal.name
+        jsonTree["kanal"].asText() shouldBeIn Kanal.entries.map { it.name }
         jsonTree["smsVarslingstekst"].asText() shouldBe tekster.smsTekst
         jsonTree["epostVarslingstittel"].asText() shouldBe tekster.epostTittel
         jsonTree["epostVarslingstekst"].asText() shouldBe tekster.epostTekst
@@ -138,6 +139,46 @@ class PeriodicVarselSenderTest {
         database.tellAntallFeilet() shouldBe 1
         database.tellAntallSendt() shouldBe 2
     }
+
+    @Test
+    fun `velger riktig kanal basert på preferanser i varsler`() = runBlocking<Unit> {
+        database.insertEksternVarsling(createEksternVarslingDBRow(UUID.randomUUID().toString(), testFnr,
+            varsler = listOf(createVarsel(prefererteKanaler = listOf(Kanal.EPOST)), createVarsel(prefererteKanaler = listOf(Kanal.EPOST))))
+        )
+        database.insertEksternVarsling(createEksternVarslingDBRow(UUID.randomUUID().toString(), testFnr,
+            varsler = listOf(createVarsel(prefererteKanaler = listOf(Kanal.SMS)), createVarsel(prefererteKanaler = listOf(Kanal.EPOST))))
+        )
+        database.insertEksternVarsling(createEksternVarslingDBRow(UUID.randomUUID().toString(), testFnr,
+            varsler = listOf(createVarsel(prefererteKanaler = listOf(Kanal.SMS)), createVarsel(prefererteKanaler = listOf(Kanal.SMS))))
+        )
+
+        database.tellAntallForKanal(null) shouldBe 3
+
+        val periodicVarselSender = PeriodicVarselSender(repository, mockProducer, "test-topic", leaderElection, interval = Duration.ofMinutes(1))
+
+        coEvery { leaderElection.isLeader() } returns true
+
+        periodicVarselSender.start()
+        delay(2000)
+        database.tellAntallForKanal(Kanal.EPOST) shouldBe 1
+        database.tellAntallForKanal(Kanal.SMS) shouldBe 2
+    }
+
+    @Test
+    fun `inaktiverte varsler påvirker ikke kanal`() = runBlocking<Unit> {
+        database.insertEksternVarsling(createEksternVarslingDBRow(UUID.randomUUID().toString(), testFnr,
+            varsler = listOf(createVarsel(prefererteKanaler = listOf(Kanal.EPOST), aktiv = true), createVarsel(prefererteKanaler = listOf(Kanal.SMS), aktiv = false)))
+        )
+
+        val periodicVarselSender = PeriodicVarselSender(repository, mockProducer, "test-topic", leaderElection, interval = Duration.ofMinutes(1))
+
+        coEvery { leaderElection.isLeader() } returns true
+
+        periodicVarselSender.start()
+        delay(2000)
+        database.tellAntallForKanal(Kanal.EPOST) shouldBe 1
+        database.tellAntallForKanal(Kanal.SMS) shouldBe 0
+    }
 }
 
 private fun Database.tellAntallSendt() = singleOrNull {
@@ -161,6 +202,20 @@ private fun Database.tellAntallSendtFørDato(sendtEtterDato: ZonedDateTime) = si
     ).map { it.int("antall") }.asSingle
 }
 
+private fun Database.tellAntallForKanal(kanal: Kanal?) = singleOrNull {
+    if (kanal != null) {
+        queryOf(
+            "select count(*) as antall from ekstern_varsling where kanal = :kanal",
+            mapOf("kanal" to kanal.name)
+        )
+    } else {
+        queryOf(
+            "select count(*) as antall from ekstern_varsling where kanal is null"
+        )
+    }.map { it.int("antall") }.asSingle
+
+}
+
 fun Database.insertEksternVarsling(eksternVarsling: EksternVarsling) {
     update {
         queryOf(
@@ -175,7 +230,7 @@ fun Database.insertEksternVarsling(eksternVarsling: EksternVarsling) {
                 "erUtsattVarsel" to eksternVarsling.erUtsattVarsel,
                 "varsler" to eksternVarsling.varsler.toJsonb(),
                 "utsending" to eksternVarsling.utsending,
-                "kanal" to eksternVarsling.kanal.name,
+                "kanal" to eksternVarsling.kanal?.name,
                 "ferdigstilt" to eksternVarsling.ferdigstilt,
                 "status" to eksternVarsling.status.name,
                 "opprettet" to eksternVarsling.opprettet,

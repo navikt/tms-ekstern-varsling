@@ -1,11 +1,8 @@
 package no.nav.tms.ekstern.varsling.bestilling
 
-import com.fasterxml.jackson.databind.JsonNode
 import no.nav.tms.kafka.application.JsonMessage
 import no.nav.tms.kafka.application.Subscriber
 import no.nav.tms.kafka.application.Subscription
-import java.time.ZonedDateTime
-import java.util.*
 
 class InaktivertVarselSubscriber (private val repository: EksternVarselRepository) : Subscriber() {
 

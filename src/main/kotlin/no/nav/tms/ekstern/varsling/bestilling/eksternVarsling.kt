@@ -46,7 +46,7 @@ data class EksternVarsling(
     val erUtsattVarsel: Boolean,
     val varsler: List<Varsel>,
     val utsending: ZonedDateTime?,
-    val kanal: Kanal,
+    val kanal: Kanal?,
     val ferdigstilt: ZonedDateTime?,
     val status: Sendingsstatus,
     val opprettet: ZonedDateTime,
