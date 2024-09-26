@@ -3,6 +3,7 @@ package no.nav.tms.ekstern.varsling.bestilling
 import io.kotest.matchers.date.shouldBeBetween
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.ktor.client.utils.EmptyContent.status
 import kotliquery.queryOf
 import no.nav.tms.ekstern.varsling.setup.LocalPostgresDatabase
 import no.nav.tms.ekstern.varsling.setup.json
@@ -28,7 +29,7 @@ class OpprettetVarselSubscriberTest {
     }
 
     @Test
-    fun `plukker opp opprettet varsel`() {
+    fun `plukker opp opprettet varsel og legger til status venter`() {
 
         broadcaster.broadcastJson(createEksternVarslingEvent(id = UUID.randomUUID().toString(), ident = testFnr))
         broadcaster.broadcastJson(createEksternVarslingEvent(id = UUID.randomUUID().toString(), ident = testFnr))
@@ -37,10 +38,15 @@ class OpprettetVarselSubscriberTest {
         broadcaster.broadcastJson(createEksternVarslingEvent(id = UUID.randomUUID().toString(), ident = testFnr))
 
         database.singleOrNull {
-            queryOf("select count(*) as antall from ekstern_varsling")
+            queryOf(
+                "select count(*) filter(where status = :status) as antall from ekstern_varsling",
+                mapOf("status" to Sendingsstatus.Venter.name)
+            )
                 .map { it.int("antall") }
                 .asSingle
         } shouldBe 5
+
+
     }
 
     @Test
@@ -142,4 +148,5 @@ class OpprettetVarselSubscriberTest {
                 .asSingle
         } shouldBe 1
     }
+
 }

@@ -23,11 +23,13 @@ class OpprettetVarselSubscriber(private val repository: EksternVarselRepository)
         val varsel = Varsel(
             varseltype = jsonMessage["type"].asText().let(::parseVarseltype),
             varselId = jsonMessage["varselId"].asText(),
-            prefererteKanaler = jsonMessage["eksternVarslingBestilling"]["prefererteKanaler"].map { Kanal.valueOf(it.asText()) },
+            prefererteKanaler = jsonMessage["eksternVarslingBestilling"]["prefererteKanaler"].map {
+                Kanal.valueOf(it.asText()) },
             smsVarslingstekst = jsonMessage["eksternVarslingBestilling"]["smsVarslingstekst"].asTextOrNull(),
             epostVarslingstittel = jsonMessage["eksternVarslingBestilling"]["epostVarslingstittel"].asTextOrNull(),
             epostVarslingstekst = jsonMessage["eksternVarslingBestilling"]["epostVarslingstekst"].asTextOrNull(),
-            produsent = produsent
+            produsent = produsent,
+            aktiv = true
         )
 
         if (isDuplicate(varsel)) {
@@ -46,8 +48,8 @@ class OpprettetVarselSubscriber(private val repository: EksternVarselRepository)
     fun addToExistingBatch(varsel: Varsel, existingBatch: EksternVarsling) {
         repository.addVarselToExisting(
             sendingsId = existingBatch.sendingsId,
-            varsel = varsel,
-            kanal = varsel.prefererteKanaler.find { it == Kanal.SMS } ?: existingBatch.kanal)
+            varsel = varsel
+        )
     }
 
     fun createNewEksternVarsling(varsel: Varsel, jsonMessage: JsonMessage) {
@@ -69,8 +71,9 @@ class OpprettetVarselSubscriber(private val repository: EksternVarselRepository)
             erUtsattVarsel = utsettSendingTil != null,
             varsler = listOf(varsel),
             utsending = utsending,
-            kanal = varsel.prefererteKanaler.find { it == Kanal.SMS } ?: Kanal.EPOST,
-            sendt = null,
+            kanal = null,
+            ferdigstilt = null,
+            status = Sendingsstatus.Venter,
             opprettet = jsonMessage["opprettet"].asText().let(ZonedDateTime::parse)
         )
 

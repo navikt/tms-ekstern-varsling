@@ -8,7 +8,6 @@ import no.nav.tms.ekstern.varsling.setup.defaultObjectMapper
 import org.apache.kafka.clients.producer.Producer
 import org.apache.kafka.clients.producer.ProducerRecord
 import java.time.Duration
-import java.time.ZonedDateTime
 
 class PeriodicVarselSender(
     private val repository: EksternVarselRepository,
@@ -28,15 +27,27 @@ class PeriodicVarselSender(
     private val objectMapper = defaultObjectMapper()
 
     private fun processRequest(eksternVarsling: EksternVarsling) {
+        if (eksternVarsling.varsler.any{it.aktiv}) {
+            sendEksternVarsling(eksternVarsling)
+
+        } else {
+            repository.kansellerSending(ferdigstilt = ZonedDateTimeHelper.nowAtUtc(),eksternVarsling.sendingsId)
+            EKSTERN_VARSLING_KANSELLERT.inc()
+        }
+    }
+
+    private fun sendEksternVarsling(eksternVarsling: EksternVarsling) {
 
         val tekster = bestemTekster(eksternVarsling)
 
         val revarsling = bestemRevarsling(eksternVarsling)
 
+        val kanal = bestemKanal(eksternVarsling)
+
         val sending = SendEksternVarsling(
             sendingsId = eksternVarsling.sendingsId,
             ident = eksternVarsling.ident,
-            kanal = eksternVarsling.kanal,
+            kanal = kanal,
             smsVarslingstekst = tekster.smsTekst,
             epostVarslingstittel = tekster.epostTittel,
             epostVarslingstekst = tekster.epostTekst,
@@ -47,14 +58,23 @@ class PeriodicVarselSender(
 
         kafkaProducer.send(ProducerRecord(kafkaTopic, eksternVarsling.sendingsId, sending))
         repository.markAsSent(
-            sendingsId = eksternVarsling.sendingsId, sendt = ZonedDateTimeHelper.nowAtUtc()
+            sendingsId = eksternVarsling.sendingsId, ferdigstilt = ZonedDateTimeHelper.nowAtUtc(), kanal = kanal
         )
 
         EKSTERN_VARSLING_SENDT.labels(
             eksternVarsling.erBatch.toString(),
-            eksternVarsling.kanal.name,
+            kanal.name,
             eksternVarsling.erUtsattVarsel.toString()
         ).inc()
+    }
+
+    private fun bestemKanal(eksternVarsling: EksternVarsling): Kanal {
+        return eksternVarsling.varsler
+            .filter { it.aktiv }
+            .flatMap { it.prefererteKanaler }
+            .distinct()
+            .find { it == Kanal.SMS }
+            ?: Kanal.EPOST
     }
 }
 
@@ -101,4 +121,10 @@ private val EKSTERN_VARSLING_SENDT: Counter = Counter.build()
     .namespace("tms_ekstern_varsling_v1")
     .help("Ekstern varsling sendt")
     .labelNames("er_batch","kanal", "er_utsatt")
+    .register()
+
+private val EKSTERN_VARSLING_KANSELLERT: Counter = Counter.build()
+    .name("ekstern_varsling_kansellert")
+    .namespace("tms_ekstern_varsling_v1")
+    .help("Ekstern varsling kansellert")
     .register()

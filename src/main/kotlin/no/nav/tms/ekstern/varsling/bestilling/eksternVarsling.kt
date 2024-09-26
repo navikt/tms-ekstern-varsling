@@ -16,6 +16,12 @@ enum class Varseltype(val alias: String) {
     fun lowercaseName() = name.lowercase()
 }
 
+enum class Sendingsstatus() {
+    Sendt,
+    Venter,
+    Kanselert,
+}
+
 data class Produsent(
     val cluster: String,
     val namespace: String,
@@ -29,7 +35,8 @@ data class Varsel(
     val smsVarslingstekst: String? = null,
     val epostVarslingstittel: String? = null,
     val epostVarslingstekst: String? = null,
-    val produsent: Produsent
+    val produsent: Produsent,
+    val aktiv: Boolean,
 )
 
 data class EksternVarsling(
@@ -39,7 +46,8 @@ data class EksternVarsling(
     val erUtsattVarsel: Boolean,
     val varsler: List<Varsel>,
     val utsending: ZonedDateTime?,
-    val kanal: Kanal,
-    val sendt: ZonedDateTime?,
+    val kanal: Kanal?,
+    val ferdigstilt: ZonedDateTime?,
+    val status: Sendingsstatus,
     val opprettet: ZonedDateTime,
 )

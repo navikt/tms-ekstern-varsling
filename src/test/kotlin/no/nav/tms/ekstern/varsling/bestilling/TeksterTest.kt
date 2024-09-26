@@ -2,7 +2,6 @@ package no.nav.tms.ekstern.varsling.bestilling
 
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
-import java.time.ZonedDateTime
 
 class TeksterTest {
 
@@ -94,6 +93,23 @@ class TeksterTest {
         blandetVarsler.epostTittel shouldBe "Du har fått varsler fra NAV"
         blandetVarsler.epostTekst shouldBe "<!DOCTYPE html><html><head><title>Varsel</title></head><body><p>Hei!</p><p>Du har fått 3 beskjed(er) og 2 oppgave(er) fra NAV. Logg inn på NAV for å lese hva det gjelder.</p><p>Vennlig hilsen</p><p>NAV</p></body></html>\n"
     }
+
+    @Test
+    fun `inaktive varsler påvirker ikke tekst`() {
+        val oppgaver = createEksternVarsling(
+            createVarsel(Varseltype.Oppgave, aktiv = true),
+            createVarsel(Varseltype.Oppgave, aktiv = true),
+            createVarsel(Varseltype.Oppgave, aktiv = true),
+            createVarsel(Varseltype.Oppgave, aktiv = true),
+            createVarsel(Varseltype.Oppgave, aktiv = false),
+            createVarsel(Varseltype.Oppgave, aktiv = false)
+        ).let { bestemTekster(it) }
+
+        oppgaver.smsTekst shouldBe "Hei! Du har fått 4 oppgave(er) fra NAV. Logg inn på NAV for å se hva det gjelder. Vennlig hilsen NAV"
+        oppgaver.epostTittel shouldBe "Du har fått varsler fra NAV"
+        oppgaver.epostTekst shouldBe "<!DOCTYPE html><html><head><title>Varsel</title></head><body><p>Hei!</p><p>Du har fått 4 oppgave(er) fra NAV. Logg inn på NAV for å lese hva det gjelder.</p><p>Vennlig hilsen</p><p>NAV</p></body></html>\n"
+
+    }
 }
 
 private fun createVarsel(
@@ -101,6 +117,7 @@ private fun createVarsel(
     smsVarslingstekst: String? = null,
     epostVarslingstittel: String? = null,
     epostVarslingstekst: String? = null,
+    aktiv: Boolean = true,
 ) = Varsel(
     varselId = "1234",
     varseltype = varseltype,
@@ -108,7 +125,8 @@ private fun createVarsel(
     smsVarslingstekst = smsVarslingstekst,
     epostVarslingstittel = epostVarslingstittel,
     epostVarslingstekst = epostVarslingstekst,
-    produsent = Produsent(cluster = "cluster", namespace = "namespace", appnavn = "appnavn")
+    produsent = Produsent(cluster = "cluster", namespace = "namespace", appnavn = "appnavn"),
+    aktiv = aktiv
 )
 
 
@@ -122,8 +140,9 @@ private fun createEksternVarsling(
     varsler = varsler.asList(),
     utsending = null,
     kanal = Kanal.SMS,
-    sendt = null,
-    opprettet = ZonedDateTimeHelper.nowAtUtc()
+    ferdigstilt = null,
+    opprettet = ZonedDateTimeHelper.nowAtUtc(),
+    status = Sendingsstatus.Venter
 )
 
 private object ForventetDefaultOppgaveTekst {

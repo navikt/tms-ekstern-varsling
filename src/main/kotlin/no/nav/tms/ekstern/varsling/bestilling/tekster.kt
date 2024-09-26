@@ -40,6 +40,7 @@ private fun addMarkupIfMissing(epostTekst: String): String {
 
 private fun batchTekster(eksternVarsling: EksternVarsling): Tekster {
     val antallTekst = eksternVarsling.varsler
+        .filter { it.aktiv }
         .groupBy { it.varseltype.alias }
         .mapValues { it.value.size }
         .map { (type, antall) -> "$antall $type(er)" }

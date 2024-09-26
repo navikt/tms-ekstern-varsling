@@ -1,6 +1,7 @@
 package no.nav.tms.ekstern.varsling.bestilling
 
 import java.time.ZonedDateTime
+import java.util.UUID
 
 fun String?.nullableTextToJson(): String {
     return if (this == null) {
@@ -9,6 +10,27 @@ fun String?.nullableTextToJson(): String {
         "\"$this\""
     }
 }
+
+fun createVarsel(
+    varselId: String = UUID.randomUUID().toString(),
+    varseltype: Varseltype = Varseltype.Beskjed,
+    prefererteKanaler: List<Kanal> = listOf(Kanal.SMS),
+    smsVarslingstekst: String? = "Dummy tekst",
+    epostVarslingstittel: String? = "Dummy epost tittel",
+    epostVarslingstekst: String? = "Dummy epost tekst",
+    produsent: Produsent = Produsent("test-cluster", "test-namespace", "test-app"),
+    aktiv: Boolean = true
+) = Varsel(
+    varselId = varselId,
+    varseltype = varseltype,
+    prefererteKanaler = prefererteKanaler,
+    smsVarslingstekst = smsVarslingstekst,
+    epostVarslingstittel = epostVarslingstittel,
+    epostVarslingstekst = epostVarslingstekst,
+    produsent = produsent,
+    aktiv = aktiv
+)
+
 
 fun createEksternVarslingEvent(
     id: String,
@@ -95,6 +117,17 @@ fun opprettetEventUtenEksternVarsling(
     }
     """
 
+fun createInaktiverEvent(id: String) = """
+    {
+        "@event_name": "inaktivert",
+        "varselId": "$id",
+        "produsent": {
+            "cluster": "dev-gcp",
+            "namespace": "dummy",
+            "appnavn": "dummy-app"
+        }
+    }
+    """
 
 fun createEksternVarslingDBRow(
     sendingsId: String,
@@ -109,21 +142,23 @@ fun createEksternVarslingDBRow(
             smsVarslingstekst = null,
             epostVarslingstittel = null,
             epostVarslingstekst = null,
-            produsent = Produsent("test-clsuter","test-namespace","test-app")
-    ), Varsel(
+            produsent = Produsent("test-clsuter", "test-namespace", "test-app"),
+            aktiv = true
+        ), Varsel(
             varselId = "22222",
             varseltype = Varseltype.Oppgave,
             prefererteKanaler = listOf(Kanal.SMS),
             smsVarslingstekst = null,
             epostVarslingstittel = null,
             epostVarslingstekst = null,
-            produsent = Produsent("test-clsuter","test-namespace","test-app")
+            produsent = Produsent("test-clsuter", "test-namespace", "test-app"),
+            aktiv = true
         )
     ),
     utsending: ZonedDateTime? = null,
-    kanal: Kanal = Kanal.SMS,
-    sendt: ZonedDateTime? = null,
+    ferdigstilt: ZonedDateTime? = null,
     opprettet: ZonedDateTime = ZonedDateTimeHelper.nowAtUtc().minusSeconds(30),
+    status: Sendingsstatus = Sendingsstatus.Venter
 ) = EksternVarsling(
     sendingsId = sendingsId,
     ident = ident,
@@ -131,7 +166,8 @@ fun createEksternVarslingDBRow(
     erUtsattVarsel = erUtsattVarsel,
     varsler = varsler,
     utsending = utsending,
-    kanal = kanal,
-    sendt = sendt,
-    opprettet = opprettet
+    kanal = null,
+    ferdigstilt = ferdigstilt,
+    opprettet = opprettet,
+    status = status
 )

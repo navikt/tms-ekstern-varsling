@@ -23,7 +23,8 @@ class EksternVarselRepository(val database: Database) {
                         varsler,
                         utsending,
                         kanal,
-                        sendt,
+                        ferdigstilt,
+                        status,
                         opprettet
                     ) values (
                         :sendingsId,
@@ -33,7 +34,8 @@ class EksternVarselRepository(val database: Database) {
                         :varsler,
                         :utsending,
                         :kanal,
-                        :sendt,
+                        :ferdigstilt,
+                        :status,
                         :opprettet
                     )
                 """, mapOf(
@@ -43,9 +45,10 @@ class EksternVarselRepository(val database: Database) {
                     "erUtsattVarsel" to dbVarsel.erUtsattVarsel,
                     "varsler" to dbVarsel.varsler.toJsonb(objectMapper),
                     "utsending" to dbVarsel.utsending,
-                    "kanal" to dbVarsel.kanal.name,
-                    "sendt" to dbVarsel.sendt,
-                    "opprettet" to dbVarsel.opprettet
+                    "kanal" to dbVarsel.kanal?.name,
+                    "ferdigstilt" to dbVarsel.ferdigstilt,
+                    "opprettet" to dbVarsel.opprettet,
+                    "status" to dbVarsel.status.name
                 )
             )
         }
@@ -62,15 +65,16 @@ class EksternVarselRepository(val database: Database) {
                     varsler,
                     utsending,
                     kanal,
-                    sendt,
-                    opprettet
+                    ferdigstilt,
+                    opprettet,
+                    status
                 from 
                     ekstern_varsling
                 where
                     ident = :ident and
                     erBatch and
                     not erUtsattVarsel and
-                    sendt is null
+                    ferdigstilt is null
                     
         """, mapOf("ident" to ident)
         ).map { it ->
@@ -81,24 +85,57 @@ class EksternVarselRepository(val database: Database) {
                 erUtsattVarsel = it.boolean("erUtsattVarsel"),
                 varsler = it.json<List<Varsel>>("varsler", objectMapper),
                 utsending = it.zonedDateTimeOrNull("utsending"),
-                kanal = Kanal.valueOf(it.string("kanal")),
-                sendt = it.zonedDateTimeOrNull("sendt"),
+                kanal = it.stringOrNull("kanal")?.let { Kanal.valueOf(it) },
+                ferdigstilt = it.zonedDateTimeOrNull("ferdigstilt"),
                 opprettet = it.zonedDateTime("opprettet"),
+                status = it.string("status").let { Sendingsstatus.valueOf(it) }
             )
         }.asSingle
     }
 
-    fun addVarselToExisting(sendingsId: String, varsel: Varsel, kanal: Kanal) {
+    fun addVarselToExisting(sendingsId: String, varsel: Varsel) {
         database.update {
             queryOf(
                 """
-                    update ekstern_varsling set kanal = :kanal, varsler = :varsel || varsler where sendingsId = :sendingsId 
+                    update ekstern_varsling set varsler = :varsel || varsler where sendingsId = :sendingsId 
                 """, mapOf(
                     "sendingsId" to sendingsId,
-                    "varsel" to listOf(varsel).toJsonb(objectMapper),
-                    "kanal" to kanal.name,
+                    "varsel" to listOf(varsel).toJsonb(objectMapper)
                 )
+
             )
+        }
+    }
+
+    fun findSendingForVarsel(varselId: String): EksternVarsling?{
+        return database.singleOrNull {
+            queryOf(
+                """select 
+                    sendingsId,
+                    ident,
+                    erBatch,
+                    erUtsattVarsel,
+                    varsler,
+                    utsending,
+                    kanal,
+                    ferdigstilt,
+                    opprettet,
+                    status from ekstern_varsling where varsler @> :varsel and ferdigstilt is null""",
+                mapOf("varsel" to varselId.toParam())
+            ).map { it ->
+            EksternVarsling(
+                sendingsId = it.string("sendingsId"),
+                ident = it.string("ident"),
+                erBatch = it.boolean("erBatch"),
+                erUtsattVarsel = it.boolean("erUtsattVarsel"),
+                varsler = it.json<List<Varsel>>("varsler", objectMapper),
+                utsending = it.zonedDateTimeOrNull("utsending"),
+                kanal = it.stringOrNull("kanal")?.let { Kanal.valueOf(it) },
+                ferdigstilt = it.zonedDateTimeOrNull("ferdigstilt"),
+                opprettet = it.zonedDateTime("opprettet"),
+                status = it.string("status").let { Sendingsstatus.valueOf(it) }
+            )
+        }.asSingle
         }
     }
 
@@ -125,13 +162,14 @@ class EksternVarselRepository(val database: Database) {
                         varsler,
                         utsending,
                         kanal,
-                        sendt,
+                        ferdigstilt,
+                        status,
                         opprettet
                     from 
                         ekstern_varsling
-                    where sendt is null and (utsending is null or utsending < :now)
+                    where ferdigstilt is null and (utsending is null or utsending < :now)
                     limit :antall
-                   """.trimIndent(), mapOf("antall" to batchSize, "now" to ZonedDateTimeHelper.nowAtUtc())
+                """.trimIndent(), mapOf("antall" to batchSize, "now" to ZonedDateTimeHelper.nowAtUtc())
             ).map { row ->
                 EksternVarsling(
                     sendingsId = row.string("sendingsId"),
@@ -140,25 +178,48 @@ class EksternVarselRepository(val database: Database) {
                     erUtsattVarsel = row.boolean("erBatch"),
                     varsler = row.json<List<Varsel>>("varsler", objectMapper),
                     utsending = null,
-                    kanal = Kanal.valueOf(row.string("kanal")),
-                    sendt = row.zonedDateTimeOrNull("sendt"),
+                    kanal = row.stringOrNull("kanal")?.let { Kanal.valueOf(it) },
+                    ferdigstilt = row.zonedDateTimeOrNull("ferdigstilt"),
                     opprettet = row.zonedDateTime("opprettet"),
+                    status = row.string("status").let { Sendingsstatus.valueOf(it) }
                 )
             }.asList
         }
     }
 
-    fun markAsSent(sendingsId: String, sendt: ZonedDateTime) {
+    fun markAsSent(sendingsId: String, ferdigstilt: ZonedDateTime, kanal: Kanal) {
         database.update {
             queryOf(
-                "update ekstern_varsling set sendt = :sendt where sendingsId = :sendingsId", mapOf(
-                    "sendt" to sendt,
+                "update ekstern_varsling set ferdigstilt = :ferdigstilt, status = :status, kanal = :kanal where sendingsId = :sendingsId",
+                mapOf(
+                    "ferdigstilt" to ferdigstilt,
                     "sendingsId" to sendingsId,
-
-                    )
+                    "status" to Sendingsstatus.Sendt.name,
+                    "kanal" to kanal.name
+                )
             )
         }
     }
 
     private fun String.toParam() = listOf(mapOf("varselId" to this)).toJsonb(objectMapper)
+
+    fun updateVarsler(sendingsId: String, varsler: List<Varsel>){
+        database.update {
+            queryOf(
+                "update ekstern_varsling set varsler = :varsler where sendingsId = :sendingsId",
+                mapOf("sendingsId" to sendingsId, "varsler" to varsler.toJsonb(objectMapper))
+            )
+        }
+    }
+
+    fun kansellerSending(ferdigstilt: ZonedDateTime, sendingsId: String) {
+        database.update {
+            queryOf(
+                "update ekstern_varsling set ferdigstilt = :ferdigstilt, status = :status where sendingsId = :sendingsId",
+                mapOf(                    "ferdigstilt" to ferdigstilt,
+                    "sendingsId" to sendingsId,
+                    "status" to Sendingsstatus.Kanselert.name)
+            )
+        }
+    }
 }
