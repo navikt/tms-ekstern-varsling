@@ -1,6 +1,7 @@
 package no.nav.tms.ekstern.varsling.setup
 
 import io.confluent.kafka.serializers.KafkaAvroSerializer
+import io.confluent.kafka.serializers.KafkaAvroSerializerConfig
 import no.nav.tms.common.util.config.StringEnvVar
 import no.nav.tms.ekstern.varsling.TmsEksternVarsling
 import org.apache.kafka.clients.CommonClientConfigs
@@ -25,6 +26,7 @@ fun <V> initializeKafkaProducer(
             put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer::class.java)
             if (useAvroSerializer) {
                 put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaAvroSerializer::class.java)
+                put(KafkaAvroSerializerConfig.SCHEMA_REGISTRY_URL_CONFIG, environment.kafkaSchemaRegistry)
             } else {
                 put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer::class.java)
             }
