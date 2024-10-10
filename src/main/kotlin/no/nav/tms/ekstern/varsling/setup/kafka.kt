@@ -1,6 +1,8 @@
 package no.nav.tms.ekstern.varsling.setup
 
 import io.confluent.kafka.serializers.KafkaAvroSerializer
+import io.confluent.kafka.serializers.KafkaAvroSerializerConfig
+import io.github.oshai.kotlinlogging.KotlinLogging
 import no.nav.tms.common.util.config.StringEnvVar
 import no.nav.tms.ekstern.varsling.TmsEksternVarsling
 import org.apache.kafka.clients.CommonClientConfigs
@@ -13,10 +15,11 @@ import org.apache.kafka.common.serialization.StringSerializer
 import java.util.*
 import kotlin.reflect.KClass
 
-// lol
 fun <V> initializeKafkaProducer(
     useAvroSerializer: Boolean = false
 ): KafkaProducer<String, V> {
+    val log = KotlinLogging.logger {}
+
     val environment = KafkaEnvironment()
     return KafkaProducer<String, V>(
         Properties().apply {
@@ -24,8 +27,15 @@ fun <V> initializeKafkaProducer(
             put(ProducerConfig.CLIENT_ID_CONFIG, TmsEksternVarsling.appnavn)
             put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer::class.java)
             if (useAvroSerializer) {
+                log.info { "Using avro serializer" }
                 put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaAvroSerializer::class.java)
+                put(KafkaAvroSerializerConfig.SCHEMA_REGISTRY_URL_CONFIG, environment.kafkaSchemaRegistry)
+                put(
+                    KafkaAvroSerializerConfig.USER_INFO_CONFIG,
+                    "${environment.kafkaSchemaRegistryUser}:${environment.kafkaSchemaRegistryPassword}"
+                )
             } else {
+                log.info { "Using string serializer" }
                 put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer::class.java)
             }
             put(ProducerConfig.MAX_BLOCK_MS_CONFIG, 40000)
@@ -41,7 +51,7 @@ fun <V> initializeKafkaProducer(
             put(SslConfigs.SSL_KEYSTORE_PASSWORD_CONFIG, environment.kafkaCredstorePassword)
             put(SslConfigs.SSL_KEY_PASSWORD_CONFIG, environment.kafkaCredstorePassword)
             put(SslConfigs.SSL_ENDPOINT_IDENTIFICATION_ALGORITHM_CONFIG, "")
-        }
+        }.also { log.info { "$it" } }
     )
 }
 
