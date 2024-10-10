@@ -41,13 +41,6 @@ interface Database {
         }
 }
 
-fun defaultObjectMapper() = jacksonMapperBuilder()
-    .addModule(JavaTimeModule())
-    .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-    .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-    .build()
-    .setSerializationInclusion(JsonInclude.Include.NON_NULL)
-
 inline fun <reified T> Row.json(label: String, objectMapper: ObjectMapper = defaultObjectMapper()): T {
     return objectMapper.readValue(string(label))
 }

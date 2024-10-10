@@ -1,12 +1,16 @@
 package no.nav.tms.ekstern.varsling.bestilling
 
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import kotliquery.queryOf
+import no.nav.doknotifikasjon.schemas.DoknotifikasjonStopp
+import no.nav.tms.ekstern.varsling.setup.DummySerializer
 import no.nav.tms.ekstern.varsling.setup.LocalPostgresDatabase
 import no.nav.tms.ekstern.varsling.setup.json
 import no.nav.tms.kafka.application.MessageBroadcaster
+import org.apache.kafka.clients.producer.MockProducer
+import org.apache.kafka.common.serialization.StringSerializer
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.util.*
 
@@ -14,15 +18,23 @@ class InaktivertVarselSubscriberTest {
     private val database = LocalPostgresDatabase.cleanDb()
     private val testFnr = "12345678910"
 
-    private val repository = EksternVarselRepository(database)
+    private val mockProducer = MockProducer<String, DoknotifikasjonStopp>(
+        false,
+        StringSerializer(),
+        DummySerializer()
+    )
+
+
+    private val repository = EksternVarslingRepository(database)
     private val opprettetVarselBroadcaster = MessageBroadcaster(listOf(OpprettetVarselSubscriber(repository)))
-    private val inaktiverVarselBroadcaster = MessageBroadcaster(listOf(InaktivertVarselSubscriber(repository)))
+    private val inaktiverVarselBroadcaster = MessageBroadcaster(listOf(InaktivertVarselSubscriber(repository, mockProducer, "dummyTopic")))
 
     @AfterEach
     fun cleanup() {
         database.update {
             queryOf("delete from ekstern_varsling")
         }
+        mockProducer.clear()
     }
 
     @Test
@@ -31,43 +43,43 @@ class InaktivertVarselSubscriberTest {
         val inarkivertVarselIdTwo = UUID.randomUUID().toString()
 
         opprettetVarselBroadcaster.broadcastJson(
-            createEksternVarslingEvent(
+            varselOpprettetEvent(
                 id = UUID.randomUUID().toString(),
                 erBatch = true,
                 ident = testFnr
             )
         )
         opprettetVarselBroadcaster.broadcastJson(
-            createEksternVarslingEvent(
+            varselOpprettetEvent(
                 id = UUID.randomUUID().toString(),
                 erBatch = true,
                 ident = testFnr
             )
         )
         opprettetVarselBroadcaster.broadcastJson(
-            createEksternVarslingEvent(
+            varselOpprettetEvent(
                 id = inarkivertVarselIdEn,
                 erBatch = true,
                 ident = testFnr
             )
         )
         opprettetVarselBroadcaster.broadcastJson(
-            createEksternVarslingEvent(
+            varselOpprettetEvent(
                 id = inarkivertVarselIdTwo,
                 erBatch = true,
                 ident = testFnr
             )
         )
         opprettetVarselBroadcaster.broadcastJson(
-            createEksternVarslingEvent(
+            varselOpprettetEvent(
                 id = UUID.randomUUID().toString(),
                 erBatch = true,
                 ident = testFnr
             )
         )
 
-        inaktiverVarselBroadcaster.broadcastJson(createInaktiverEvent(id = inarkivertVarselIdEn))
-        inaktiverVarselBroadcaster.broadcastJson(createInaktiverEvent(id = inarkivertVarselIdTwo))
+        inaktiverVarselBroadcaster.broadcastJson(inaktivertEvent(id = inarkivertVarselIdEn))
+        inaktiverVarselBroadcaster.broadcastJson(inaktivertEvent(id = inarkivertVarselIdTwo))
 
 
 
@@ -81,53 +93,31 @@ class InaktivertVarselSubscriberTest {
     }
 
     @Test
-    fun `Ignorer varseler som tilhører ferdigstilte sendinger`() {
-
+    fun `Sender doknotifikasjon-stopp hvis revarsling er satt`() {
         val sendingsId = UUID.randomUUID().toString()
         val varselId = UUID.randomUUID().toString()
 
-        val sendingsId2 = UUID.randomUUID().toString()
-        val varselId2 = UUID.randomUUID().toString()
-
-        val sendingsId3 = UUID.randomUUID().toString()
-        val varselId3 = UUID.randomUUID().toString()
-
         database.insertEksternVarsling(
-            createEksternVarslingDBRow(
+            eksternVarslingDBRow(
                 sendingsId,
                 testFnr,
                 status = Sendingsstatus.Sendt,
                 ferdigstilt = ZonedDateTimeHelper.nowAtUtc().minusHours(1),
-                varsler = listOf(createVarsel(varselId = varselId))
-            )
-        )
-        database.insertEksternVarsling(
-            createEksternVarslingDBRow(
-                sendingsId2,
-                testFnr,
-                status = Sendingsstatus.Kanselert,
-                ferdigstilt = ZonedDateTimeHelper.nowAtUtc().minusHours(1),
-                varsler = listOf(createVarsel(varselId = varselId2))
+                varsler = listOf(createVarsel(varselId = varselId)),
+                revarsling = Revarsling(1, 7)
             )
         )
 
-        database.insertEksternVarsling(
-            createEksternVarslingDBRow(
-                sendingsId3,
-                testFnr,
-                varsler = listOf(createVarsel(varselId = varselId3))
-            )
-        )
+        inaktiverVarselBroadcaster.broadcastJson(inaktivertEvent(id = varselId))
 
-        inaktiverVarselBroadcaster.broadcastJson(createInaktiverEvent(id = varselId))
-        inaktiverVarselBroadcaster.broadcastJson(createInaktiverEvent(id = varselId2))
-        inaktiverVarselBroadcaster.broadcastJson(createInaktiverEvent(id = varselId3))
+        mockProducer.history().firstOrNull().let {
+            it.shouldNotBeNull()
 
+            val doknotStopp = it.value()
 
-        tellAktiveVarsler(sendingsId) shouldBe 1
-        tellAktiveVarsler(sendingsId2) shouldBe 1
-        tellAktiveVarsler(sendingsId3) shouldBe 0
-
+            doknotStopp.bestillerId shouldBe "tms-ekstern-varsling"
+            doknotStopp.bestillingsId shouldBe sendingsId
+        }
     }
 
     private fun tellAktiveVarsler(sendingsId: String) = database.singleOrNull {

@@ -19,7 +19,8 @@ fun createVarsel(
     epostVarslingstittel: String? = "Dummy epost tittel",
     epostVarslingstekst: String? = "Dummy epost tekst",
     produsent: Produsent = Produsent("test-cluster", "test-namespace", "test-app"),
-    aktiv: Boolean = true
+    aktiv: Boolean = true,
+    behandletAvLegacy: Boolean = false,
 ) = Varsel(
     varselId = varselId,
     varseltype = varseltype,
@@ -28,11 +29,12 @@ fun createVarsel(
     epostVarslingstittel = epostVarslingstittel,
     epostVarslingstekst = epostVarslingstekst,
     produsent = produsent,
-    aktiv = aktiv
+    aktiv = aktiv,
+    behandletAvLegacy = behandletAvLegacy,
 )
 
 
-fun createEksternVarslingEvent(
+fun varselOpprettetEvent(
     id: String,
     ident: String,
     type: String = "oppgave",
@@ -48,7 +50,6 @@ fun createEksternVarslingEvent(
         "type": "$type",
         "varselId": "$id",
         "ident": "$ident",
-        "sensitivitet": "high",
         "innhold": {
         "tekst": "Dummy tekst",
         "link": "https://nav.no",
@@ -82,7 +83,7 @@ fun createEksternVarslingEvent(
     }
     """
 
-fun opprettetEventUtenEksternVarsling(
+fun varselOpprettetEventUtenEksternVarsling(
     id: String,
     ident: String,
     type: String = "oppgave",
@@ -92,7 +93,6 @@ fun opprettetEventUtenEksternVarsling(
         "type": "$type",
         "varselId": "$id",
         "ident": "$ident",
-        "sensitivitet": "high",
         "innhold": {
         "tekst": "Dummy tekst",
         "link": "https://nav.no",
@@ -117,7 +117,7 @@ fun opprettetEventUtenEksternVarsling(
     }
     """
 
-fun createInaktiverEvent(id: String) = """
+fun inaktivertEvent(id: String) = """
     {
         "@event_name": "inaktivert",
         "varselId": "$id",
@@ -129,7 +129,7 @@ fun createInaktiverEvent(id: String) = """
     }
     """
 
-fun createEksternVarslingDBRow(
+fun eksternVarslingDBRow(
     sendingsId: String,
     ident: String,
     erBatch: Boolean = false,
@@ -143,7 +143,8 @@ fun createEksternVarslingDBRow(
             epostVarslingstittel = null,
             epostVarslingstekst = null,
             produsent = Produsent("test-clsuter", "test-namespace", "test-app"),
-            aktiv = true
+            aktiv = true,
+            behandletAvLegacy = false,
         ), Varsel(
             varselId = "22222",
             varseltype = Varseltype.Oppgave,
@@ -152,13 +153,16 @@ fun createEksternVarslingDBRow(
             epostVarslingstittel = null,
             epostVarslingstekst = null,
             produsent = Produsent("test-clsuter", "test-namespace", "test-app"),
-            aktiv = true
+            aktiv = true,
+            behandletAvLegacy = false,
         )
     ),
     utsending: ZonedDateTime? = null,
     ferdigstilt: ZonedDateTime? = null,
     opprettet: ZonedDateTime = ZonedDateTimeHelper.nowAtUtc().minusSeconds(30),
-    status: Sendingsstatus = Sendingsstatus.Venter
+    status: Sendingsstatus = Sendingsstatus.Venter,
+    eksternStatus: EksternStatus.Oversikt? = null,
+    revarsling: Revarsling? = null
 ) = EksternVarsling(
     sendingsId = sendingsId,
     ident = ident,
@@ -169,5 +173,7 @@ fun createEksternVarslingDBRow(
     kanal = null,
     ferdigstilt = ferdigstilt,
     opprettet = opprettet,
-    status = status
+    status = status,
+    eksternStatus = eksternStatus,
+    revarsling = revarsling
 )

@@ -1,6 +1,8 @@
 package no.nav.tms.ekstern.varsling.bestilling
 
 import com.fasterxml.jackson.databind.JsonNode
+import io.github.oshai.kotlinlogging.KotlinLogging
+import no.nav.tms.common.observability.traceVarsel
 import no.nav.tms.kafka.application.JsonMessage
 import no.nav.tms.kafka.application.Subscriber
 import no.nav.tms.kafka.application.Subscription
@@ -8,12 +10,14 @@ import java.time.ZonedDateTime
 import java.util.*
 
 
-class OpprettetVarselSubscriber(private val repository: EksternVarselRepository) : Subscriber() {
+class OpprettetVarselSubscriber(private val repository: EksternVarslingRepository) : Subscriber() {
+
+    private val log = KotlinLogging.logger {}
 
     override fun subscribe() = Subscription.forEvent("opprettet")
         .withFields("type", "varselId", "ident", "eksternVarslingBestilling", "opprettet", "produsent")
 
-    override suspend fun receive(jsonMessage: JsonMessage) {
+    override suspend fun receive(jsonMessage: JsonMessage) = traceVarsel(id = jsonMessage["varselId"].asText(), mapOf("action" to "opprett")) {
         val produsent = Produsent(
             cluster = jsonMessage["produsent"]["cluster"].asText(),
             namespace = jsonMessage["produsent"]["namespace"].asText(),
@@ -29,11 +33,13 @@ class OpprettetVarselSubscriber(private val repository: EksternVarselRepository)
             epostVarslingstittel = jsonMessage["eksternVarslingBestilling"]["epostVarslingstittel"].asTextOrNull(),
             epostVarslingstekst = jsonMessage["eksternVarslingBestilling"]["epostVarslingstekst"].asTextOrNull(),
             produsent = produsent,
-            aktiv = true
+            aktiv = true,
+            behandletAvLegacy = false
         )
 
         if (isDuplicate(varsel)) {
-            return
+            log.info { "Ignorerer duplikat varsel" }
+            return@traceVarsel
         }
 
         findExistingBatch(jsonMessage)
@@ -46,6 +52,7 @@ class OpprettetVarselSubscriber(private val repository: EksternVarselRepository)
     }
 
     fun addToExistingBatch(varsel: Varsel, existingBatch: EksternVarsling) {
+        log.info { "Legger til varsel i eksisterende varsling" }
         repository.addVarselToExisting(
             sendingsId = existingBatch.sendingsId,
             varsel = varsel
@@ -74,9 +81,12 @@ class OpprettetVarselSubscriber(private val repository: EksternVarselRepository)
             kanal = null,
             ferdigstilt = null,
             status = Sendingsstatus.Venter,
+            eksternStatus = null,
+            revarsling = null,
             opprettet = jsonMessage["opprettet"].asText().let(ZonedDateTime::parse)
         )
 
+        log.info { "Oppretter ny varsling for varsel" }
         repository.insertEksternVarsling(eksternVarsling)
     }
 

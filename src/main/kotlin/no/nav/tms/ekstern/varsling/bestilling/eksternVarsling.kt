@@ -16,10 +16,10 @@ enum class Varseltype(val alias: String) {
     fun lowercaseName() = name.lowercase()
 }
 
-enum class Sendingsstatus() {
+enum class Sendingsstatus {
     Sendt,
     Venter,
-    Kanselert,
+    Kansellert,
 }
 
 data class Produsent(
@@ -37,6 +37,7 @@ data class Varsel(
     val epostVarslingstekst: String? = null,
     val produsent: Produsent,
     val aktiv: Boolean,
+    val behandletAvLegacy: Boolean
 )
 
 data class EksternVarsling(
@@ -49,5 +50,38 @@ data class EksternVarsling(
     val kanal: Kanal?,
     val ferdigstilt: ZonedDateTime?,
     val status: Sendingsstatus,
+    val revarsling: Revarsling?,
+    val eksternStatus: EksternStatus.Oversikt?,
     val opprettet: ZonedDateTime,
 )
+
+data class Revarsling(
+    val intervall: Int,
+    val antall: Int
+)
+
+object EksternStatus {
+    data class Oversikt(
+        val sendt: Boolean,
+        val renotifikasjonSendt: Boolean,
+        val kanal: String?,
+        val historikk: List<HistorikkEntry>,
+        val sistOppdatert: ZonedDateTime
+    )
+
+    data class HistorikkEntry(
+        val melding: String,
+        val status: Status,
+        val distribusjonsId: Long?,
+        val kanal: String?,
+        val renotifikasjon: Boolean?,
+        val tidspunkt: ZonedDateTime
+    )
+
+    enum class Status {
+        Feilet, Info, Bestilt, Sendt, Ferdigstilt;
+
+        @JsonValue
+        fun toJson() = name.lowercase()
+    }
+}

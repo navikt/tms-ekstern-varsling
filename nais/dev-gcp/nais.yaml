@@ -49,3 +49,9 @@ spec:
   env:
     - name: KAFKA_GROUP_ID
       value: "ekstern-varsling-02"
+    - name: VARSEL_TOPIC
+      value: "min-side.brukervarsel-v1"
+    - name: DOKNOTIFIKASJON_TOPIC
+      value: "teamdokumenthandtering.privat-dok-notifikasjon"
+    - name: DOKNOTIFIKASJON_STOP_TOPIC
+      value: "teamdokumenthandtering.privat-dok-notifikasjon-stopp"

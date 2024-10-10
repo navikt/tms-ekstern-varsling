@@ -118,6 +118,7 @@ private fun createVarsel(
     epostVarslingstittel: String? = null,
     epostVarslingstekst: String? = null,
     aktiv: Boolean = true,
+    behandletAvLegacy: Boolean = false
 ) = Varsel(
     varselId = "1234",
     varseltype = varseltype,
@@ -126,7 +127,8 @@ private fun createVarsel(
     epostVarslingstittel = epostVarslingstittel,
     epostVarslingstekst = epostVarslingstekst,
     produsent = Produsent(cluster = "cluster", namespace = "namespace", appnavn = "appnavn"),
-    aktiv = aktiv
+    aktiv = aktiv,
+    behandletAvLegacy = behandletAvLegacy
 )
 
 
@@ -142,7 +144,9 @@ private fun createEksternVarsling(
     kanal = Kanal.SMS,
     ferdigstilt = null,
     opprettet = ZonedDateTimeHelper.nowAtUtc(),
-    status = Sendingsstatus.Venter
+    status = Sendingsstatus.Venter,
+    eksternStatus = null,
+    revarsling = null
 )
 
 private object ForventetDefaultOppgaveTekst {
