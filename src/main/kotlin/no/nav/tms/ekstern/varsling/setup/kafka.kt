@@ -15,7 +15,6 @@ import org.apache.kafka.common.serialization.StringSerializer
 import java.util.*
 import kotlin.reflect.KClass
 
-// lol
 fun <V> initializeKafkaProducer(
     useAvroSerializer: Boolean = false
 ): KafkaProducer<String, V> {
