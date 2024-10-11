@@ -10,13 +10,15 @@ object Flyway {
 
     fun runFlywayMigrations() {
         log.info { "Starter flyway-migrering" }
-        val flyway = configure().load()
-        flyway.migrate()
+        configure().load().migrate().let {
+            log.info { it.migrations }
+        }
         log.info { "Flyway migrering ferdig" }
     }
 
     private fun configure(): FluentConfiguration {
         val configBuilder = Flyway.configure()
+            .validateMigrationNaming(true)
             .connectRetries(5)
         val dataSource = PostgresDatabase.hikariFromLocalDb()
         configBuilder.dataSource(dataSource)
