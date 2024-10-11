@@ -12,7 +12,6 @@ object Flyway {
 
     private fun configure(): FluentConfiguration {
         val configBuilder = Flyway.configure()
-            .validateMigrationNaming(true)
             .connectRetries(5)
         val dataSource = PostgresDatabase.hikariFromLocalDb()
         configBuilder.dataSource(dataSource)
