@@ -1,5 +1,5 @@
 alter table ekstern_varsling
-    add column status text not null;
+    add column status text;
 
 
 alter table ekstern_varsling
