@@ -9,14 +9,17 @@ object Flyway {
 
     private val log = KotlinLogging.logger {}
 
-    fun runFlywayMigrations() {
+    fun runFlywayMigrations() = try {
         log.info { "Starter flyway-migrering" }
-        configure().load()
-            .also {
+        configure().also{ log.info { "Configure complete" } }
+            .load().also {
+                log.info { "Load complete" }
                 log.info {it.configuration.modernConfig.flyway }
                 println(MigrationInfoDumper.dumpToAsciiTable(it.info().all()))
             }.migrate()
         log.info { "Flyway migrering ferdig" }
+    } catch (e: Exception) {
+        log.warn(e) { "Error during flyway" }
     }
 
     private fun configure(): FluentConfiguration {

@@ -3,7 +3,7 @@
     <appender name="stdout_json" class="ch.qos.logback.core.ConsoleAppender">
         <encoder class="net.logstash.logback.encoder.LogstashEncoder"/>
     </appender>
-    <root level="DEBUG">
+    <root level="INFO">
         <appender-ref ref="stdout_json"/>
     </root>
 </configuration>
