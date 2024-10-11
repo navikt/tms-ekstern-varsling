@@ -45,18 +45,12 @@ class LocalPostgresDatabase private constructor() : Database {
         }
     }
 
-    private val log = KotlinLogging.logger {}
-
     private fun migrate(expectedMigrations: Int) {
         Flyway.configure()
             .connectRetries(3)
             .validateMigrationNaming(true)
             .dataSource(dataSource)
             .load()
-            .also {
-                log.info {it.configuration.modernConfig.flyway }
-                println(MigrationInfoDumper.dumpToAsciiTable(it.info().all()))
-            }
             .migrate()
             .let { assert(it.migrationsExecuted == expectedMigrations) }
 

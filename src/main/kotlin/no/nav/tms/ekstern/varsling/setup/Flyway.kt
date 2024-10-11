@@ -10,26 +10,18 @@ object Flyway {
     private val log = KotlinLogging.logger {}
 
     fun runFlywayMigrations() = try {
-        log.info { "Starter flyway-migrering" }
-        configure().also{ log.info { "Configure complete" } }
-            .load().also {
-                log.info { "Load complete" }
-                log.info {it.configuration.modernConfig.flyway }
-                println(MigrationInfoDumper.dumpToAsciiTable(it.info().all()))
-            }.migrate()
-        log.info { "Flyway migrering ferdig" }
-    } catch (e: Exception) {
-        log.warn(e) { "Error during flyway" }
-    }
 
-    private fun configure(): FluentConfiguration {
-        val configBuilder = Flyway.configure()
+        log.info { "Starter flyway-migrering" }
+
+        Flyway.configure()
             .validateMigrationNaming(true)
             .connectRetries(5)
-        val dataSource = PostgresDatabase.hikariFromLocalDb()
-        configBuilder.dataSource(dataSource)
+            .dataSource(PostgresDatabase.hikariFromLocalDb())
+            .load()
+            .migrate()
 
-        return configBuilder
+        log.info { "Flyway migrering ferdig" }
+    } catch (e: Exception) {
+        log.warn(e) { "Feil ved flyway-migrering" }
     }
-
 }
