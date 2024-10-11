@@ -3,6 +3,7 @@ package no.nav.tms.ekstern.varsling.setup
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.flywaydb.core.Flyway
 import org.flywaydb.core.api.configuration.FluentConfiguration
+import org.flywaydb.core.internal.info.MigrationInfoDumper
 
 object Flyway {
 
@@ -10,9 +11,10 @@ object Flyway {
 
     fun runFlywayMigrations() {
         log.info { "Starter flyway-migrering" }
-        configure().load().migrate().let {
-            log.info { it.migrations }
-        }
+        configure().load()
+            .also {
+                MigrationInfoDumper.dumpToAsciiTable(it.info().all())
+            }.migrate()
         log.info { "Flyway migrering ferdig" }
     }
 
