@@ -13,7 +13,8 @@ object Flyway {
         log.info { "Starter flyway-migrering" }
         configure().load()
             .also {
-                MigrationInfoDumper.dumpToAsciiTable(it.info().all())
+                log.info {it.configuration.modernConfig.flyway }
+                println(MigrationInfoDumper.dumpToAsciiTable(it.info().all()))
             }.migrate()
         log.info { "Flyway migrering ferdig" }
     }

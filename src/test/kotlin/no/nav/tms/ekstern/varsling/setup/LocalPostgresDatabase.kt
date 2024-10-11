@@ -2,9 +2,11 @@ package no.nav.tms.ekstern.varsling.setup
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.zaxxer.hikari.HikariDataSource
+import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.serialization.json.Json
 import kotliquery.queryOf
 import org.flywaydb.core.Flyway
+import org.flywaydb.core.internal.info.MigrationInfoDumper
 import org.testcontainers.containers.PostgreSQLContainer
 
 class LocalPostgresDatabase private constructor() : Database {
@@ -43,12 +45,18 @@ class LocalPostgresDatabase private constructor() : Database {
         }
     }
 
+    private val log = KotlinLogging.logger {}
+
     private fun migrate(expectedMigrations: Int) {
         Flyway.configure()
             .connectRetries(3)
             .validateMigrationNaming(true)
             .dataSource(dataSource)
             .load()
+            .also {
+                log.info {it.configuration.modernConfig.flyway }
+                println(MigrationInfoDumper.dumpToAsciiTable(it.info().all()))
+            }
             .migrate()
             .let { assert(it.migrationsExecuted == expectedMigrations) }
 
