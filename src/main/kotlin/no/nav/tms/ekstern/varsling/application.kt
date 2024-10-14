@@ -51,6 +51,8 @@ fun main() {
         )
         onStartup {
             Flyway.runFlywayMigrations()
+        }
+        onReady {
             varselSender.start()
         }
         onShutdown {
