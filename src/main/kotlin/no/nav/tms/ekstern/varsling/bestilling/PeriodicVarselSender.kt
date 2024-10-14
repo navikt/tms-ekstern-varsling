@@ -25,11 +25,19 @@ class PeriodicVarselSender(
 
     private val log = KotlinLogging.logger {}
 
+    private var count = -1
+
     override val job = initializeJob {
         if (leaderElection.isLeader()) {
             repository
                 .nextInVarselQueue(gracePeriod)
+                .also { logInfo(it) }
                 .forEach(::processRequest)
+        } else {
+            count = (count + 1) % 60
+            if (count == 0) {
+                log.info { "Was not leader" }
+            }
         }
     }
 
