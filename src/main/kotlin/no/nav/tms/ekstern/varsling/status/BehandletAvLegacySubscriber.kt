@@ -15,7 +15,7 @@ class BehandletAvLegacySubscriber(private val repository: EksternVarslingReposit
 
     override fun subscribe() = Subscription.forEvent("eksternVarslingStatus")
         .withoutValue("bestillerAppnavn", TmsEksternVarsling.appnavn)
-        .withValue("status", "OVERSENDT")
+        .withAnyValue("status", "OVERSENDT", "FEILET")
         .withFields("eventId")
 
     override suspend fun receive(jsonMessage: JsonMessage) = traceVarsel(jsonMessage["eventId"].asText(), mapOf("action" to "duplikatBehandling")) {
