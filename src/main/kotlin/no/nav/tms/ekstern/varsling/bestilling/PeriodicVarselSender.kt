@@ -33,6 +33,12 @@ class PeriodicVarselSender(
         }
     }
 
+    private fun logInfo(varsler: List<EksternVarsling>) {
+        if (varsler.isNotEmpty()) {
+            log.info { "Behandler ${varsler.size} ventende sendinger." }
+        }
+    }
+
     private fun processRequest(eksternVarsling: EksternVarsling) {
         if (eksternVarsling.varsler.any { it.aktiv && !it.behandletAvLegacy }) {
             sendEksternVarsling(eksternVarsling)
