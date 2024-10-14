@@ -31,6 +31,7 @@ class PeriodicVarselSender(
         if (leaderElection.isLeader()) {
             repository
                 .nextInVarselQueue(gracePeriod)
+                .also { logInfo(it) }
                 .forEach(::processRequest)
         } else {
             count = (count + 1) % 60
