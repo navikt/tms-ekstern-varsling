@@ -76,7 +76,7 @@ class PeriodicVarselSender(
             .setRenotifikasjoner(revarsling)
             .build()
 
-        logSending(varsling)
+        logSending(varsling, kanal)
 
         kafkaProducer.send(ProducerRecord(doknotTopic, varsling.sendingsId, doknot))
         repository.markAsSent(
@@ -126,15 +126,15 @@ class PeriodicVarselSender(
         }
     }
 
-    private fun logSending(varsling: EksternVarsling) = traceVarsel(id = varsling.sendingsId, mapOf("action" to "sendEksternVarsling")) {
+    private fun logSending(varsling: EksternVarsling, kanal: Kanal) = traceVarsel(id = varsling.sendingsId, mapOf("action" to "sendEksternVarsling")) {
         if (varsling.erBatch && varsling.varsler.size > 1) {
-            log.info { "Sender ekstern varsling via kanal ${varsling.kanal} for batch med ${varsling.varsler.size} varsler." }
+            log.info { "Sender ekstern varsling via kanal $kanal for batch med ${varsling.varsler.size} varsler." }
         } else if (varsling.erBatch) {
-            log.info { "Sender ekstern varsling via kanal ${varsling.kanal} for batch med ett ${varsling.varsler.first().varseltype}-varsel." }
+            log.info { "Sender ekstern varsling via kanal $kanal for batch med ett ${varsling.varsler.first().varseltype}-varsel." }
         } else if (varsling.erUtsattVarsel) {
-            log.info { "Sender utsatt ekstern varsling via kanal ${varsling.kanal} for ett ${varsling.varsler.first().varseltype}-varsel." }
+            log.info { "Sender utsatt ekstern varsling via kanal $kanal for ett ${varsling.varsler.first().varseltype}-varsel." }
         } else {
-            log.info { "Sender ekstern varsling via kanal ${varsling.kanal} for ett ${varsling.varsler.first().varseltype}-varsel." }
+            log.info { "Sender ekstern varsling via kanal $kanal for ett ${varsling.varsler.first().varseltype}-varsel." }
         }
     }
 
