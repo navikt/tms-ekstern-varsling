@@ -60,15 +60,15 @@ class OpprettetVarselSubscriber(private val repository: EksternVarslingRepositor
     }
 
     fun createNewEksternVarsling(varsel: Varsel, jsonMessage: JsonMessage) {
-        val erBatch = jsonMessage["eksternVarslingBestilling"]["kanBatches"].asBooleanOrNull() ?: false
+        val kanBatches = jsonMessage["eksternVarslingBestilling"]["kanBatches"].asBooleanOrNull() ?: false
         val utsettSendingTil = jsonMessage["eksternVarslingBestilling"]["utsettSendingTil"].asTextOrNull()?.let { ZonedDateTime.parse(it) }
 
-        val utsending = if (utsettSendingTil != null) {
-            utsettSendingTil
-        } else if (erBatch){
-            ZonedDateTimeHelper.nowAtUtc().plusHours(1)
+        val (erBatch, utsending) = if (utsettSendingTil != null) {
+            false to utsettSendingTil
+        } else if (kanBatches){
+            true to ZonedDateTimeHelper.nowAtUtc().plusHours(1)
         } else {
-            null
+            false to null
         }
 
         val eksternVarsling = EksternVarsling(
