@@ -1,5 +1,6 @@
 package no.nav.tms.ekstern.varsling.bestilling
 
+import io.kotest.matchers.collections.shouldContainOnly
 import io.kotest.matchers.date.shouldBeBetween
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
@@ -10,6 +11,7 @@ import no.nav.tms.kafka.application.MessageBroadcaster
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import java.time.ZonedDateTime
 import java.util.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -51,13 +53,13 @@ class OpprettetVarselSubscriberTest {
     @Test
     fun `legger varsel som kan batches i eksisterende batch`() {
 
-        broadcaster.broadcastJson(varselOpprettetEvent(id = UUID.randomUUID().toString(), ident = testFnr, erBatch = true))
-        broadcaster.broadcastJson(varselOpprettetEvent(id = UUID.randomUUID().toString(), ident = testFnr, erBatch = false))
-        broadcaster.broadcastJson(varselOpprettetEvent(id = UUID.randomUUID().toString(), ident = testFnr, erBatch = false))
-        broadcaster.broadcastJson(varselOpprettetEvent(id = UUID.randomUUID().toString(), ident = testFnr, erBatch = true))
-        broadcaster.broadcastJson(varselOpprettetEvent(id = UUID.randomUUID().toString(), ident = testFnr, erBatch = true))
-        broadcaster.broadcastJson(varselOpprettetEvent(id = UUID.randomUUID().toString(), ident = testFnr, erBatch = true))
-        broadcaster.broadcastJson(varselOpprettetEvent(id = UUID.randomUUID().toString(), ident = testFnr, erBatch = true))
+        broadcaster.broadcastJson(varselOpprettetEvent(id = UUID.randomUUID().toString(), ident = testFnr, kanBatches = true))
+        broadcaster.broadcastJson(varselOpprettetEvent(id = UUID.randomUUID().toString(), ident = testFnr, kanBatches = false))
+        broadcaster.broadcastJson(varselOpprettetEvent(id = UUID.randomUUID().toString(), ident = testFnr, kanBatches = false))
+        broadcaster.broadcastJson(varselOpprettetEvent(id = UUID.randomUUID().toString(), ident = testFnr, kanBatches = true))
+        broadcaster.broadcastJson(varselOpprettetEvent(id = UUID.randomUUID().toString(), ident = testFnr, kanBatches = true))
+        broadcaster.broadcastJson(varselOpprettetEvent(id = UUID.randomUUID().toString(), ident = testFnr, kanBatches = true))
+        broadcaster.broadcastJson(varselOpprettetEvent(id = UUID.randomUUID().toString(), ident = testFnr, kanBatches = true))
 
 
         database.singleOrNull {
@@ -81,6 +83,35 @@ class OpprettetVarselSubscriberTest {
         utsending.shouldNotBeNull()
         utsending.shouldBeBetween(ZonedDateTimeHelper.nowAtUtc().plusMinutes(59), ZonedDateTimeHelper.nowAtUtc().plusMinutes(60))
 
+    }
+
+    @Test
+    fun `hvis utsatt sending er satt ignoreres kanBatches-flagget`() {
+
+        broadcaster.broadcastJson(varselOpprettetEvent(id = UUID.randomUUID().toString(), ident = testFnr, kanBatches = true, utsettSendingTil = ZonedDateTime.now().plusDays(1)))
+        broadcaster.broadcastJson(varselOpprettetEvent(id = UUID.randomUUID().toString(), ident = testFnr, kanBatches = true))
+        broadcaster.broadcastJson(varselOpprettetEvent(id = UUID.randomUUID().toString(), ident = testFnr, kanBatches = true))
+        broadcaster.broadcastJson(varselOpprettetEvent(id = UUID.randomUUID().toString(), ident = testFnr, kanBatches = true, utsettSendingTil = ZonedDateTime.now().plusDays(1)))
+        broadcaster.broadcastJson(varselOpprettetEvent(id = UUID.randomUUID().toString(), ident = testFnr, kanBatches = true))
+
+
+        database.singleOrNull {
+            queryOf("select count(*) as antall from ekstern_varsling")
+                .map { it.int("antall") }
+                .asSingle
+        } shouldBe 3
+
+        database.singleOrNull {
+            queryOf("select varsler from ekstern_varsling where erBatch")
+                .map { it.json<List<Varsel>>("varsler").size }
+                .asSingle
+        } shouldBe 3
+
+        database.list {
+            queryOf("select varsler from ekstern_varsling where not erBatch")
+                .map { it.json<List<Varsel>>("varsler").size }
+                .asList
+        }.all { it == 1 } shouldBe true
     }
 
     @Test

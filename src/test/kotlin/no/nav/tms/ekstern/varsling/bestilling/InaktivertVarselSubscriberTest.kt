@@ -45,35 +45,35 @@ class InaktivertVarselSubscriberTest {
         opprettetVarselBroadcaster.broadcastJson(
             varselOpprettetEvent(
                 id = UUID.randomUUID().toString(),
-                erBatch = true,
+                kanBatches = true,
                 ident = testFnr
             )
         )
         opprettetVarselBroadcaster.broadcastJson(
             varselOpprettetEvent(
                 id = UUID.randomUUID().toString(),
-                erBatch = true,
+                kanBatches = true,
                 ident = testFnr
             )
         )
         opprettetVarselBroadcaster.broadcastJson(
             varselOpprettetEvent(
                 id = inarkivertVarselIdEn,
-                erBatch = true,
+                kanBatches = true,
                 ident = testFnr
             )
         )
         opprettetVarselBroadcaster.broadcastJson(
             varselOpprettetEvent(
                 id = inarkivertVarselIdTwo,
-                erBatch = true,
+                kanBatches = true,
                 ident = testFnr
             )
         )
         opprettetVarselBroadcaster.broadcastJson(
             varselOpprettetEvent(
                 id = UUID.randomUUID().toString(),
-                erBatch = true,
+                kanBatches = true,
                 ident = testFnr
             )
         )
