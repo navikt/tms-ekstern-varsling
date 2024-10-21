@@ -43,7 +43,7 @@ fun varselOpprettetEvent(
     epostVarslingstittel: String? = null,
     epostVarslingstekst: String? = null,
     opprettet: ZonedDateTime = ZonedDateTimeHelper.nowAtUtc(),
-    erBatch: Boolean? = null,
+    kanBatches: Boolean? = null,
     utsettSendingTil: ZonedDateTime? = null,
 ) = """
     {
@@ -73,7 +73,7 @@ fun varselOpprettetEvent(
         "smsVarslingstekst": ${smsVarslingstekst.nullableTextToJson()},
         "epostVarslingstittel": ${epostVarslingstittel.nullableTextToJson()},
         "epostVarslingstekst": ${epostVarslingstekst.nullableTextToJson()},
-        "kanBatches": $erBatch,
+        "kanBatches": $kanBatches,
         "utsettSendingTil": ${utsettSendingTil?.toString().nullableTextToJson()}
     },
         "opprettet": "$opprettet",

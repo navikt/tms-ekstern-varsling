@@ -91,9 +91,10 @@ class OpprettetVarselSubscriber(private val repository: EksternVarslingRepositor
     }
 
     fun findExistingBatch(jsonMessage: JsonMessage): EksternVarsling? {
-        val erBatch = jsonMessage["eksternVarslingBestilling"]["kanBatches"]?.asBoolean() ?: false
+        val kanBatches = jsonMessage["eksternVarslingBestilling"]["kanBatches"].asBooleanOrNull() ?: false
+        val utsettSendingTil = jsonMessage["eksternVarslingBestilling"]["utsettSendingTil"].asTextOrNull()?.let { ZonedDateTime.parse(it) }
 
-        return if (erBatch) {
+        return if (kanBatches && utsettSendingTil == null) {
             repository.findExistingBatch(jsonMessage["ident"].asText())
         } else {
             null
