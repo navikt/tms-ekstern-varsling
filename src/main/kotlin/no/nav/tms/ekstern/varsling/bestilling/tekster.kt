@@ -48,8 +48,8 @@ private fun batchTekster(eksternVarsling: EksternVarsling): Tekster {
 
     return Tekster(
         smsTekst =
-            "Hei! Du har fått $antallTekst fra NAV. Logg inn på NAV for å se hva det gjelder. Vennlig hilsen NAV",
-        epostTittel = "Du har fått varsler fra NAV",
+            "Hei! Du har fått $antallTekst fra Nav. Logg inn på Nav for å se hva det gjelder. Vennlig hilsen Nav",
+        epostTittel = "Du har fått varsler fra Nav",
         epostTekst = EpostBatchTekst.tekst(antallTekst)
     )
 }
@@ -74,23 +74,23 @@ private interface Standardtekster {
 }
 
 private object OppgaveTekster: Standardtekster {
-    override val eposttittel = "Du har fått en oppgave fra NAV"
+    override val eposttittel = "Du har fått en oppgave fra Nav"
     override val smstekst =
-        "Hei! Du har fått en ny oppgave fra NAV. Logg inn på NAV for å se hva oppgaven gjelder. Vennlig hilsen NAV"
+        "Hei! Du har fått en ny oppgave fra Nav. Logg inn på Nav for å se hva oppgaven gjelder. Vennlig hilsen Nav"
     override val epostTekstfil = "epost_oppgave.txt"
     override val epostTekst = this::class.java.getResource("/texts/$epostTekstfil")!!.readText(Charsets.UTF_8)
 }
 
 private object BeskjedTekster: Standardtekster {
-    override val eposttittel = "Beskjed fra NAV"
-    override val smstekst = "Hei! Du har fått en ny beskjed fra NAV. Logg inn på NAV for å se hva beskjeden gjelder. Vennlig hilsen NAV"
+    override val eposttittel = "Beskjed fra Nav"
+    override val smstekst = "Hei! Du har fått en ny beskjed fra Nav. Logg inn på Nav for å se hva beskjeden gjelder. Vennlig hilsen Nav"
     override val epostTekstfil = "epost_beskjed.txt"
     override val epostTekst = this::class.java.getResource("/texts/${epostTekstfil}")!!.readText(Charsets.UTF_8)
 }
 
 private object InnboksTekster: Standardtekster {
-    override val eposttittel = "Du har fått en melding fra NAV"
-    override val smstekst = "Hei! Du har fått en ny melding fra NAV. Logg inn på NAV for å lese meldingen. Vennlig hilsen NAV"
+    override val eposttittel = "Du har fått en melding fra Nav"
+    override val smstekst = "Hei! Du har fått en ny melding fra Nav. Logg inn på Nav for å lese meldingen. Vennlig hilsen Nav"
     override val epostTekstfil = "epost_innboks.txt"
     override val epostTekst = this::class.java.getResource("/texts/${epostTekstfil}")!!.readText(Charsets.UTF_8)
 }
