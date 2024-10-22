@@ -24,20 +24,17 @@ class PeriodicVarselSender(
 ) : PeriodicJob(interval) {
 
     private val log = KotlinLogging.logger {}
-
-    private var count = -1
+    private val securelog = KotlinLogging.logger("secureLog")
 
     override val job = initializeJob {
-        if (leaderElection.isLeader()) {
+        if (leaderElection.isLeader()) try {
             repository
                 .nextInVarselQueue(gracePeriod)
                 .also { logInfo(it) }
                 .forEach(::processRequest)
-        } else {
-            count = (count + 1) % 60
-            if (count == 0) {
-                log.info { "Was not leader" }
-            }
+        } catch (e: Exception) {
+            log.error { "Feil ved prosessering av varsel-kø" }
+            securelog.error(e) { "Feil ved prosessering av varsel-kø" }
         }
     }
 
