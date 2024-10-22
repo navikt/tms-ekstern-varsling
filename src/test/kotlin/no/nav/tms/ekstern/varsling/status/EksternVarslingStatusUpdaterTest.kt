@@ -184,6 +184,7 @@ class EksternVarslingStatusSubscriberTest {
             val ferdigstilt = output.find { it["status"].textValue() == "sendt" }!!
             ferdigstilt["@event_name"].textValue() shouldBe "eksternVarslingStatusOppdatert"
             ferdigstilt["varselId"].textValue() shouldBe oppgave.varselId
+            ferdigstilt["ident"].textValue() shouldBe ident
             ferdigstilt["kanal"].textValue() shouldBe "SMS"
             ferdigstilt["renotifikasjon"].booleanValue() shouldBe false
             ferdigstilt["tidspunkt"].textValue().let { ZonedDateTime.parse(it) } shouldNotBe null

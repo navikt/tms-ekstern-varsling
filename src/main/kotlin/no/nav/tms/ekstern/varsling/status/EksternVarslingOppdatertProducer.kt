@@ -39,6 +39,7 @@ class EksternVarslingOppdatertProducer(private val kafkaProducer: Producer<Strin
 data class EksternStatusOppdatering(
     val status: EksternStatus.Status,
     val varselId: String,
+    val ident: String,
     val kanal: String?,
     val renotifikasjon: Boolean?,
     val batch: Boolean,
