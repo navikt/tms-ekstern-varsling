@@ -28,6 +28,7 @@ fun <V> initializeKafkaProducer(
             put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer::class.java)
             if (useAvroSerializer) {
                 log.info { "Using avro serializer" }
+                put(KafkaAvroSerializerConfig.BASIC_AUTH_CREDENTIALS_SOURCE, "USER_INFO")
                 put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaAvroSerializer::class.java)
                 put(KafkaAvroSerializerConfig.SCHEMA_REGISTRY_URL_CONFIG, environment.kafkaSchemaRegistry)
                 put(
