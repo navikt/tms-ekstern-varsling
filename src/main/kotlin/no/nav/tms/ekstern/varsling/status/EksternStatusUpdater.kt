@@ -59,7 +59,7 @@ class EksternStatusUpdater(
 
         repository.updateEksternStatus(varsling.sendingsId, updatedStatus)
         varsling.varsler.forEach { varsel ->
-            buildOppdatering(newEntry, varsel, batch = varsling.varsler.size > 1).let {
+            buildOppdatering(varsling.ident, newEntry, varsel, batch = varsling.varsler.size > 1).let {
                 eksternVarslingOppdatertProducer.eksternStatusOppdatert(it)
             }
         }
@@ -100,11 +100,12 @@ class EksternStatusUpdater(
         return Duration.between(previous, statusEvent.tidspunkt)
     }
 
-    private fun buildOppdatering(newEntry: EksternStatus.HistorikkEntry, varsel: Varsel, batch: Boolean) = EksternStatusOppdatering(
+    private fun buildOppdatering(ident: String, newEntry: EksternStatus.HistorikkEntry, varsel: Varsel, batch: Boolean) = EksternStatusOppdatering(
         status = newEntry.status,
         kanal = newEntry.kanal,
         varseltype = varsel.varseltype,
         varselId = varsel.varselId,
+        ident = ident,
         renotifikasjon = newEntry.renotifikasjon,
         feilmelding = if (newEntry.status == Feilet) newEntry.melding else null,
         batch = batch,
