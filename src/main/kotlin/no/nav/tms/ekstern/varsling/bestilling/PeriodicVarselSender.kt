@@ -27,14 +27,16 @@ class PeriodicVarselSender(
     private val securelog = KotlinLogging.logger("secureLog")
 
     override val job = initializeJob {
-        if (leaderElection.isLeader()) try {
-            repository
-                .nextInVarselQueue(gracePeriod)
-                .also { logInfo(it) }
-                .forEach(::processRequest)
-        } catch (e: Exception) {
-            log.error { "Feil ved prosessering av varsel-kø" }
-            securelog.error(e) { "Feil ved prosessering av varsel-kø" }
+        if (leaderElection.isLeader()) {
+            try {
+                repository
+                    .nextInVarselQueue(gracePeriod)
+                    .also { logInfo(it) }
+                    .forEach(::processRequest)
+            } catch (e: Exception) {
+                log.error { "Feil ved prosessering av varsel-kø" }
+                securelog.error(e) { "Feil ved prosessering av varsel-kø" }
+            }
         }
     }
 
