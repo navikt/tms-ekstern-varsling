@@ -19,7 +19,7 @@ class PeriodicVarselSender(
     private val kafkaProducer: Producer<String, Doknotifikasjon>,
     private val doknotTopic: String,
     private val leaderElection: PodLeaderElection,
-    private val gracePeriod: Duration = Duration.ofMinutes(5),
+    private val gracePeriod: Duration = Duration.ofMinutes(15),
     interval: Duration = Duration.ofSeconds(1),
 ) : PeriodicJob(interval) {
 
@@ -154,14 +154,14 @@ private fun mapKanal(kanal: Kanal) = when(kanal) {
 }
 
 private val EKSTERN_VARSLING_SENDT: Counter = Counter.build()
-    .name("ekstern_varsling_sendt")
-    .namespace("tms_ekstern_varsling_v1")
-    .help("Ekstern varsling sendt")
+    .name("ekstern_varsling_bestilt")
+    .namespace("tms_ekstern_varsling_v2")
+    .help("Ekstern varsling bestilt")
     .labelNames("er_batch","kanal", "er_utsatt")
     .register()
 
 private val EKSTERN_VARSLING_KANSELLERT: Counter = Counter.build()
     .name("ekstern_varsling_kansellert")
-    .namespace("tms_ekstern_varsling_v1")
+    .namespace("tms_ekstern_varsling_v2")
     .help("Ekstern varsling kansellert")
     .register()

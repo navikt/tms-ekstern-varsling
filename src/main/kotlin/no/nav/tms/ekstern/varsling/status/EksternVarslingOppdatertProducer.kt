@@ -2,6 +2,7 @@ package no.nav.tms.ekstern.varsling.status
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.prometheus.client.Counter
 import no.nav.tms.ekstern.varsling.bestilling.EksternStatus
 import no.nav.tms.ekstern.varsling.bestilling.Produsent
 import no.nav.tms.ekstern.varsling.bestilling.Varseltype
@@ -21,6 +22,14 @@ class EksternVarslingOppdatertProducer(private val kafkaProducer: Producer<Strin
         val producerRecord = ProducerRecord(topicName, oppdatering.varselId, objectMapper.writeValueAsString(oppdatering))
 
         kafkaProducer.send(producerRecord)
+
+        EKSTERN_STATUS_OPPDATERT.labels(
+            oppdatering.varseltype.name.lowercase(),
+            oppdatering.status.name.lowercase(),
+            oppdatering.kanal ?: "",
+            oppdatering.renotifikasjon?.toString() ?: "",
+            oppdatering.batch.toString(),
+        ).inc()
 
         log.info { "eksternStatusOppdatert-event produsert til kafka" }
     }
@@ -49,5 +58,11 @@ data class EksternStatusOppdatering(
 ) {
     @JsonProperty("@event_name") val eventName = "eksternVarslingStatusOppdatert"
     val tidspunkt = nowAtUtc()
-
 }
+
+private val EKSTERN_STATUS_OPPDATERT: Counter = Counter.build()
+    .name("ekstern_varsling_status_oppdatert")
+    .namespace("tms_ekstern_varsling_v2")
+    .help("Ekstern varsling status oppdatert")
+    .labelNames("varseltype", "status", "kanal", "renotifikasjon", "batch")
+    .register()
