@@ -78,7 +78,7 @@ class TeksterTest {
 
         oppgaver.smsTekst shouldBe "Hei! Du har fått 3 oppgave(er) fra Nav. Logg inn på Nav for å se hva det gjelder. Vennlig hilsen Nav"
         oppgaver.epostTittel shouldBe "Du har fått varsler fra Nav"
-        oppgaver.epostTekst shouldBe "<!DOCTYPE html><html><head><title>Varsel</title></head><body><p>Hei!</p><p>Du har fått 3 oppgave(er) fra Nav. Logg inn på Nav for å lese hva det gjelder.</p><p>Vennlig hilsen</p><p>Nav</p></body></html>\n"
+        oppgaver.epostTekst shouldBe "<!DOCTYPE html><html><head><title>Varsel</title></head><body><p>Hei!</p><p>Du har fått 3 oppgave(er) fra Nav. Logg inn på Nav for å se hva det gjelder.</p><p>Vennlig hilsen</p><p>Nav</p></body></html>\n"
 
         val blandetVarsler = createEksternVarsling(
             createVarsel(Varseltype.Beskjed),
@@ -91,7 +91,7 @@ class TeksterTest {
 
         blandetVarsler.smsTekst shouldBe "Hei! Du har fått 3 beskjed(er) og 2 oppgave(er) fra Nav. Logg inn på Nav for å se hva det gjelder. Vennlig hilsen Nav"
         blandetVarsler.epostTittel shouldBe "Du har fått varsler fra Nav"
-        blandetVarsler.epostTekst shouldBe "<!DOCTYPE html><html><head><title>Varsel</title></head><body><p>Hei!</p><p>Du har fått 3 beskjed(er) og 2 oppgave(er) fra Nav. Logg inn på Nav for å lese hva det gjelder.</p><p>Vennlig hilsen</p><p>Nav</p></body></html>\n"
+        blandetVarsler.epostTekst shouldBe "<!DOCTYPE html><html><head><title>Varsel</title></head><body><p>Hei!</p><p>Du har fått 3 beskjed(er) og 2 oppgave(er) fra Nav. Logg inn på Nav for å se hva det gjelder.</p><p>Vennlig hilsen</p><p>Nav</p></body></html>\n"
     }
 
     @Test
@@ -107,7 +107,7 @@ class TeksterTest {
 
         oppgaver.smsTekst shouldBe "Hei! Du har fått 4 oppgave(er) fra Nav. Logg inn på Nav for å se hva det gjelder. Vennlig hilsen Nav"
         oppgaver.epostTittel shouldBe "Du har fått varsler fra Nav"
-        oppgaver.epostTekst shouldBe "<!DOCTYPE html><html><head><title>Varsel</title></head><body><p>Hei!</p><p>Du har fått 4 oppgave(er) fra Nav. Logg inn på Nav for å lese hva det gjelder.</p><p>Vennlig hilsen</p><p>Nav</p></body></html>\n"
+        oppgaver.epostTekst shouldBe "<!DOCTYPE html><html><head><title>Varsel</title></head><body><p>Hei!</p><p>Du har fått 4 oppgave(er) fra Nav. Logg inn på Nav for å se hva det gjelder.</p><p>Vennlig hilsen</p><p>Nav</p></body></html>\n"
 
     }
 }

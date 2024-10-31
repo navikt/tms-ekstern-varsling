@@ -40,7 +40,7 @@ fun main() {
             readTopics(environment.varselTopic)
         }
         subscribers(
-            OpprettetVarselSubscriber(eksternVarselRepository),
+            OpprettetVarselSubscriber(eksternVarselRepository, environment.enableBatch),
             InaktivertVarselSubscriber(
                 eksternVarselRepository,
                 initializeKafkaProducer(useAvroSerializer = true),

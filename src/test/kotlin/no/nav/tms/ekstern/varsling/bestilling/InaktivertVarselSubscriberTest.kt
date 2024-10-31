@@ -26,7 +26,7 @@ class InaktivertVarselSubscriberTest {
 
 
     private val repository = EksternVarslingRepository(database)
-    private val opprettetVarselBroadcaster = MessageBroadcaster(listOf(OpprettetVarselSubscriber(repository)))
+    private val opprettetVarselBroadcaster = MessageBroadcaster(listOf(OpprettetVarselSubscriber(repository, enableBatch = true)))
     private val inaktiverVarselBroadcaster = MessageBroadcaster(listOf(InaktivertVarselSubscriber(repository, mockProducer, "dummyTopic")))
 
     @AfterEach

@@ -20,7 +20,7 @@ class OpprettetVarselSubscriberTest {
     private val testFnr = "12345678910"
 
     private val repository = EksternVarslingRepository(database)
-    private val broadcaster = MessageBroadcaster(listOf(OpprettetVarselSubscriber(repository)))
+    private val broadcaster = MessageBroadcaster(listOf(OpprettetVarselSubscriber(repository, enableBatch = true)))
 
     @AfterEach
     fun cleanup() {
@@ -83,6 +83,33 @@ class OpprettetVarselSubscriberTest {
         utsending.shouldNotBeNull()
         utsending.shouldBeBetween(ZonedDateTimeHelper.nowAtUtc().plusMinutes(59), ZonedDateTimeHelper.nowAtUtc().plusMinutes(60))
 
+    }
+
+    @Test
+    fun `tillater å skru av all batching`() {
+
+        val localBroadcaster = MessageBroadcaster(listOf(OpprettetVarselSubscriber(repository, enableBatch = false)))
+
+        localBroadcaster.broadcastJson(varselOpprettetEvent(id = UUID.randomUUID().toString(), ident = testFnr, kanBatches = true))
+        localBroadcaster.broadcastJson(varselOpprettetEvent(id = UUID.randomUUID().toString(), ident = testFnr, kanBatches = false))
+        localBroadcaster.broadcastJson(varselOpprettetEvent(id = UUID.randomUUID().toString(), ident = testFnr, kanBatches = false))
+        localBroadcaster.broadcastJson(varselOpprettetEvent(id = UUID.randomUUID().toString(), ident = testFnr, kanBatches = true))
+        localBroadcaster.broadcastJson(varselOpprettetEvent(id = UUID.randomUUID().toString(), ident = testFnr, kanBatches = true))
+        localBroadcaster.broadcastJson(varselOpprettetEvent(id = UUID.randomUUID().toString(), ident = testFnr, kanBatches = true))
+        localBroadcaster.broadcastJson(varselOpprettetEvent(id = UUID.randomUUID().toString(), ident = testFnr, kanBatches = true))
+
+
+        database.singleOrNull {
+            queryOf("select count(*) as antall from ekstern_varsling")
+                .map { it.int("antall") }
+                .asSingle
+        } shouldBe 7
+
+        database.singleOrNull {
+            queryOf("select count(*) as antall from ekstern_varsling where utsending is null")
+                .map { it.int("antall") }
+                .asSingle
+        } shouldBe 7
     }
 
     @Test

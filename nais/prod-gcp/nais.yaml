@@ -55,3 +55,5 @@ spec:
       value: "teamdokumenthandtering.privat-dok-notifikasjon"
     - name: DOKNOTIFIKASJON_STOP_TOPIC
       value: "teamdokumenthandtering.privat-dok-notifikasjon-stopp"
+    - name: ENABLE_BATCH
+      value: "false"

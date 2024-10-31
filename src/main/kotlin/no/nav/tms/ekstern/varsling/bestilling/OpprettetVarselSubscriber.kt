@@ -10,7 +10,10 @@ import java.time.ZonedDateTime
 import java.util.*
 
 
-class OpprettetVarselSubscriber(private val repository: EksternVarslingRepository) : Subscriber() {
+class OpprettetVarselSubscriber(
+    private val repository: EksternVarslingRepository,
+    private val enableBatch: Boolean
+) : Subscriber() {
 
     private val log = KotlinLogging.logger {}
 
@@ -60,7 +63,12 @@ class OpprettetVarselSubscriber(private val repository: EksternVarslingRepositor
     }
 
     fun createNewEksternVarsling(varsel: Varsel, jsonMessage: JsonMessage) {
-        val kanBatches = jsonMessage["eksternVarslingBestilling"]["kanBatches"].asBooleanOrNull() ?: false
+        val kanBatches = if (enableBatch) {
+            jsonMessage["eksternVarslingBestilling"]["kanBatches"].asBooleanOrNull() ?: false
+        } else {
+            false
+        }
+
         val utsettSendingTil = jsonMessage["eksternVarslingBestilling"]["utsettSendingTil"].asTextOrNull()?.let { ZonedDateTime.parse(it) }
 
         val (erBatch, utsending) = if (utsettSendingTil != null) {
@@ -91,7 +99,12 @@ class OpprettetVarselSubscriber(private val repository: EksternVarslingRepositor
     }
 
     fun findExistingBatch(jsonMessage: JsonMessage): EksternVarsling? {
-        val kanBatches = jsonMessage["eksternVarslingBestilling"]["kanBatches"].asBooleanOrNull() ?: false
+        val kanBatches = if (enableBatch) {
+            jsonMessage["eksternVarslingBestilling"]["kanBatches"].asBooleanOrNull() ?: false
+        } else {
+            false
+        }
+
         val utsettSendingTil = jsonMessage["eksternVarslingBestilling"]["utsettSendingTil"].asTextOrNull()?.let { ZonedDateTime.parse(it) }
 
         return if (kanBatches && utsettSendingTil == null) {
