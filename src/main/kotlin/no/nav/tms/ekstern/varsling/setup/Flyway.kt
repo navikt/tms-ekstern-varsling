@@ -1,23 +1,27 @@
 package no.nav.tms.ekstern.varsling.setup
 
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.flywaydb.core.Flyway
 import org.flywaydb.core.api.configuration.FluentConfiguration
+import org.flywaydb.core.internal.info.MigrationInfoDumper
 
 object Flyway {
 
-    fun runFlywayMigrations() {
-        val flyway = configure().load()
-        flyway.migrate()
-    }
+    private val log = KotlinLogging.logger {}
 
-    private fun configure(): FluentConfiguration {
-        val configBuilder = Flyway.configure()
+    fun runFlywayMigrations() = try {
+
+        log.info { "Starter flyway-migrering" }
+
+        Flyway.configure()
             .validateMigrationNaming(true)
             .connectRetries(5)
-        val dataSource = PostgresDatabase.hikariFromLocalDb()
-        configBuilder.dataSource(dataSource)
+            .dataSource(PostgresDatabase.hikariFromLocalDb())
+            .load()
+            .migrate()
 
-        return configBuilder
+        log.info { "Flyway migrering ferdig" }
+    } catch (e: Exception) {
+        log.warn(e) { "Feil ved flyway-migrering" }
     }
-
 }

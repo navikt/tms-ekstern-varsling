@@ -76,9 +76,9 @@ class TeksterTest {
             createVarsel(Varseltype.Oppgave)
         ).let { bestemTekster(it) }
 
-        oppgaver.smsTekst shouldBe "Hei! Du har fått 3 oppgave(er) fra NAV. Logg inn på NAV for å se hva det gjelder. Vennlig hilsen NAV"
-        oppgaver.epostTittel shouldBe "Du har fått varsler fra NAV"
-        oppgaver.epostTekst shouldBe "<!DOCTYPE html><html><head><title>Varsel</title></head><body><p>Hei!</p><p>Du har fått 3 oppgave(er) fra NAV. Logg inn på NAV for å lese hva det gjelder.</p><p>Vennlig hilsen</p><p>NAV</p></body></html>\n"
+        oppgaver.smsTekst shouldBe "Hei! Du har fått 3 oppgave(er) fra Nav. Logg inn på Nav for å se hva det gjelder. Vennlig hilsen Nav"
+        oppgaver.epostTittel shouldBe "Du har fått varsler fra Nav"
+        oppgaver.epostTekst shouldBe "<!DOCTYPE html><html><head><title>Varsel</title></head><body><p>Hei!</p><p>Du har fått 3 oppgave(er) fra Nav. Logg inn på Nav for å lese hva det gjelder.</p><p>Vennlig hilsen</p><p>Nav</p></body></html>\n"
 
         val blandetVarsler = createEksternVarsling(
             createVarsel(Varseltype.Beskjed),
@@ -89,9 +89,9 @@ class TeksterTest {
 
             ).let { bestemTekster(it) }
 
-        blandetVarsler.smsTekst shouldBe "Hei! Du har fått 3 beskjed(er) og 2 oppgave(er) fra NAV. Logg inn på NAV for å se hva det gjelder. Vennlig hilsen NAV"
-        blandetVarsler.epostTittel shouldBe "Du har fått varsler fra NAV"
-        blandetVarsler.epostTekst shouldBe "<!DOCTYPE html><html><head><title>Varsel</title></head><body><p>Hei!</p><p>Du har fått 3 beskjed(er) og 2 oppgave(er) fra NAV. Logg inn på NAV for å lese hva det gjelder.</p><p>Vennlig hilsen</p><p>NAV</p></body></html>\n"
+        blandetVarsler.smsTekst shouldBe "Hei! Du har fått 3 beskjed(er) og 2 oppgave(er) fra Nav. Logg inn på Nav for å se hva det gjelder. Vennlig hilsen Nav"
+        blandetVarsler.epostTittel shouldBe "Du har fått varsler fra Nav"
+        blandetVarsler.epostTekst shouldBe "<!DOCTYPE html><html><head><title>Varsel</title></head><body><p>Hei!</p><p>Du har fått 3 beskjed(er) og 2 oppgave(er) fra Nav. Logg inn på Nav for å lese hva det gjelder.</p><p>Vennlig hilsen</p><p>Nav</p></body></html>\n"
     }
 
     @Test
@@ -105,9 +105,9 @@ class TeksterTest {
             createVarsel(Varseltype.Oppgave, aktiv = false)
         ).let { bestemTekster(it) }
 
-        oppgaver.smsTekst shouldBe "Hei! Du har fått 4 oppgave(er) fra NAV. Logg inn på NAV for å se hva det gjelder. Vennlig hilsen NAV"
-        oppgaver.epostTittel shouldBe "Du har fått varsler fra NAV"
-        oppgaver.epostTekst shouldBe "<!DOCTYPE html><html><head><title>Varsel</title></head><body><p>Hei!</p><p>Du har fått 4 oppgave(er) fra NAV. Logg inn på NAV for å lese hva det gjelder.</p><p>Vennlig hilsen</p><p>NAV</p></body></html>\n"
+        oppgaver.smsTekst shouldBe "Hei! Du har fått 4 oppgave(er) fra Nav. Logg inn på Nav for å se hva det gjelder. Vennlig hilsen Nav"
+        oppgaver.epostTittel shouldBe "Du har fått varsler fra Nav"
+        oppgaver.epostTekst shouldBe "<!DOCTYPE html><html><head><title>Varsel</title></head><body><p>Hei!</p><p>Du har fått 4 oppgave(er) fra Nav. Logg inn på Nav for å lese hva det gjelder.</p><p>Vennlig hilsen</p><p>Nav</p></body></html>\n"
 
     }
 }
@@ -118,6 +118,7 @@ private fun createVarsel(
     epostVarslingstittel: String? = null,
     epostVarslingstekst: String? = null,
     aktiv: Boolean = true,
+    behandletAvLegacy: Boolean = false
 ) = Varsel(
     varselId = "1234",
     varseltype = varseltype,
@@ -126,7 +127,8 @@ private fun createVarsel(
     epostVarslingstittel = epostVarslingstittel,
     epostVarslingstekst = epostVarslingstekst,
     produsent = Produsent(cluster = "cluster", namespace = "namespace", appnavn = "appnavn"),
-    aktiv = aktiv
+    aktiv = aktiv,
+    behandletAvLegacy = behandletAvLegacy
 )
 
 
@@ -142,29 +144,31 @@ private fun createEksternVarsling(
     kanal = Kanal.SMS,
     ferdigstilt = null,
     opprettet = ZonedDateTimeHelper.nowAtUtc(),
-    status = Sendingsstatus.Venter
+    status = Sendingsstatus.Venter,
+    eksternStatus = null,
+    revarsling = null
 )
 
 private object ForventetDefaultOppgaveTekst {
-    val eposttittel = "Du har fått en oppgave fra NAV"
+    val eposttittel = "Du har fått en oppgave fra Nav"
     val smstekst =
-        "Hei! Du har fått en ny oppgave fra NAV. Logg inn på NAV for å se hva oppgaven gjelder. Vennlig hilsen NAV"
+        "Hei! Du har fått en ny oppgave fra Nav. Logg inn på Nav for å se hva oppgaven gjelder. Vennlig hilsen Nav"
     val epostTekst =
-        "<!DOCTYPE html><html><head><title>Varsel</title></head><body><p>Hei!</p><p>Du har fått en ny oppgave fra NAV. Logg inn på NAV for å se hva oppgaven gjelder.</p><p>Vennlig hilsen</p><p>NAV</p></body></html>\n"
+        "<!DOCTYPE html><html><head><title>Varsel</title></head><body><p>Hei!</p><p>Du har fått en ny oppgave fra Nav. Logg inn på Nav for å se hva oppgaven gjelder.</p><p>Vennlig hilsen</p><p>Nav</p></body></html>\n"
 }
 
 private object ForventetDefaultBeskjedTekst {
-    val eposttittel = "Beskjed fra NAV"
+    val eposttittel = "Beskjed fra Nav"
     val smstekst =
-        "Hei! Du har fått en ny beskjed fra NAV. Logg inn på NAV for å se hva beskjeden gjelder. Vennlig hilsen NAV"
+        "Hei! Du har fått en ny beskjed fra Nav. Logg inn på Nav for å se hva beskjeden gjelder. Vennlig hilsen Nav"
     val epostTekst =
-        "<!DOCTYPE html><html><head><title>Varsel</title></head><body><p>Hei!</p><p>Du har fått en ny beskjed fra NAV. Logg inn på NAV for å se hva beskjeden gjelder.</p><p>Vennlig hilsen</p><p>NAV</p></body></html>\n"
+        "<!DOCTYPE html><html><head><title>Varsel</title></head><body><p>Hei!</p><p>Du har fått en ny beskjed fra Nav. Logg inn på Nav for å se hva beskjeden gjelder.</p><p>Vennlig hilsen</p><p>Nav</p></body></html>\n"
 }
 
 private object ForventetDefaultInnboksTekst {
-    val eposttittel = "Du har fått en melding fra NAV"
+    val eposttittel = "Du har fått en melding fra Nav"
     val smstekst =
-        "Hei! Du har fått en ny melding fra NAV. Logg inn på NAV for å lese meldingen. Vennlig hilsen NAV"
+        "Hei! Du har fått en ny melding fra Nav. Logg inn på Nav for å lese meldingen. Vennlig hilsen Nav"
     val epostTekst =
-        "<!DOCTYPE html><html><head><title>Varsel</title></head><body><p>Hei!</p><p>Du har fått en ny melding fra NAV. Logg inn på NAV for å lese meldingen.</p><p>Vennlig hilsen</p><p>NAV</p></body></html>\n"
+        "<!DOCTYPE html><html><head><title>Varsel</title></head><body><p>Hei!</p><p>Du har fått en ny melding fra Nav. Logg inn på Nav for å lese meldingen.</p><p>Vennlig hilsen</p><p>Nav</p></body></html>\n"
 }

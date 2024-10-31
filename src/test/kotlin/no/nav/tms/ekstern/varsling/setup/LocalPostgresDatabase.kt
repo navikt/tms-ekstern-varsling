@@ -2,9 +2,11 @@ package no.nav.tms.ekstern.varsling.setup
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.zaxxer.hikari.HikariDataSource
+import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.serialization.json.Json
 import kotliquery.queryOf
 import org.flywaydb.core.Flyway
+import org.flywaydb.core.internal.info.MigrationInfoDumper
 import org.testcontainers.containers.PostgreSQLContainer
 
 class LocalPostgresDatabase private constructor() : Database {
@@ -15,7 +17,7 @@ class LocalPostgresDatabase private constructor() : Database {
     companion object {
         private val instance by lazy {
             LocalPostgresDatabase().also {
-                it.migrate(expectedMigrations = 3)
+                it.migrate(expectedMigrations = 4)
             }
         }
 

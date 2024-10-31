@@ -1,17 +1,17 @@
 package no.nav.tms.ekstern.varsling.bestilling
 
 import io.kotest.matchers.collections.shouldBeIn
+import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotliquery.queryOf
+import no.nav.doknotifikasjon.schemas.Doknotifikasjon
 import no.nav.tms.common.kubernetes.PodLeaderElection
-import no.nav.tms.ekstern.varsling.setup.Database
-import no.nav.tms.ekstern.varsling.setup.LocalPostgresDatabase
-import no.nav.tms.ekstern.varsling.setup.defaultObjectMapper
-import no.nav.tms.ekstern.varsling.setup.toJsonb
+import no.nav.tms.ekstern.varsling.setup.*
 import org.apache.kafka.clients.producer.MockProducer
 import org.apache.kafka.common.serialization.StringSerializer
 import org.junit.jupiter.api.AfterEach
@@ -24,13 +24,13 @@ import java.util.*
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class PeriodicVarselSenderTest {
     private val database = LocalPostgresDatabase.cleanDb()
-    private val repository = EksternVarselRepository(database)
+    private val repository = EksternVarslingRepository(database)
     private val testFnr = "12345678910"
 
-    private val mockProducer = MockProducer(
+    private val mockProducer = MockProducer<String, Doknotifikasjon>(
         false,
         StringSerializer(),
-        StringSerializer()
+        DummySerializer()
     )
 
     private val leaderElection: PodLeaderElection = mockk()
@@ -45,16 +45,19 @@ class PeriodicVarselSenderTest {
 
     @Test
     fun `behandler batch og sender ekstern varsel på kafka`() = runBlocking<Unit> {
-        database.insertEksternVarsling(createEksternVarslingDBRow(UUID.randomUUID().toString(), testFnr))
-        database.insertEksternVarsling(createEksternVarslingDBRow(UUID.randomUUID().toString(), testFnr))
-        database.insertEksternVarsling(createEksternVarslingDBRow(UUID.randomUUID().toString(), testFnr))
+        database.insertEksternVarsling(eksternVarslingDBRow(UUID.randomUUID().toString(), testFnr))
+        database.insertEksternVarsling(eksternVarslingDBRow(UUID.randomUUID().toString(), testFnr))
+        database.insertEksternVarsling(eksternVarslingDBRow(UUID.randomUUID().toString(), testFnr))
 
-        val periodicVarselSender = PeriodicVarselSender(repository, mockProducer, "test-topic", leaderElection, interval = Duration.ofMinutes(1))
+        val periodicVarselSender = PeriodicVarselSender(
+            repository, mockProducer, "test-topic", leaderElection,
+            gracePeriod = Duration.ZERO, interval = Duration.ofMinutes(1)
+        )
 
         coEvery { leaderElection.isLeader() } returns true
 
         periodicVarselSender.start()
-        delay(2000)
+        delay(500)
         mockProducer.history().size shouldBe 3
         database.tellAntallSendt() shouldBe 3
     }
@@ -64,40 +67,46 @@ class PeriodicVarselSenderTest {
     fun `behandle kun batch som ikke har blitt behandlet`() = runBlocking<Unit> {
         val tidligereBehandletDato = ZonedDateTimeHelper.nowAtUtc().minusDays(3)
         database.insertEksternVarsling(
-            createEksternVarslingDBRow(
+            eksternVarslingDBRow(
                 UUID.randomUUID().toString(),
                 testFnr,
                 ferdigstilt = tidligereBehandletDato
             )
         )
         database.insertEksternVarsling(
-            createEksternVarslingDBRow(
+            eksternVarslingDBRow(
                 UUID.randomUUID().toString(), testFnr, ferdigstilt = tidligereBehandletDato
             )
         )
         database.insertEksternVarsling(
-            createEksternVarslingDBRow(
+            eksternVarslingDBRow(
                 UUID.randomUUID().toString(), testFnr, ferdigstilt = tidligereBehandletDato
             )
         )
-        database.insertEksternVarsling(createEksternVarslingDBRow(UUID.randomUUID().toString(), testFnr))
-        database.insertEksternVarsling(createEksternVarslingDBRow(UUID.randomUUID().toString(), testFnr))
+        database.insertEksternVarsling(eksternVarslingDBRow(UUID.randomUUID().toString(), testFnr))
+        database.insertEksternVarsling(eksternVarslingDBRow(UUID.randomUUID().toString(), testFnr))
 
-        val periodicVarselSender = PeriodicVarselSender(repository, mockProducer, "test-topic", leaderElection, interval = Duration.ofMinutes(1))
+        val periodicVarselSender = PeriodicVarselSender(
+            repository, mockProducer, "test-topic", leaderElection,
+            gracePeriod = Duration.ZERO, interval = Duration.ofMinutes(1)
+        )
 
         coEvery { leaderElection.isLeader() } returns true
 
         periodicVarselSender.start()
-        delay(2000)
+        delay(500)
         mockProducer.history().size shouldBe 2
         database.tellAntallSendtFørDato(tidligereBehandletDato.plusHours(2)) shouldBe 3
     }
 
     @Test
     fun `riktig format på utsendt event`() = runBlocking<Unit>{
-        val eksternVarslingData = createEksternVarslingDBRow(UUID.randomUUID().toString(), testFnr)
+        val eksternVarslingData = eksternVarslingDBRow(UUID.randomUUID().toString(), testFnr)
         database.insertEksternVarsling(eksternVarslingData)
-        val periodicVarselSender = PeriodicVarselSender(repository, mockProducer, "test-topic", leaderElection, interval = Duration.ofMinutes(1))
+        val periodicVarselSender = PeriodicVarselSender(
+            repository, mockProducer, "test-topic", leaderElection,
+            gracePeriod = Duration.ZERO, interval = Duration.ofMinutes(1)
+        )
 
         coEvery { leaderElection.isLeader() } returns true
 
@@ -105,79 +114,206 @@ class PeriodicVarselSenderTest {
         delay(500)
         mockProducer.history().size shouldBe 1
 
-        val objectMapper = defaultObjectMapper()
-        val jsonTree = mockProducer.history().first().let { objectMapper.readTree(it.value()) }
+        val doknot = mockProducer.history().first().value()
         val tekster = bestemTekster(eksternVarslingData)
-        jsonTree["sendingsId"].asText() shouldBe eksternVarslingData.sendingsId
-        jsonTree["ident"].asText() shouldBe eksternVarslingData.ident
-        jsonTree["kanal"].asText() shouldBeIn Kanal.entries.map { it.name }
-        jsonTree["smsVarslingstekst"].asText() shouldBe tekster.smsTekst
-        jsonTree["epostVarslingstittel"].asText() shouldBe tekster.epostTittel
-        jsonTree["epostVarslingstekst"].asText() shouldBe tekster.epostTekst
-        jsonTree["antallRevarslinger"].asInt() shouldBe 0
-        jsonTree["revarslingsIntervall"].asInt() shouldBe 0
-        jsonTree["produsent"]["cluster"].asText() shouldBe "todo-gcp"
-        jsonTree["produsent"]["appnavn"].asText() shouldBe "tms-ekstern-varsling"
-        jsonTree["produsent"]["namespace"].asText() shouldBe "min-side"
+        doknot.bestillingsId shouldBe eksternVarslingData.sendingsId
+        doknot.fodselsnummer shouldBe eksternVarslingData.ident
+        doknot.prefererteKanaler.first().name shouldBeIn Kanal.entries.map { it.name }
+        doknot.smsTekst shouldBe tekster.smsTekst
+        doknot.tittel shouldBe tekster.epostTittel
+        doknot.epostTekst shouldBe tekster.epostTekst
+        doknot.antallRenotifikasjoner shouldBe null
+        doknot.renotifikasjonIntervall shouldBe null
+        doknot.bestillerId shouldBe "tms-ekstern-varsling"
     }
 
     @Test
     fun `ignorer batch som kun har inaktive varsler`() = runBlocking<Unit> {
 
-        database.insertEksternVarsling(createEksternVarslingDBRow(UUID.randomUUID().toString(), testFnr, varsler = listOf(createVarsel(aktiv = false), createVarsel(aktiv = false))))
-        database.insertEksternVarsling(createEksternVarslingDBRow(UUID.randomUUID().toString(), testFnr, varsler = listOf(createVarsel(aktiv = false), createVarsel(aktiv = true))))
-        database.insertEksternVarsling(createEksternVarslingDBRow(UUID.randomUUID().toString(), testFnr, varsler = listOf(createVarsel(aktiv = true), createVarsel(aktiv = true))))
+        database.insertEksternVarsling(eksternVarslingDBRow(UUID.randomUUID().toString(), testFnr, varsler = listOf(createVarsel(aktiv = false), createVarsel(aktiv = false))))
+        database.insertEksternVarsling(eksternVarslingDBRow(UUID.randomUUID().toString(), testFnr, varsler = listOf(createVarsel(aktiv = false), createVarsel(aktiv = true))))
+        database.insertEksternVarsling(eksternVarslingDBRow(UUID.randomUUID().toString(), testFnr, varsler = listOf(createVarsel(aktiv = true), createVarsel(aktiv = true))))
 
 
-        val periodicVarselSender = PeriodicVarselSender(repository, mockProducer, "test-topic", leaderElection, interval = Duration.ofMinutes(1))
+        val periodicVarselSender = PeriodicVarselSender(
+            repository, mockProducer, "test-topic", leaderElection,
+            gracePeriod = Duration.ZERO, interval = Duration.ofMinutes(1)
+        )
 
         coEvery { leaderElection.isLeader() } returns true
 
         periodicVarselSender.start()
-        delay(2000)
+        delay(500)
         mockProducer.history().size shouldBe 2
-        database.tellAntallFeilet() shouldBe 1
+        database.tellAntallKansellert() shouldBe 1
         database.tellAntallSendt() shouldBe 2
     }
 
     @Test
     fun `velger riktig kanal basert på preferanser i varsler`() = runBlocking<Unit> {
-        database.insertEksternVarsling(createEksternVarslingDBRow(UUID.randomUUID().toString(), testFnr,
+        database.insertEksternVarsling(eksternVarslingDBRow(UUID.randomUUID().toString(), testFnr,
             varsler = listOf(createVarsel(prefererteKanaler = listOf(Kanal.EPOST)), createVarsel(prefererteKanaler = listOf(Kanal.EPOST))))
         )
-        database.insertEksternVarsling(createEksternVarslingDBRow(UUID.randomUUID().toString(), testFnr,
+        database.insertEksternVarsling(eksternVarslingDBRow(UUID.randomUUID().toString(), testFnr,
             varsler = listOf(createVarsel(prefererteKanaler = listOf(Kanal.SMS)), createVarsel(prefererteKanaler = listOf(Kanal.EPOST))))
         )
-        database.insertEksternVarsling(createEksternVarslingDBRow(UUID.randomUUID().toString(), testFnr,
+        database.insertEksternVarsling(eksternVarslingDBRow(UUID.randomUUID().toString(), testFnr,
             varsler = listOf(createVarsel(prefererteKanaler = listOf(Kanal.SMS)), createVarsel(prefererteKanaler = listOf(Kanal.SMS))))
         )
 
         database.tellAntallForKanal(null) shouldBe 3
 
-        val periodicVarselSender = PeriodicVarselSender(repository, mockProducer, "test-topic", leaderElection, interval = Duration.ofMinutes(1))
+        val periodicVarselSender = PeriodicVarselSender(
+            repository, mockProducer, "test-topic", leaderElection,
+            gracePeriod = Duration.ZERO, interval = Duration.ofMinutes(1)
+        )
 
         coEvery { leaderElection.isLeader() } returns true
 
         periodicVarselSender.start()
-        delay(2000)
+        delay(500)
         database.tellAntallForKanal(Kanal.EPOST) shouldBe 1
         database.tellAntallForKanal(Kanal.SMS) shouldBe 2
     }
 
     @Test
     fun `inaktiverte varsler påvirker ikke kanal`() = runBlocking<Unit> {
-        database.insertEksternVarsling(createEksternVarslingDBRow(UUID.randomUUID().toString(), testFnr,
+        database.insertEksternVarsling(eksternVarslingDBRow(UUID.randomUUID().toString(), testFnr,
             varsler = listOf(createVarsel(prefererteKanaler = listOf(Kanal.EPOST), aktiv = true), createVarsel(prefererteKanaler = listOf(Kanal.SMS), aktiv = false)))
         )
 
-        val periodicVarselSender = PeriodicVarselSender(repository, mockProducer, "test-topic", leaderElection, interval = Duration.ofMinutes(1))
+        val periodicVarselSender = PeriodicVarselSender(
+            repository, mockProducer, "test-topic", leaderElection,
+            gracePeriod = Duration.ZERO, interval = Duration.ofMinutes(1)
+        )
 
         coEvery { leaderElection.isLeader() } returns true
 
         periodicVarselSender.start()
-        delay(2000)
+        delay(500)
         database.tellAntallForKanal(Kanal.EPOST) shouldBe 1
         database.tellAntallForKanal(Kanal.SMS) shouldBe 0
+    }
+
+    @Test
+    fun `Setter revarsling for innboks som ikke batches`() = runBlocking<Unit> {
+        val sendingsId = UUID.randomUUID().toString()
+
+        database.insertEksternVarsling(eksternVarslingDBRow(sendingsId, testFnr,
+            varsler = listOf(createVarsel(varseltype = Varseltype.Innboks)))
+        )
+
+        val periodicVarselSender = PeriodicVarselSender(
+            repository, mockProducer, "test-topic", leaderElection,
+            gracePeriod = Duration.ZERO, interval = Duration.ofMinutes(1)
+        )
+
+        coEvery { leaderElection.isLeader() } returns true
+
+        periodicVarselSender.start()
+        delay(500)
+
+        repository.getEksternVarsling(sendingsId).let {
+            it.shouldNotBeNull()
+
+            it.revarsling.shouldNotBeNull()
+            it.revarsling!!.antall shouldBe 1
+            it.revarsling!!.intervall shouldBe 4
+        }
+
+        mockProducer.history().first().value().let {
+            it.antallRenotifikasjoner shouldBe 1
+            it.renotifikasjonIntervall shouldBe 4
+        }
+    }
+
+    @Test
+    fun `Setter revarsling for oppgave som ikke batches`() = runBlocking<Unit> {
+        val sendingsId = UUID.randomUUID().toString()
+
+        database.insertEksternVarsling(
+            eksternVarslingDBRow(
+                sendingsId, testFnr,
+                varsler = listOf(createVarsel(varseltype = Varseltype.Oppgave))
+            )
+        )
+
+        val periodicVarselSender = PeriodicVarselSender(
+            repository, mockProducer, "test-topic", leaderElection,
+            gracePeriod = Duration.ZERO, interval = Duration.ofMinutes(1)
+        )
+
+        coEvery { leaderElection.isLeader() } returns true
+
+        periodicVarselSender.start()
+        delay(500)
+
+        repository.getEksternVarsling(sendingsId).let {
+            it.shouldNotBeNull()
+
+            it.revarsling.shouldNotBeNull()
+            it.revarsling!!.antall shouldBe 1
+            it.revarsling!!.intervall shouldBe 7
+        }
+
+        mockProducer.history().first().value().let {
+            it.antallRenotifikasjoner shouldBe 1
+            it.renotifikasjonIntervall shouldBe 7
+        }
+    }
+
+    @Test
+    fun `Setter ikke revarsling for beskjed`() = runBlocking<Unit> {
+        val sendingsId = UUID.randomUUID().toString()
+
+        database.insertEksternVarsling(eksternVarslingDBRow(sendingsId, testFnr,
+            varsler = listOf(createVarsel(varseltype = Varseltype.Beskjed)))
+        )
+
+        val periodicVarselSender = PeriodicVarselSender(
+            repository, mockProducer, "test-topic", leaderElection,
+            gracePeriod = Duration.ZERO, interval = Duration.ofMinutes(1)
+        )
+
+        coEvery { leaderElection.isLeader() } returns true
+
+        periodicVarselSender.start()
+        delay(500)
+
+        repository.getEksternVarsling(sendingsId).let {
+            it.shouldNotBeNull()
+
+            it.revarsling.shouldBeNull()
+        }
+
+        mockProducer.history().first().value().let {
+            it.antallRenotifikasjoner shouldBe null
+            it.renotifikasjonIntervall shouldBe null
+        }
+    }
+
+
+    @Test
+    fun `Ignorerer varsler som er markert behandlet av tms-ekstern-varselbestiller`() = runBlocking<Unit> {
+        val sendingsId = UUID.randomUUID().toString()
+
+        database.insertEksternVarsling(eksternVarslingDBRow(sendingsId, testFnr,
+            varsler = listOf(createVarsel(varseltype = Varseltype.Beskjed, behandletAvLegacy = true)))
+        )
+
+        val periodicVarselSender = PeriodicVarselSender(
+            repository, mockProducer, "test-topic", leaderElection,
+            gracePeriod = Duration.ZERO, interval = Duration.ofMinutes(1)
+        )
+
+        coEvery { leaderElection.isLeader() } returns true
+
+        periodicVarselSender.start()
+        delay(500)
+        val eksternVarsling = repository.getEksternVarsling(sendingsId)
+
+        eksternVarsling.shouldNotBeNull()
+        eksternVarsling.status shouldBe Sendingsstatus.Kansellert
     }
 }
 
@@ -188,10 +324,10 @@ private fun Database.tellAntallSendt() = singleOrNull {
     ).map { it.int("antall") }.asSingle
 }
 
-private fun Database.tellAntallFeilet() = singleOrNull {
+private fun Database.tellAntallKansellert() = singleOrNull {
     queryOf(
         "select count(*) filter(where status = :status) as antall from ekstern_varsling where ferdigstilt is not Null",
-        mapOf("status" to Sendingsstatus.Kanselert.name)
+        mapOf("status" to Sendingsstatus.Kansellert.name)
     ).map { it.int("antall") }.asSingle
 }
 
@@ -220,8 +356,8 @@ fun Database.insertEksternVarsling(eksternVarsling: EksternVarsling) {
     update {
         queryOf(
             """
-                insert into ekstern_varsling(sendingsId, ident, erBatch, erUtsattVarsel, varsler, utsending, kanal, ferdigstilt, opprettet, status)
-                values (:sendingsId, :ident, :erBatch, :erUtsattVarsel, :varsler, :utsending, :kanal, :ferdigstilt, :opprettet, :status)
+                insert into ekstern_varsling(sendingsId, ident, erBatch, erUtsattVarsel, varsler, utsending, kanal, ferdigstilt, opprettet, status, revarsling)
+                values (:sendingsId, :ident, :erBatch, :erUtsattVarsel, :varsler, :utsending, :kanal, :ferdigstilt, :opprettet, :status, :revarsling)
             """,
             mapOf(
                 "sendingsId" to eksternVarsling.sendingsId,
@@ -233,6 +369,7 @@ fun Database.insertEksternVarsling(eksternVarsling: EksternVarsling) {
                 "kanal" to eksternVarsling.kanal?.name,
                 "ferdigstilt" to eksternVarsling.ferdigstilt,
                 "status" to eksternVarsling.status.name,
+                "revarsling" to eksternVarsling.revarsling.toJsonb(),
                 "opprettet" to eksternVarsling.opprettet,
             )
         )

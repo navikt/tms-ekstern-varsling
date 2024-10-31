@@ -18,6 +18,7 @@ kotlin {
 
 repositories {
     mavenCentral()
+    maven("https://packages.confluent.io/maven")
     maven {
         url = uri("https://github-package-registry-mirror.gc.nav.no/cached/maven-release")
     }
@@ -31,6 +32,8 @@ tasks {
 }
 
 dependencies {
+    implementation(Avro.avroSerializer)
+    implementation(Doknotifikasjon.schemas)
     implementation(Flyway.core)
     implementation(Flyway.postgres)
     implementation(Hikari.cp)
@@ -52,6 +55,7 @@ dependencies {
     implementation(Postgresql.postgresql)
     implementation(TmsCommonLib.utils)
     implementation(TmsCommonLib.kubernetes)
+    implementation(TmsCommonLib.observability)
     implementation(TmsKafkaTools.kafkaApplication)
     implementation(Prometheus.common)
     implementation(Prometheus.simpleClient)
