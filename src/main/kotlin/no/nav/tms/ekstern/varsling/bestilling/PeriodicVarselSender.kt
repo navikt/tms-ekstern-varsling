@@ -19,7 +19,6 @@ class PeriodicVarselSender(
     private val kafkaProducer: Producer<String, Doknotifikasjon>,
     private val doknotTopic: String,
     private val leaderElection: PodLeaderElection,
-    private val gracePeriod: Duration = Duration.ofMinutes(15),
     interval: Duration = Duration.ofSeconds(1),
 ) : PeriodicJob(interval) {
 
@@ -30,7 +29,7 @@ class PeriodicVarselSender(
         if (leaderElection.isLeader()) {
             try {
                 repository
-                    .nextInVarselQueue(gracePeriod)
+                    .nextInVarselQueue()
                     .also { logInfo(it) }
                     .forEach(::processRequest)
             } catch (e: Exception) {

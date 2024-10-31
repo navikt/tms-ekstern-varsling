@@ -51,7 +51,7 @@ class PeriodicVarselSenderTest {
 
         val periodicVarselSender = PeriodicVarselSender(
             repository, mockProducer, "test-topic", leaderElection,
-            gracePeriod = Duration.ZERO, interval = Duration.ofMinutes(1)
+            interval = Duration.ofMinutes(1)
         )
 
         coEvery { leaderElection.isLeader() } returns true
@@ -87,8 +87,8 @@ class PeriodicVarselSenderTest {
         database.insertEksternVarsling(eksternVarslingDBRow(UUID.randomUUID().toString(), testFnr))
 
         val periodicVarselSender = PeriodicVarselSender(
-            repository, mockProducer, "test-topic", leaderElection,
-            gracePeriod = Duration.ZERO, interval = Duration.ofMinutes(1)
+            repository, mockProducer, "test-topic",
+            leaderElection, interval = Duration.ofMinutes(1)
         )
 
         coEvery { leaderElection.isLeader() } returns true
@@ -104,8 +104,8 @@ class PeriodicVarselSenderTest {
         val eksternVarslingData = eksternVarslingDBRow(UUID.randomUUID().toString(), testFnr)
         database.insertEksternVarsling(eksternVarslingData)
         val periodicVarselSender = PeriodicVarselSender(
-            repository, mockProducer, "test-topic", leaderElection,
-            gracePeriod = Duration.ZERO, interval = Duration.ofMinutes(1)
+            repository, mockProducer, "test-topic",
+            leaderElection, interval = Duration.ofMinutes(1)
         )
 
         coEvery { leaderElection.isLeader() } returns true
@@ -136,8 +136,8 @@ class PeriodicVarselSenderTest {
 
 
         val periodicVarselSender = PeriodicVarselSender(
-            repository, mockProducer, "test-topic", leaderElection,
-            gracePeriod = Duration.ZERO, interval = Duration.ofMinutes(1)
+            repository, mockProducer, "test-topic",
+            leaderElection, interval = Duration.ofMinutes(1)
         )
 
         coEvery { leaderElection.isLeader() } returns true
@@ -164,8 +164,8 @@ class PeriodicVarselSenderTest {
         database.tellAntallForKanal(null) shouldBe 3
 
         val periodicVarselSender = PeriodicVarselSender(
-            repository, mockProducer, "test-topic", leaderElection,
-            gracePeriod = Duration.ZERO, interval = Duration.ofMinutes(1)
+            repository, mockProducer, "test-topic",
+            leaderElection, interval = Duration.ofMinutes(1)
         )
 
         coEvery { leaderElection.isLeader() } returns true
@@ -183,8 +183,8 @@ class PeriodicVarselSenderTest {
         )
 
         val periodicVarselSender = PeriodicVarselSender(
-            repository, mockProducer, "test-topic", leaderElection,
-            gracePeriod = Duration.ZERO, interval = Duration.ofMinutes(1)
+            repository, mockProducer, "test-topic",
+            leaderElection, interval = Duration.ofMinutes(1)
         )
 
         coEvery { leaderElection.isLeader() } returns true
@@ -204,8 +204,8 @@ class PeriodicVarselSenderTest {
         )
 
         val periodicVarselSender = PeriodicVarselSender(
-            repository, mockProducer, "test-topic", leaderElection,
-            gracePeriod = Duration.ZERO, interval = Duration.ofMinutes(1)
+            repository, mockProducer, "test-topic",
+            leaderElection, interval = Duration.ofMinutes(1)
         )
 
         coEvery { leaderElection.isLeader() } returns true
@@ -239,8 +239,8 @@ class PeriodicVarselSenderTest {
         )
 
         val periodicVarselSender = PeriodicVarselSender(
-            repository, mockProducer, "test-topic", leaderElection,
-            gracePeriod = Duration.ZERO, interval = Duration.ofMinutes(1)
+            repository, mockProducer, "test-topic",
+            leaderElection, interval = Duration.ofMinutes(1)
         )
 
         coEvery { leaderElection.isLeader() } returns true
@@ -271,8 +271,8 @@ class PeriodicVarselSenderTest {
         )
 
         val periodicVarselSender = PeriodicVarselSender(
-            repository, mockProducer, "test-topic", leaderElection,
-            gracePeriod = Duration.ZERO, interval = Duration.ofMinutes(1)
+            repository, mockProducer, "test-topic",
+            leaderElection, interval = Duration.ofMinutes(1)
         )
 
         coEvery { leaderElection.isLeader() } returns true
@@ -302,8 +302,8 @@ class PeriodicVarselSenderTest {
         )
 
         val periodicVarselSender = PeriodicVarselSender(
-            repository, mockProducer, "test-topic", leaderElection,
-            gracePeriod = Duration.ZERO, interval = Duration.ofMinutes(1)
+            repository, mockProducer, "test-topic",
+            leaderElection, interval = Duration.ofMinutes(1)
         )
 
         coEvery { leaderElection.isLeader() } returns true

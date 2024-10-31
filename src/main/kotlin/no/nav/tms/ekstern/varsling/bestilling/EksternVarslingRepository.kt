@@ -169,7 +169,7 @@ class EksternVarslingRepository(val database: Database) {
         } ?: false
     }
 
-    fun nextInVarselQueue(gracePeriod: Duration, batchSize: Int = 100): List<EksternVarsling> {
+    fun nextInVarselQueue(batchSize: Int = 100): List<EksternVarsling> {
         return database.list {
             queryOf(
                 """
@@ -189,13 +189,12 @@ class EksternVarslingRepository(val database: Database) {
                 from 
                     ekstern_varsling
                 where 
-                    ferdigstilt is null and (utsending is null or utsending < :now) and opprettet < :forsinkelse
+                    ferdigstilt is null and (utsending is null or utsending < :now)
                 limit :antall
                 """,
                 mapOf(
                     "antall" to batchSize,
-                    "now" to ZonedDateTimeHelper.nowAtUtc(),
-                    "forsinkelse" to ZonedDateTimeHelper.nowAtUtc() - gracePeriod
+                    "now" to ZonedDateTimeHelper.nowAtUtc()
                 )
             ).map(::mapEksternVarsling)
             .asList
