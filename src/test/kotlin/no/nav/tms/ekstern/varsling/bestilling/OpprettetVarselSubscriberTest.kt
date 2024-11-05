@@ -4,6 +4,7 @@ import io.kotest.matchers.collections.shouldContainOnly
 import io.kotest.matchers.date.shouldBeBetween
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import kotliquery.queryOf
 import no.nav.tms.ekstern.varsling.setup.LocalPostgresDatabase
 import no.nav.tms.ekstern.varsling.setup.json
@@ -206,4 +207,33 @@ class OpprettetVarselSubscriberTest {
         } shouldBe 1
     }
 
+    @Test
+    fun `oppretter ny sendingsId hvis sending er batch`() {
+        val varselId = UUID.randomUUID().toString()
+
+        broadcaster.broadcastJson(varselOpprettetEvent(id = varselId, ident = testFnr, kanBatches = true))
+
+        database.singleOrNull {
+            queryOf(
+                "select sendingsId from ekstern_varsling"
+            )
+                .map { it.string("sendingsId") }
+                .asSingle
+        } shouldNotBe varselId
+    }
+
+    @Test
+    fun `bruker varselId som sendingsId hvis sending ikke er batch`() {
+        val varselId = UUID.randomUUID().toString()
+
+        broadcaster.broadcastJson(varselOpprettetEvent(id = varselId, ident = testFnr, kanBatches = false))
+
+        database.singleOrNull {
+            queryOf(
+                "select sendingsId from ekstern_varsling"
+            )
+                .map { it.string("sendingsId") }
+                .asSingle
+        } shouldBe varselId
+    }
 }

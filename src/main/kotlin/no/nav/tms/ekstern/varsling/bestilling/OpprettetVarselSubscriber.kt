@@ -79,8 +79,14 @@ class OpprettetVarselSubscriber(
             false to null
         }
 
+        val sendingsId = if (erBatch) {
+            UUID.randomUUID().toString()
+        } else {
+            varsel.varselId
+        }
+
         val eksternVarsling = EksternVarsling(
-            sendingsId = UUID.randomUUID().toString(),
+            sendingsId = sendingsId,
             ident = jsonMessage["ident"].asText(),
             erBatch = erBatch,
             erUtsattVarsel = utsettSendingTil != null,
