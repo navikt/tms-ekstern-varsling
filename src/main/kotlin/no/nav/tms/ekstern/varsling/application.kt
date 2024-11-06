@@ -1,7 +1,5 @@
 package no.nav.tms.ekstern.varsling
 
-import io.github.oshai.kotlinlogging.KotlinLogging
-import io.ktor.server.routing.*
 import kotlinx.coroutines.runBlocking
 import no.nav.tms.common.kubernetes.PodLeaderElection
 import no.nav.tms.ekstern.varsling.bestilling.*
@@ -12,7 +10,6 @@ import no.nav.tms.ekstern.varsling.status.BehandletAvLegacySubscriber
 import no.nav.tms.ekstern.varsling.status.EksternStatusUpdater
 import no.nav.tms.ekstern.varsling.status.EksternVarslingOppdatertProducer
 import no.nav.tms.ekstern.varsling.status.EksternVarslingStatusSubscriber
-import no.nav.tms.kafka.application.AppHealth
 import no.nav.tms.kafka.application.KafkaApplication
 
 
@@ -65,31 +62,11 @@ fun main() {
             }
         }
 
-        ktorModule {
-            routing {
-                post("/application/kill") {
-                    KotlinLogging.logger {  }.info { "Killing application" }
-                    ApplicationHealth.kill()
-                }
-            }
-        }
-
         healthCheck("Varselsender", varselSender::isHealthy)
-        healthCheck("Killswitch", ApplicationHealth::health)
 
     }.start()
 }
 
 object TmsEksternVarsling {
     const val appnavn = "tms-ekstern-varsling"
-}
-
-object ApplicationHealth {
-    private var appHealth = AppHealth.Healthy
-
-    fun kill() {
-        appHealth = AppHealth.Unhealthy
-    }
-
-    val health get() = appHealth
 }
