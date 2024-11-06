@@ -74,8 +74,8 @@ fun main() {
             }
         }
 
-        healthCheck(varselSender::isHealthy)
-        healthCheck(ApplicationHealth::health)
+        healthCheck("Varselsender", varselSender::isHealthy)
+        healthCheck("Killswitch", ApplicationHealth::health)
 
     }.start()
 }
@@ -91,5 +91,5 @@ object ApplicationHealth {
         appHealth = AppHealth.Unhealthy
     }
 
-    val health = appHealth
+    val health get() = appHealth
 }
