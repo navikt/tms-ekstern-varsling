@@ -62,6 +62,8 @@ fun main() {
             }
         }
 
+        healthCheck("Varselsender", varselSender::isHealthy)
+
     }.start()
 }
 

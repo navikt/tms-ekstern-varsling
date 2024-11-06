@@ -9,10 +9,12 @@ import no.nav.tms.common.observability.traceVarsel
 import no.nav.tms.common.util.scheduling.PeriodicJob
 import no.nav.tms.ekstern.varsling.TmsEksternVarsling
 import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper.nowAtUtc
+import no.nav.tms.kafka.application.AppHealth
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.Producer
 import org.apache.kafka.clients.producer.ProducerRecord
 import java.time.Duration
+import java.time.ZonedDateTime
 
 class PeriodicVarselSender(
     private val repository: EksternVarslingRepository,
@@ -37,6 +39,12 @@ class PeriodicVarselSender(
                 securelog.error(e) { "Feil ved prosessering av varsel-kø" }
             }
         }
+    }
+
+    fun isHealthy() = if (job.isActive) {
+        AppHealth.Healthy
+    } else {
+        AppHealth.Unhealthy
     }
 
     private fun logInfo(varsler: List<EksternVarsling>) {
