@@ -62,4 +62,4 @@ spec:
     - name: SMS_SENDING_START
       value: "09:00:00"
     - name: SMS_SENDING_END
-      value: "17:00:00"
+      value: "15:00:00"
