@@ -17,8 +17,15 @@ fun main() {
     val eksternVarselRepository = EksternVarslingRepository(PostgresDatabase())
     val environment = Environment()
 
+    val kanalDecider = PreferertKanalDecider(
+        environment.smsSendingsStart,
+        environment.smsSendingsEnd,
+        environment.smsTimezone
+    )
+
     val varselSender = PeriodicVarselSender(
         repository = eksternVarselRepository,
+        kanalDecider = kanalDecider,
         kafkaProducer = initializeKafkaProducer(useAvroSerializer = true),
         doknotTopic = environment.doknotTopic,
         leaderElection = PodLeaderElection()
