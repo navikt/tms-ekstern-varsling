@@ -1,5 +1,6 @@
 package no.nav.tms.ekstern.varsling.bestilling
 
+import io.github.oshai.kotlinlogging.KotlinLogging
 import java.time.LocalTime
 import java.time.OffsetTime
 import java.time.ZoneId
@@ -9,6 +10,8 @@ class PreferertKanalDecider(
     private val smsUtsendingEnd: LocalTime,
     private val timezone: ZoneId
 ) {
+    private val log = KotlinLogging.logger {}
+
     fun bestemKanal(eksternVarsling: EksternVarsling): Kanal {
         val kanaler = eksternVarsling.varsler
             .filter { it.aktiv }
@@ -22,7 +25,11 @@ class PreferertKanalDecider(
                 else -> Kanal.EPOST
             }
         } else if (kanaler.size > 1) {
-            prioritertKanal()
+            val kanal = prioritertKanal()
+
+            log.info { "Velger ${kanal.name} som prioritert kanal for varsel med ${kanaler.map { it.name }} preferert. " }
+
+            kanal
         } else if (kanaler.size == 1) {
             when(val kanal = kanaler.first()) {
                 Kanal.BETINGET_SMS -> prioritertKanal()
