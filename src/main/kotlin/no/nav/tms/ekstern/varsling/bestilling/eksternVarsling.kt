@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonValue
 import java.time.ZonedDateTime
 
 enum class Kanal {
-    EPOST, SMS
+    EPOST, SMS, BETINGET_SMS
 }
 
 enum class Varseltype(val alias: String) {

@@ -18,6 +18,7 @@ import java.time.ZonedDateTime
 
 class PeriodicVarselSender(
     private val repository: EksternVarslingRepository,
+    private val kanalDecider: PreferertKanalDecider,
     private val kafkaProducer: Producer<String, Doknotifikasjon>,
     private val doknotTopic: String,
     private val leaderElection: PodLeaderElection,
@@ -67,7 +68,7 @@ class PeriodicVarselSender(
 
         val tekster = bestemTekster(varsling)
 
-        val kanal = bestemKanal(varsling)
+        val kanal = kanalDecider.bestemKanal(varsling)
 
         val revarsling = bestemRevarsling(varsling)
 
@@ -94,15 +95,6 @@ class PeriodicVarselSender(
             kanal.name,
             varsling.erUtsattVarsel.toString()
         ).inc()
-    }
-
-    private fun bestemKanal(eksternVarsling: EksternVarsling): Kanal {
-        return eksternVarsling.varsler
-            .filter { it.aktiv }
-            .flatMap { it.prefererteKanaler }
-            .distinct()
-            .find { it == Kanal.SMS }
-            ?: Kanal.EPOST
     }
 
     private fun bestemRevarsling(varsling: EksternVarsling): Revarsling? {
@@ -158,6 +150,7 @@ class PeriodicVarselSender(
 private fun mapKanal(kanal: Kanal) = when(kanal) {
     Kanal.EPOST -> listOf(PrefererteKanal.EPOST)
     Kanal.SMS -> listOf(PrefererteKanal.SMS)
+    else -> throw IllegalArgumentException("Kun SMS og EPOST lar seg oversette direkte til doknot preferert kanal")
 }
 
 private val EKSTERN_VARSLING_SENDT: Counter = Counter.build()

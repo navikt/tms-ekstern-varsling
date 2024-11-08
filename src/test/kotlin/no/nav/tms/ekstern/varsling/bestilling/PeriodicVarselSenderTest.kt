@@ -4,8 +4,7 @@ import io.kotest.matchers.collections.shouldBeIn
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import io.mockk.coEvery
-import io.mockk.mockk
+import io.mockk.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotliquery.queryOf
@@ -18,6 +17,10 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import java.time.Duration
+import java.time.LocalTime
+import java.time.OffsetTime
+import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.util.*
 
@@ -33,6 +36,12 @@ class PeriodicVarselSenderTest {
         DummySerializer()
     )
 
+    private val kanalDecider = PreferertKanalDecider(
+        smsUtsendingStart = LocalTime.MIN,
+        smsUtsendingEnd = LocalTime.MAX,
+        timezone = ZoneId.of("Europe/Oslo")
+    )
+
     private val leaderElection: PodLeaderElection = mockk()
 
     @AfterEach
@@ -41,6 +50,7 @@ class PeriodicVarselSenderTest {
             queryOf("delete from ekstern_varsling")
         }
         mockProducer.clear()
+        unmockkObject(LocalTimeHelper)
     }
 
     @Test
@@ -50,7 +60,7 @@ class PeriodicVarselSenderTest {
         database.insertEksternVarsling(eksternVarslingDBRow(UUID.randomUUID().toString(), testFnr))
 
         val periodicVarselSender = PeriodicVarselSender(
-            repository, mockProducer, "test-topic", leaderElection,
+            repository, kanalDecider, mockProducer, "test-topic", leaderElection,
             interval = Duration.ofMinutes(1)
         )
 
@@ -87,7 +97,7 @@ class PeriodicVarselSenderTest {
         database.insertEksternVarsling(eksternVarslingDBRow(UUID.randomUUID().toString(), testFnr))
 
         val periodicVarselSender = PeriodicVarselSender(
-            repository, mockProducer, "test-topic",
+            repository, kanalDecider, mockProducer, "test-topic",
             leaderElection, interval = Duration.ofMinutes(1)
         )
 
@@ -104,7 +114,7 @@ class PeriodicVarselSenderTest {
         val eksternVarslingData = eksternVarslingDBRow(UUID.randomUUID().toString(), testFnr)
         database.insertEksternVarsling(eksternVarslingData)
         val periodicVarselSender = PeriodicVarselSender(
-            repository, mockProducer, "test-topic",
+            repository, kanalDecider, mockProducer, "test-topic",
             leaderElection, interval = Duration.ofMinutes(1)
         )
 
@@ -136,7 +146,7 @@ class PeriodicVarselSenderTest {
 
 
         val periodicVarselSender = PeriodicVarselSender(
-            repository, mockProducer, "test-topic",
+            repository, kanalDecider, mockProducer, "test-topic",
             leaderElection, interval = Duration.ofMinutes(1)
         )
 
@@ -164,7 +174,7 @@ class PeriodicVarselSenderTest {
         database.tellAntallForKanal(null) shouldBe 3
 
         val periodicVarselSender = PeriodicVarselSender(
-            repository, mockProducer, "test-topic",
+            repository, kanalDecider, mockProducer, "test-topic",
             leaderElection, interval = Duration.ofMinutes(1)
         )
 
@@ -183,7 +193,7 @@ class PeriodicVarselSenderTest {
         )
 
         val periodicVarselSender = PeriodicVarselSender(
-            repository, mockProducer, "test-topic",
+            repository, kanalDecider, mockProducer, "test-topic",
             leaderElection, interval = Duration.ofMinutes(1)
         )
 
@@ -204,7 +214,7 @@ class PeriodicVarselSenderTest {
         )
 
         val periodicVarselSender = PeriodicVarselSender(
-            repository, mockProducer, "test-topic",
+            repository, kanalDecider, mockProducer, "test-topic",
             leaderElection, interval = Duration.ofMinutes(1)
         )
 
@@ -239,7 +249,7 @@ class PeriodicVarselSenderTest {
         )
 
         val periodicVarselSender = PeriodicVarselSender(
-            repository, mockProducer, "test-topic",
+            repository, kanalDecider, mockProducer, "test-topic",
             leaderElection, interval = Duration.ofMinutes(1)
         )
 
@@ -271,7 +281,7 @@ class PeriodicVarselSenderTest {
         )
 
         val periodicVarselSender = PeriodicVarselSender(
-            repository, mockProducer, "test-topic",
+            repository, kanalDecider, mockProducer, "test-topic",
             leaderElection, interval = Duration.ofMinutes(1)
         )
 
@@ -302,7 +312,7 @@ class PeriodicVarselSenderTest {
         )
 
         val periodicVarselSender = PeriodicVarselSender(
-            repository, mockProducer, "test-topic",
+            repository, kanalDecider, mockProducer, "test-topic",
             leaderElection, interval = Duration.ofMinutes(1)
         )
 
@@ -314,6 +324,133 @@ class PeriodicVarselSenderTest {
 
         eksternVarsling.shouldNotBeNull()
         eksternVarsling.status shouldBe Sendingsstatus.Kansellert
+    }
+
+    @Test
+    fun `Velger sms hvis preferert kanal er BETINGET_SMS og sms vil sendes umiddelbart`() = runBlocking<Unit> {
+        val sendingsId = UUID.randomUUID().toString()
+
+        database.insertEksternVarsling(eksternVarslingDBRow(sendingsId, testFnr,
+            varsler = listOf(createVarsel(varseltype = Varseltype.Beskjed, prefererteKanaler = listOf(Kanal.BETINGET_SMS))))
+        )
+
+        val smsStart = LocalTime.parse("06:00:00")
+        val smsEnd = LocalTime.parse("18:00:00")
+
+        mockkObject(LocalTimeHelper)
+
+        every { LocalTimeHelper.nowAt(any()) } returns LocalTime.parse("13:00:00")
+
+        val sendSmsDuringDaytime = PreferertKanalDecider(smsStart, smsEnd, ZoneId.of("Europe/Oslo"))
+
+        val periodicVarselSender = PeriodicVarselSender(
+            repository, sendSmsDuringDaytime, mockProducer, "test-topic",
+            leaderElection, interval = Duration.ofMinutes(1)
+        )
+
+        coEvery { leaderElection.isLeader() } returns true
+
+        periodicVarselSender.start()
+        delay(500)
+        val eksternVarsling = repository.getEksternVarsling(sendingsId)
+
+        eksternVarsling.shouldNotBeNull()
+        eksternVarsling.kanal shouldBe Kanal.SMS
+    }
+
+    @Test
+    fun `Velger epost hvis preferert kanal er BETINGET_SMS og sms ikke vil sendes umiddelbart`() = runBlocking<Unit> {
+        val sendingsId = UUID.randomUUID().toString()
+
+        database.insertEksternVarsling(eksternVarslingDBRow(sendingsId, testFnr,
+            varsler = listOf(createVarsel(varseltype = Varseltype.Beskjed, prefererteKanaler = listOf(Kanal.BETINGET_SMS))))
+        )
+
+        val smsStart = LocalTime.parse("06:00:00")
+        val smsEnd = LocalTime.parse("18:00:00")
+
+        mockkObject(LocalTimeHelper)
+
+        every { LocalTimeHelper.nowAt(any()) } returns LocalTime.parse("01:00:00")
+
+        val sendSmsDuringDaytime = PreferertKanalDecider(smsStart, smsEnd, ZoneId.of("Europe/Oslo"))
+
+        val periodicVarselSender = PeriodicVarselSender(
+            repository, sendSmsDuringDaytime, mockProducer, "test-topic",
+            leaderElection, interval = Duration.ofMinutes(1)
+        )
+
+        coEvery { leaderElection.isLeader() } returns true
+
+        periodicVarselSender.start()
+        delay(500)
+        val eksternVarsling = repository.getEksternVarsling(sendingsId)
+
+        eksternVarsling.shouldNotBeNull()
+        eksternVarsling.kanal shouldBe Kanal.EPOST
+    }
+
+    @Test
+    fun `Velger sms hvis preferert kanal er SMS og EPOST og sms vil sendes umiddelbart`() = runBlocking<Unit> {
+        val sendingsId = UUID.randomUUID().toString()
+
+        database.insertEksternVarsling(eksternVarslingDBRow(sendingsId, testFnr,
+            varsler = listOf(createVarsel(varseltype = Varseltype.Beskjed, prefererteKanaler = listOf(Kanal.SMS, Kanal.EPOST))))
+        )
+
+        val smsStart = LocalTime.parse("06:00:00")
+        val smsEnd = LocalTime.parse("18:00:00")
+
+        mockkObject(LocalTimeHelper)
+
+        every { LocalTimeHelper.nowAt(any()) } returns LocalTime.parse("13:00:00")
+
+        val sendSmsDuringDaytime = PreferertKanalDecider(smsStart, smsEnd, ZoneId.of("Europe/Oslo"))
+        val periodicVarselSender = PeriodicVarselSender(
+            repository, sendSmsDuringDaytime, mockProducer, "test-topic",
+            leaderElection, interval = Duration.ofMinutes(1)
+        )
+
+        coEvery { leaderElection.isLeader() } returns true
+
+        periodicVarselSender.start()
+        delay(500)
+        val eksternVarsling = repository.getEksternVarsling(sendingsId)
+
+        eksternVarsling.shouldNotBeNull()
+        eksternVarsling.kanal shouldBe Kanal.SMS
+    }
+
+    @Test
+    fun `Velger epost hvis preferert kanal er SMS og EPOST og sms ikke vil sendes umiddelbart`() = runBlocking<Unit> {
+        val sendingsId = UUID.randomUUID().toString()
+
+        database.insertEksternVarsling(eksternVarslingDBRow(sendingsId, testFnr,
+            varsler = listOf(createVarsel(varseltype = Varseltype.Beskjed, prefererteKanaler = listOf(Kanal.SMS, Kanal.EPOST))))
+        )
+
+        val smsStart = LocalTime.parse("06:00:00")
+        val smsEnd = LocalTime.parse("18:00:00")
+
+        mockkObject(LocalTimeHelper)
+
+        every { LocalTimeHelper.nowAt(any()) } returns LocalTime.parse("01:00:00")
+
+        val sendSmsDuringDaytime = PreferertKanalDecider(smsStart, smsEnd, ZoneId.of("Europe/Oslo"))
+
+        val periodicVarselSender = PeriodicVarselSender(
+            repository, sendSmsDuringDaytime, mockProducer, "test-topic",
+            leaderElection, interval = Duration.ofMinutes(1)
+        )
+
+        coEvery { leaderElection.isLeader() } returns true
+
+        periodicVarselSender.start()
+        delay(500)
+        val eksternVarsling = repository.getEksternVarsling(sendingsId)
+
+        eksternVarsling.shouldNotBeNull()
+        eksternVarsling.kanal shouldBe Kanal.EPOST
     }
 }
 

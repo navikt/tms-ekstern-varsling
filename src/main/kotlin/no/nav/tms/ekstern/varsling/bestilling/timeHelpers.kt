@@ -2,6 +2,8 @@ package no.nav.tms.ekstern.varsling.bestilling
 
 import com.fasterxml.jackson.databind.JsonNode
 import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.OffsetTime
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
@@ -33,3 +35,6 @@ object ZonedDateTimeHelper {
     }
 }
 
+object LocalTimeHelper {
+    fun nowAt(timezone: ZoneId) = LocalTime.now(timezone).truncatedTo(ChronoUnit.MILLIS)
+}
