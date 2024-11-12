@@ -11,6 +11,8 @@ import kotliquery.queryOf
 import no.nav.doknotifikasjon.schemas.Doknotifikasjon
 import no.nav.tms.common.kubernetes.PodLeaderElection
 import no.nav.tms.ekstern.varsling.setup.*
+import no.nav.tms.ekstern.varsling.status.EksternStatusOppdatering
+import no.nav.tms.ekstern.varsling.status.EksternVarslingOppdatertProducer
 import org.apache.kafka.clients.producer.MockProducer
 import org.apache.kafka.common.serialization.StringSerializer
 import org.junit.jupiter.api.AfterEach
@@ -18,9 +20,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import java.time.Duration
 import java.time.LocalTime
-import java.time.OffsetTime
 import java.time.ZoneId
-import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.util.*
 
@@ -30,10 +30,20 @@ class PeriodicVarselSenderTest {
     private val repository = EksternVarslingRepository(database)
     private val testFnr = "12345678910"
 
-    private val mockProducer = MockProducer<String, Doknotifikasjon>(
+    private val doknotTopic = MockProducer<String, Doknotifikasjon>(
         false,
         StringSerializer(),
         DummySerializer()
+    )
+
+    private val statusTopic = MockProducer(
+        false,
+        StringSerializer(),
+        StringSerializer()
+    )
+
+    private val statusProducer = EksternVarslingOppdatertProducer(
+        statusTopic, "dummytopic"
     )
 
     private val kanalDecider = PreferertKanalDecider(
@@ -49,7 +59,7 @@ class PeriodicVarselSenderTest {
         database.update {
             queryOf("delete from ekstern_varsling")
         }
-        mockProducer.clear()
+        doknotTopic.clear()
         unmockkObject(LocalTimeHelper)
     }
 
@@ -60,15 +70,15 @@ class PeriodicVarselSenderTest {
         database.insertEksternVarsling(eksternVarslingDBRow(UUID.randomUUID().toString(), testFnr))
 
         val periodicVarselSender = PeriodicVarselSender(
-            repository, kanalDecider, mockProducer, "test-topic", leaderElection,
-            interval = Duration.ofMinutes(1)
+            repository, kanalDecider, doknotTopic, statusProducer,
+            "test-topic", leaderElection, interval = Duration.ofMinutes(1)
         )
 
         coEvery { leaderElection.isLeader() } returns true
 
         periodicVarselSender.start()
         delay(500)
-        mockProducer.history().size shouldBe 3
+        doknotTopic.history().size shouldBe 3
         database.tellAntallSendt() shouldBe 3
     }
 
@@ -97,15 +107,15 @@ class PeriodicVarselSenderTest {
         database.insertEksternVarsling(eksternVarslingDBRow(UUID.randomUUID().toString(), testFnr))
 
         val periodicVarselSender = PeriodicVarselSender(
-            repository, kanalDecider, mockProducer, "test-topic",
-            leaderElection, interval = Duration.ofMinutes(1)
+            repository, kanalDecider, doknotTopic, statusProducer,
+            "test-topic", leaderElection, interval = Duration.ofMinutes(1)
         )
 
         coEvery { leaderElection.isLeader() } returns true
 
         periodicVarselSender.start()
         delay(500)
-        mockProducer.history().size shouldBe 2
+        doknotTopic.history().size shouldBe 2
         database.tellAntallSendtFørDato(tidligereBehandletDato.plusHours(2)) shouldBe 3
     }
 
@@ -114,17 +124,17 @@ class PeriodicVarselSenderTest {
         val eksternVarslingData = eksternVarslingDBRow(UUID.randomUUID().toString(), testFnr)
         database.insertEksternVarsling(eksternVarslingData)
         val periodicVarselSender = PeriodicVarselSender(
-            repository, kanalDecider, mockProducer, "test-topic",
-            leaderElection, interval = Duration.ofMinutes(1)
+            repository, kanalDecider, doknotTopic, statusProducer,
+            "test-topic", leaderElection, interval = Duration.ofMinutes(1)
         )
 
         coEvery { leaderElection.isLeader() } returns true
 
         periodicVarselSender.start()
         delay(500)
-        mockProducer.history().size shouldBe 1
+        doknotTopic.history().size shouldBe 1
 
-        val doknot = mockProducer.history().first().value()
+        val doknot = doknotTopic.history().first().value()
         val tekster = bestemTekster(eksternVarslingData)
         doknot.bestillingsId shouldBe eksternVarslingData.sendingsId
         doknot.fodselsnummer shouldBe eksternVarslingData.ident
@@ -146,17 +156,57 @@ class PeriodicVarselSenderTest {
 
 
         val periodicVarselSender = PeriodicVarselSender(
-            repository, kanalDecider, mockProducer, "test-topic",
-            leaderElection, interval = Duration.ofMinutes(1)
+            repository, kanalDecider, doknotTopic, statusProducer,
+            "test-topic", leaderElection, interval = Duration.ofMinutes(1)
         )
 
         coEvery { leaderElection.isLeader() } returns true
 
         periodicVarselSender.start()
         delay(500)
-        mockProducer.history().size shouldBe 2
+        doknotTopic.history().size shouldBe 2
         database.tellAntallKansellert() shouldBe 1
         database.tellAntallSendt() shouldBe 2
+    }
+
+    @Test
+    fun `sender status 'kansellert' for avbrutte sendinger`() = runBlocking<Unit> {
+        val varselId1 = UUID.randomUUID().toString()
+        val varselId2 = UUID.randomUUID().toString()
+        val varselId3 = UUID.randomUUID().toString()
+
+        database.insertEksternVarsling(eksternVarslingDBRow(UUID.randomUUID().toString(), testFnr, varsler = listOf(createVarsel(varselId = varselId1, aktiv = true))))
+        database.insertEksternVarsling(eksternVarslingDBRow(UUID.randomUUID().toString(), testFnr, varsler = listOf(createVarsel(varselId = varselId2, aktiv = false), createVarsel(varselId = varselId3, aktiv = false))))
+
+        val periodicVarselSender = PeriodicVarselSender(
+            repository, kanalDecider, doknotTopic, statusProducer,
+            "test-topic", leaderElection, interval = Duration.ofMinutes(1)
+        )
+
+        coEvery { leaderElection.isLeader() } returns true
+
+        periodicVarselSender.start()
+        delay(500)
+
+        val objectMapper = defaultObjectMapper()
+
+        statusTopic.history()
+            .map { objectMapper.readTree(it.value()) }
+            .let { statusEvents ->
+                statusEvents.firstOrNull { it["varselId"].asText() == varselId1 }.shouldBeNull()
+
+                statusEvents.firstOrNull { it["varselId"].asText() == varselId2 }.let {
+                    it.shouldNotBeNull()
+
+                    it["status"].asText() shouldBe "kansellert"
+                }
+
+                statusEvents.firstOrNull { it["varselId"].asText() == varselId3 }.let {
+                    it.shouldNotBeNull()
+
+                    it["status"].asText() shouldBe "kansellert"
+                }
+            }
     }
 
     @Test
@@ -174,8 +224,8 @@ class PeriodicVarselSenderTest {
         database.tellAntallForKanal(null) shouldBe 3
 
         val periodicVarselSender = PeriodicVarselSender(
-            repository, kanalDecider, mockProducer, "test-topic",
-            leaderElection, interval = Duration.ofMinutes(1)
+            repository, kanalDecider, doknotTopic, statusProducer,
+            "test-topic", leaderElection, interval = Duration.ofMinutes(1)
         )
 
         coEvery { leaderElection.isLeader() } returns true
@@ -193,8 +243,8 @@ class PeriodicVarselSenderTest {
         )
 
         val periodicVarselSender = PeriodicVarselSender(
-            repository, kanalDecider, mockProducer, "test-topic",
-            leaderElection, interval = Duration.ofMinutes(1)
+            repository, kanalDecider, doknotTopic, statusProducer,
+            "test-topic", leaderElection, interval = Duration.ofMinutes(1)
         )
 
         coEvery { leaderElection.isLeader() } returns true
@@ -214,8 +264,8 @@ class PeriodicVarselSenderTest {
         )
 
         val periodicVarselSender = PeriodicVarselSender(
-            repository, kanalDecider, mockProducer, "test-topic",
-            leaderElection, interval = Duration.ofMinutes(1)
+            repository, kanalDecider, doknotTopic, statusProducer,
+            "test-topic", leaderElection, interval = Duration.ofMinutes(1)
         )
 
         coEvery { leaderElection.isLeader() } returns true
@@ -231,7 +281,7 @@ class PeriodicVarselSenderTest {
             it.revarsling!!.intervall shouldBe 4
         }
 
-        mockProducer.history().first().value().let {
+        doknotTopic.history().first().value().let {
             it.antallRenotifikasjoner shouldBe 1
             it.renotifikasjonIntervall shouldBe 4
         }
@@ -249,8 +299,8 @@ class PeriodicVarselSenderTest {
         )
 
         val periodicVarselSender = PeriodicVarselSender(
-            repository, kanalDecider, mockProducer, "test-topic",
-            leaderElection, interval = Duration.ofMinutes(1)
+            repository, kanalDecider, doknotTopic, statusProducer,
+            "test-topic", leaderElection, interval = Duration.ofMinutes(1)
         )
 
         coEvery { leaderElection.isLeader() } returns true
@@ -266,7 +316,7 @@ class PeriodicVarselSenderTest {
             it.revarsling!!.intervall shouldBe 7
         }
 
-        mockProducer.history().first().value().let {
+        doknotTopic.history().first().value().let {
             it.antallRenotifikasjoner shouldBe 1
             it.renotifikasjonIntervall shouldBe 7
         }
@@ -281,8 +331,8 @@ class PeriodicVarselSenderTest {
         )
 
         val periodicVarselSender = PeriodicVarselSender(
-            repository, kanalDecider, mockProducer, "test-topic",
-            leaderElection, interval = Duration.ofMinutes(1)
+            repository, kanalDecider, doknotTopic, statusProducer,
+            "test-topic", leaderElection, interval = Duration.ofMinutes(1)
         )
 
         coEvery { leaderElection.isLeader() } returns true
@@ -296,7 +346,7 @@ class PeriodicVarselSenderTest {
             it.revarsling.shouldBeNull()
         }
 
-        mockProducer.history().first().value().let {
+        doknotTopic.history().first().value().let {
             it.antallRenotifikasjoner shouldBe null
             it.renotifikasjonIntervall shouldBe null
         }
@@ -312,8 +362,8 @@ class PeriodicVarselSenderTest {
         )
 
         val periodicVarselSender = PeriodicVarselSender(
-            repository, kanalDecider, mockProducer, "test-topic",
-            leaderElection, interval = Duration.ofMinutes(1)
+            repository, kanalDecider, doknotTopic, statusProducer,
+            "test-topic", leaderElection, interval = Duration.ofMinutes(1)
         )
 
         coEvery { leaderElection.isLeader() } returns true
@@ -344,8 +394,8 @@ class PeriodicVarselSenderTest {
         val sendSmsDuringDaytime = PreferertKanalDecider(smsStart, smsEnd, ZoneId.of("Europe/Oslo"))
 
         val periodicVarselSender = PeriodicVarselSender(
-            repository, sendSmsDuringDaytime, mockProducer, "test-topic",
-            leaderElection, interval = Duration.ofMinutes(1)
+            repository, sendSmsDuringDaytime, doknotTopic, statusProducer,
+            "test-topic", leaderElection, interval = Duration.ofMinutes(1)
         )
 
         coEvery { leaderElection.isLeader() } returns true
@@ -376,8 +426,8 @@ class PeriodicVarselSenderTest {
         val sendSmsDuringDaytime = PreferertKanalDecider(smsStart, smsEnd, ZoneId.of("Europe/Oslo"))
 
         val periodicVarselSender = PeriodicVarselSender(
-            repository, sendSmsDuringDaytime, mockProducer, "test-topic",
-            leaderElection, interval = Duration.ofMinutes(1)
+            repository, sendSmsDuringDaytime, doknotTopic, statusProducer,
+            "test-topic", leaderElection, interval = Duration.ofMinutes(1)
         )
 
         coEvery { leaderElection.isLeader() } returns true
@@ -407,8 +457,8 @@ class PeriodicVarselSenderTest {
 
         val sendSmsDuringDaytime = PreferertKanalDecider(smsStart, smsEnd, ZoneId.of("Europe/Oslo"))
         val periodicVarselSender = PeriodicVarselSender(
-            repository, sendSmsDuringDaytime, mockProducer, "test-topic",
-            leaderElection, interval = Duration.ofMinutes(1)
+            repository, sendSmsDuringDaytime, doknotTopic, statusProducer,
+            "test-topic", leaderElection, interval = Duration.ofMinutes(1)
         )
 
         coEvery { leaderElection.isLeader() } returns true
@@ -439,8 +489,8 @@ class PeriodicVarselSenderTest {
         val sendSmsDuringDaytime = PreferertKanalDecider(smsStart, smsEnd, ZoneId.of("Europe/Oslo"))
 
         val periodicVarselSender = PeriodicVarselSender(
-            repository, sendSmsDuringDaytime, mockProducer, "test-topic",
-            leaderElection, interval = Duration.ofMinutes(1)
+            repository, sendSmsDuringDaytime, doknotTopic, statusProducer,
+            "test-topic", leaderElection, interval = Duration.ofMinutes(1)
         )
 
         coEvery { leaderElection.isLeader() } returns true

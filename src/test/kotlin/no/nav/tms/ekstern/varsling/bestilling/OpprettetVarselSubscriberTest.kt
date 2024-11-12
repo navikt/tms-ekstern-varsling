@@ -1,14 +1,17 @@
 package no.nav.tms.ekstern.varsling.bestilling
 
-import io.kotest.matchers.collections.shouldContainOnly
 import io.kotest.matchers.date.shouldBeBetween
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import kotliquery.queryOf
 import no.nav.tms.ekstern.varsling.setup.LocalPostgresDatabase
+import no.nav.tms.ekstern.varsling.setup.defaultObjectMapper
 import no.nav.tms.ekstern.varsling.setup.json
+import no.nav.tms.ekstern.varsling.status.EksternVarslingOppdatertProducer
 import no.nav.tms.kafka.application.MessageBroadcaster
+import org.apache.kafka.clients.producer.MockProducer
+import org.apache.kafka.common.serialization.StringSerializer
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
@@ -20,14 +23,23 @@ class OpprettetVarselSubscriberTest {
     private val database = LocalPostgresDatabase.cleanDb()
     private val testFnr = "12345678910"
 
+    private val statusTopic = MockProducer(
+        false,
+        StringSerializer(),
+        StringSerializer()
+    )
+
+    private val statusProducer = EksternVarslingOppdatertProducer(statusTopic, "dummy-topic")
+
     private val repository = EksternVarslingRepository(database)
-    private val broadcaster = MessageBroadcaster(listOf(OpprettetVarselSubscriber(repository, enableBatch = true)))
+    private val broadcaster = MessageBroadcaster(listOf(OpprettetVarselSubscriber(repository, statusProducer, enableBatch = true)))
 
     @AfterEach
     fun cleanup() {
         database.update {
             queryOf("delete from ekstern_varsling")
         }
+        statusTopic.clear()
     }
 
     @Test
@@ -48,7 +60,27 @@ class OpprettetVarselSubscriberTest {
                 .asSingle
         } shouldBe 5
 
+        statusTopic.history().size shouldBe 5
+    }
 
+    @Test
+    fun `sender status 'venter' til internt topic`() {
+        val varselId = UUID.randomUUID().toString()
+
+        broadcaster.broadcastJson(varselOpprettetEvent(id = varselId, ident = testFnr, type = "oppgave"))
+
+        val objectMapper = defaultObjectMapper()
+
+        statusTopic.history()
+            .first()
+            .value()
+            .let { objectMapper.readTree(it) }
+            .let { event ->
+                event["@event_name"].asText() shouldBe "eksternVarslingStatusOppdatert"
+                event["status"].asText() shouldBe "venter"
+                event["ident"].asText() shouldBe testFnr
+                event["varseltype"].asText() shouldBe "oppgave"
+            }
     }
 
     @Test
@@ -89,7 +121,7 @@ class OpprettetVarselSubscriberTest {
     @Test
     fun `tillater å skru av all batching`() {
 
-        val localBroadcaster = MessageBroadcaster(listOf(OpprettetVarselSubscriber(repository, enableBatch = false)))
+        val localBroadcaster = MessageBroadcaster(listOf(OpprettetVarselSubscriber(repository, statusProducer, enableBatch = false)))
 
         localBroadcaster.broadcastJson(varselOpprettetEvent(id = UUID.randomUUID().toString(), ident = testFnr, kanBatches = true))
         localBroadcaster.broadcastJson(varselOpprettetEvent(id = UUID.randomUUID().toString(), ident = testFnr, kanBatches = false))

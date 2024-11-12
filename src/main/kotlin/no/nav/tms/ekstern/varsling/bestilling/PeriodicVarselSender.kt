@@ -9,17 +9,18 @@ import no.nav.tms.common.observability.traceVarsel
 import no.nav.tms.common.util.scheduling.PeriodicJob
 import no.nav.tms.ekstern.varsling.TmsEksternVarsling
 import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper.nowAtUtc
+import no.nav.tms.ekstern.varsling.status.EksternStatusOppdatering
+import no.nav.tms.ekstern.varsling.status.EksternVarslingOppdatertProducer
 import no.nav.tms.kafka.application.AppHealth
-import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.Producer
 import org.apache.kafka.clients.producer.ProducerRecord
 import java.time.Duration
-import java.time.ZonedDateTime
 
 class PeriodicVarselSender(
     private val repository: EksternVarslingRepository,
     private val kanalDecider: PreferertKanalDecider,
     private val kafkaProducer: Producer<String, Doknotifikasjon>,
+    private val statusProducer: EksternVarslingOppdatertProducer,
     private val doknotTopic: String,
     private val leaderElection: PodLeaderElection,
     interval: Duration = Duration.ofSeconds(1),
@@ -60,6 +61,7 @@ class PeriodicVarselSender(
         } else {
             logKansellering(eksternVarsling)
             repository.markAsCancelled(ferdigstilt = nowAtUtc(), eksternVarsling.sendingsId)
+            sendKansellertStatus(eksternVarsling)
             EKSTERN_VARSLING_KANSELLERT.inc()
         }
     }
@@ -95,6 +97,25 @@ class PeriodicVarselSender(
             kanal.name,
             varsling.erUtsattVarsel.toString()
         ).inc()
+    }
+
+    private fun sendKansellertStatus(varsling: EksternVarsling) {
+        varsling.varsler.map {
+            EksternStatusOppdatering(
+                status = EksternStatus.Status.Kansellert,
+                varselId = it.varselId,
+                ident = varsling.ident,
+                kanal = null,
+                renotifikasjon = null,
+                batch = varsling.varsler.size > 1,
+                varseltype = it.varseltype,
+                produsent = it.produsent,
+                melding = null,
+                feilmelding = null
+            ).let { status ->
+                statusProducer.eksternStatusOppdatert(status)
+            }
+        }
     }
 
     private fun bestemRevarsling(varsling: EksternVarsling): Revarsling? {

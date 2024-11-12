@@ -2,11 +2,13 @@ package no.nav.tms.ekstern.varsling.bestilling
 
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.mockk.mockk
 import kotliquery.queryOf
 import no.nav.doknotifikasjon.schemas.DoknotifikasjonStopp
 import no.nav.tms.ekstern.varsling.setup.DummySerializer
 import no.nav.tms.ekstern.varsling.setup.LocalPostgresDatabase
 import no.nav.tms.ekstern.varsling.setup.json
+import no.nav.tms.ekstern.varsling.status.EksternVarslingOppdatertProducer
 import no.nav.tms.kafka.application.MessageBroadcaster
 import org.apache.kafka.clients.producer.MockProducer
 import org.apache.kafka.common.serialization.StringSerializer
@@ -18,23 +20,22 @@ class InaktivertVarselSubscriberTest {
     private val database = LocalPostgresDatabase.cleanDb()
     private val testFnr = "12345678910"
 
-    private val mockProducer = MockProducer<String, DoknotifikasjonStopp>(
+    private val stopTopic = MockProducer<String, DoknotifikasjonStopp>(
         false,
         StringSerializer(),
         DummySerializer()
     )
 
-
     private val repository = EksternVarslingRepository(database)
-    private val opprettetVarselBroadcaster = MessageBroadcaster(listOf(OpprettetVarselSubscriber(repository, enableBatch = true)))
-    private val inaktiverVarselBroadcaster = MessageBroadcaster(listOf(InaktivertVarselSubscriber(repository, mockProducer, "dummyTopic")))
+    private val opprettetVarselBroadcaster = MessageBroadcaster(listOf(OpprettetVarselSubscriber(repository, mockk(relaxed = true), enableBatch = true)))
+    private val inaktiverVarselBroadcaster = MessageBroadcaster(listOf(InaktivertVarselSubscriber(repository, stopTopic, "dummyTopic")))
 
     @AfterEach
     fun cleanup() {
         database.update {
             queryOf("delete from ekstern_varsling")
         }
-        mockProducer.clear()
+        stopTopic.clear()
     }
 
     @Test
@@ -110,7 +111,7 @@ class InaktivertVarselSubscriberTest {
 
         inaktiverVarselBroadcaster.broadcastJson(inaktivertEvent(id = varselId))
 
-        mockProducer.history().firstOrNull().let {
+        stopTopic.history().firstOrNull().let {
             it.shouldNotBeNull()
 
             val doknotStopp = it.value()

@@ -51,9 +51,10 @@ data class EksternStatusOppdatering(
     val ident: String,
     val kanal: String?,
     val renotifikasjon: Boolean?,
-    val batch: Boolean,
+    val batch: Boolean?,
     val varseltype: Varseltype,
     val produsent: Produsent,
+    val melding: String?,
     val feilmelding: String?
 ) {
     @JsonProperty("@event_name") val eventName = "eksternVarslingStatusOppdatert"
