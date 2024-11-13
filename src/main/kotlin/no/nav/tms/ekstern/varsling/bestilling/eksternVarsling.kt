@@ -79,7 +79,7 @@ object EksternStatus {
     )
 
     enum class Status {
-        Feilet, Info, Bestilt, Sendt, Ferdigstilt;
+        Feilet, Info, Bestilt, Sendt, Ferdigstilt, Kansellert, Venter;
 
         @JsonValue
         fun toJson() = name.lowercase()

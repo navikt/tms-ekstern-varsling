@@ -23,17 +23,18 @@ fun main() {
         environment.smsTimezone
     )
 
+    val statusOppdatertProducer = EksternVarslingOppdatertProducer(
+        kafkaProducer = initializeKafkaProducer(),
+        topicName = environment.varselTopic
+    )
+
     val varselSender = PeriodicVarselSender(
         repository = eksternVarselRepository,
         kanalDecider = kanalDecider,
         kafkaProducer = initializeKafkaProducer(useAvroSerializer = true),
         doknotTopic = environment.doknotTopic,
-        leaderElection = PodLeaderElection()
-    )
-
-    val statusOppdatertProducer = EksternVarslingOppdatertProducer(
-        kafkaProducer = initializeKafkaProducer(),
-        topicName = environment.varselTopic
+        leaderElection = PodLeaderElection(),
+        statusProducer = statusOppdatertProducer
     )
 
     val eksternStatusUpdater = EksternStatusUpdater(
@@ -47,7 +48,7 @@ fun main() {
             readTopics(environment.varselTopic)
         }
         subscribers(
-            OpprettetVarselSubscriber(eksternVarselRepository, environment.enableBatch),
+            OpprettetVarselSubscriber(eksternVarselRepository, statusOppdatertProducer, environment.enableBatch),
             InaktivertVarselSubscriber(
                 eksternVarselRepository,
                 initializeKafkaProducer(useAvroSerializer = true),

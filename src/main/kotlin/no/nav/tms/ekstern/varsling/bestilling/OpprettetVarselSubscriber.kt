@@ -3,6 +3,8 @@ package no.nav.tms.ekstern.varsling.bestilling
 import com.fasterxml.jackson.databind.JsonNode
 import io.github.oshai.kotlinlogging.KotlinLogging
 import no.nav.tms.common.observability.traceVarsel
+import no.nav.tms.ekstern.varsling.status.EksternStatusOppdatering
+import no.nav.tms.ekstern.varsling.status.EksternVarslingOppdatertProducer
 import no.nav.tms.kafka.application.JsonMessage
 import no.nav.tms.kafka.application.Subscriber
 import no.nav.tms.kafka.application.Subscription
@@ -12,6 +14,7 @@ import java.util.*
 
 class OpprettetVarselSubscriber(
     private val repository: EksternVarslingRepository,
+    private val statusProducer: EksternVarslingOppdatertProducer,
     private val enableBatch: Boolean
 ) : Subscriber() {
 
@@ -48,6 +51,21 @@ class OpprettetVarselSubscriber(
         findExistingBatch(jsonMessage)
             ?.let { addToExistingBatch(varsel, it) }
             ?: createNewEksternVarsling(varsel, jsonMessage)
+
+        EksternStatusOppdatering(
+            status = EksternStatus.Status.Venter,
+            varselId = varsel.varselId,
+            ident = jsonMessage["ident"].asText(),
+            varseltype = varsel.varseltype,
+            produsent = varsel.produsent,
+            kanal = null,
+            renotifikasjon = null,
+            batch = null,
+            melding = null,
+            feilmelding = null
+        ).let {
+            statusProducer.eksternStatusOppdatert(it)
+        }
     }
 
     fun isDuplicate(varsel: Varsel): Boolean {
