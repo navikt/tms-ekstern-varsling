@@ -107,7 +107,7 @@ class EksternStatusUpdater(
         varselId = varsel.varselId,
         ident = ident,
         renotifikasjon = newEntry.renotifikasjon,
-        melding = if (newEntry.status == Info) newEntry.melding else null,
+        melding = if (newEntry.status == Info || newEntry.status == Ferdigstilt) newEntry.melding else null,
         feilmelding = if (newEntry.status == Feilet) newEntry.melding else null,
         batch = batch,
         produsent = varsel.produsent

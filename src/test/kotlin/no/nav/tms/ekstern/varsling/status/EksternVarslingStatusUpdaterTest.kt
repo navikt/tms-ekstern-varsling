@@ -358,6 +358,42 @@ class EksternVarslingStatusSubscriberTest {
         }
     }
 
+    @Test
+    fun `sender med melding for statuser info og ferdigstilt til kafka`() {
+
+        val sendingsId = UUID.randomUUID().toString()
+
+        repository.insertEksternVarsling(sendtEksternVarsling(sendingsId, ident))
+
+        val info = "Dette er en infomelding"
+        val sendt = "Notifikasjon sendt via SMS"
+        val ferdigstilt = "Varsel er ferdigstilt og renotifikasjon er stanset"
+
+        testBroadcaster.broadcastJson(eksternVarslingStatus(sendingsId, INFO, melding = info, tidspunktZ = nowAtUtc()))
+        testBroadcaster.broadcastJson(eksternVarslingStatus(sendingsId, FERDIGSTILT, kanal = "SMS", melding = sendt, tidspunktZ = nowAtUtc()))
+        testBroadcaster.broadcastJson(eksternVarslingStatus(sendingsId, FERDIGSTILT, kanal = null, melding = ferdigstilt, tidspunktZ = nowAtUtc()))
+
+        mockProducer.verifyOutput { output ->
+            output.first {
+                it["status"].textValue() == "sendt"
+            }.let {
+                it["melding"].shouldBeNull()
+            }
+
+            output.first {
+                it["status"].textValue() == "info"
+            }.let {
+                it["melding"].asText() shouldBe info
+            }
+
+            output.first {
+                it["status"].textValue() == "ferdigstilt"
+            }.let {
+                it["melding"].asText() shouldBe ferdigstilt
+            }
+        }
+    }
+
     private fun sendtEksternVarsling(
         sendingsId: String,
         ident: String,
