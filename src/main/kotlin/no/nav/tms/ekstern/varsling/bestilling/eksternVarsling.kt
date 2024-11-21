@@ -47,12 +47,17 @@ data class EksternVarsling(
     val erUtsattVarsel: Boolean,
     val varsler: List<Varsel>,
     val utsending: ZonedDateTime?,
-    val kanal: Kanal?,
     val ferdigstilt: ZonedDateTime?,
     val status: Sendingsstatus,
-    val revarsling: Revarsling?,
     val eksternStatus: EksternStatus.Oversikt?,
+    val bestilling: Bestilling?,
     val opprettet: ZonedDateTime,
+)
+
+data class Bestilling(
+    val preferertKanal: Kanal,
+    val tekster: Tekster?,
+    val revarsling: Revarsling?
 )
 
 data class Revarsling(

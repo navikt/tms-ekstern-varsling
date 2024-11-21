@@ -141,12 +141,11 @@ private fun createEksternVarsling(
     erUtsattVarsel = false,
     varsler = varsler.asList(),
     utsending = null,
-    kanal = Kanal.SMS,
     ferdigstilt = null,
     opprettet = ZonedDateTimeHelper.nowAtUtc(),
     status = Sendingsstatus.Venter,
     eksternStatus = null,
-    revarsling = null
+    bestilling = null
 )
 
 private object ForventetDefaultOppgaveTekst {

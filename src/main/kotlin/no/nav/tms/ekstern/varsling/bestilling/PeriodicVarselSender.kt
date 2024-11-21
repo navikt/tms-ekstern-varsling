@@ -87,9 +87,15 @@ class PeriodicVarselSender(
 
         logSending(varsling, kanal)
 
+        val bestilling = Bestilling(
+            preferertKanal = kanal,
+            revarsling = revarsling,
+            tekster = tekster
+        )
+
         kafkaProducer.send(ProducerRecord(doknotTopic, varsling.sendingsId, doknot))
         repository.markAsSent(
-            sendingsId = varsling.sendingsId, ferdigstilt = nowAtUtc(), kanal = kanal, revarsling = revarsling
+            sendingsId = varsling.sendingsId, ferdigstilt = nowAtUtc(), bestilling = bestilling
         )
 
         EKSTERN_VARSLING_SENDT.labels(
@@ -142,6 +148,9 @@ class PeriodicVarselSender(
         if (revarsling != null) {
             antallRenotifikasjoner = revarsling.antall
             renotifikasjonIntervall = revarsling.intervall
+        } else {
+            antallRenotifikasjoner = 0
+            renotifikasjonIntervall = 0
         }
     }
 

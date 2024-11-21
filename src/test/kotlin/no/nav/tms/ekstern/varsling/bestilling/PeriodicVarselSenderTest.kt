@@ -142,8 +142,8 @@ class PeriodicVarselSenderTest {
         doknot.smsTekst shouldBe tekster.smsTekst
         doknot.tittel shouldBe tekster.epostTittel
         doknot.epostTekst shouldBe tekster.epostTekst
-        doknot.antallRenotifikasjoner shouldBe null
-        doknot.renotifikasjonIntervall shouldBe null
+        doknot.antallRenotifikasjoner shouldBe 0
+        doknot.renotifikasjonIntervall shouldBe 0
         doknot.bestillerId shouldBe "tms-ekstern-varsling"
     }
 
@@ -276,9 +276,9 @@ class PeriodicVarselSenderTest {
         repository.getEksternVarsling(sendingsId).let {
             it.shouldNotBeNull()
 
-            it.revarsling.shouldNotBeNull()
-            it.revarsling!!.antall shouldBe 1
-            it.revarsling!!.intervall shouldBe 4
+            it.bestilling?.revarsling.shouldNotBeNull()
+            it.bestilling?.revarsling!!.antall shouldBe 1
+            it.bestilling?.revarsling!!.intervall shouldBe 4
         }
 
         doknotTopic.history().first().value().let {
@@ -311,9 +311,9 @@ class PeriodicVarselSenderTest {
         repository.getEksternVarsling(sendingsId).let {
             it.shouldNotBeNull()
 
-            it.revarsling.shouldNotBeNull()
-            it.revarsling!!.antall shouldBe 1
-            it.revarsling!!.intervall shouldBe 7
+            it.bestilling?.revarsling.shouldNotBeNull()
+            it.bestilling?.revarsling!!.antall shouldBe 1
+            it.bestilling?.revarsling!!.intervall shouldBe 7
         }
 
         doknotTopic.history().first().value().let {
@@ -343,12 +343,12 @@ class PeriodicVarselSenderTest {
         repository.getEksternVarsling(sendingsId).let {
             it.shouldNotBeNull()
 
-            it.revarsling.shouldBeNull()
+            it.bestilling?.revarsling.shouldBeNull()
         }
 
         doknotTopic.history().first().value().let {
-            it.antallRenotifikasjoner shouldBe null
-            it.renotifikasjonIntervall shouldBe null
+            it.antallRenotifikasjoner shouldBe 0
+            it.renotifikasjonIntervall shouldBe 0
         }
     }
 
@@ -405,7 +405,7 @@ class PeriodicVarselSenderTest {
         val eksternVarsling = repository.getEksternVarsling(sendingsId)
 
         eksternVarsling.shouldNotBeNull()
-        eksternVarsling.kanal shouldBe Kanal.SMS
+        eksternVarsling.bestilling?.preferertKanal shouldBe Kanal.SMS
     }
 
     @Test
@@ -437,7 +437,7 @@ class PeriodicVarselSenderTest {
         val eksternVarsling = repository.getEksternVarsling(sendingsId)
 
         eksternVarsling.shouldNotBeNull()
-        eksternVarsling.kanal shouldBe Kanal.EPOST
+        eksternVarsling.bestilling?.preferertKanal shouldBe Kanal.EPOST
     }
 
     @Test
@@ -468,7 +468,7 @@ class PeriodicVarselSenderTest {
         val eksternVarsling = repository.getEksternVarsling(sendingsId)
 
         eksternVarsling.shouldNotBeNull()
-        eksternVarsling.kanal shouldBe Kanal.SMS
+        eksternVarsling.bestilling?.preferertKanal shouldBe Kanal.SMS
     }
 
     @Test
@@ -500,7 +500,35 @@ class PeriodicVarselSenderTest {
         val eksternVarsling = repository.getEksternVarsling(sendingsId)
 
         eksternVarsling.shouldNotBeNull()
-        eksternVarsling.kanal shouldBe Kanal.EPOST
+        eksternVarsling.bestilling?.preferertKanal shouldBe Kanal.EPOST
+    }
+
+    @Test
+    fun `Lagrer info om hvilke tekster som ble spesifisert ved bestilling`() = runBlocking<Unit> {
+        val sendingsId = UUID.randomUUID().toString()
+
+        database.insertEksternVarsling(eksternVarslingDBRow(sendingsId, testFnr,
+            erBatch = true,
+            varsler = listOf(
+                createVarsel(varseltype = Varseltype.Beskjed),
+                createVarsel(varseltype = Varseltype.Beskjed),
+                createVarsel(varseltype = Varseltype.Innboks)
+            ))
+        )
+
+        val periodicVarselSender = PeriodicVarselSender(
+            repository, kanalDecider, doknotTopic, statusProducer,
+            "test-topic", leaderElection, interval = Duration.ofMinutes(1)
+        )
+
+        coEvery { leaderElection.isLeader() } returns true
+
+        periodicVarselSender.start()
+        delay(500)
+        val eksternVarsling = repository.getEksternVarsling(sendingsId)
+
+        eksternVarsling.shouldNotBeNull()
+        eksternVarsling.bestilling?.tekster shouldBe bestemTekster(eksternVarsling)
     }
 }
 
@@ -528,12 +556,12 @@ private fun Database.tellAntallSendtFørDato(sendtEtterDato: ZonedDateTime) = si
 private fun Database.tellAntallForKanal(kanal: Kanal?) = singleOrNull {
     if (kanal != null) {
         queryOf(
-            "select count(*) as antall from ekstern_varsling where kanal = :kanal",
+            "select count(*) as antall from ekstern_varsling where bestilling->>'preferertKanal' = :kanal",
             mapOf("kanal" to kanal.name)
         )
     } else {
         queryOf(
-            "select count(*) as antall from ekstern_varsling where kanal is null"
+            "select count(*) as antall from ekstern_varsling where bestilling->>'preferertKanal' is null"
         )
     }.map { it.int("antall") }.asSingle
 
@@ -543,8 +571,8 @@ fun Database.insertEksternVarsling(eksternVarsling: EksternVarsling) {
     update {
         queryOf(
             """
-                insert into ekstern_varsling(sendingsId, ident, erBatch, erUtsattVarsel, varsler, utsending, kanal, ferdigstilt, opprettet, status, revarsling)
-                values (:sendingsId, :ident, :erBatch, :erUtsattVarsel, :varsler, :utsending, :kanal, :ferdigstilt, :opprettet, :status, :revarsling)
+                insert into ekstern_varsling(sendingsId, ident, erBatch, erUtsattVarsel, varsler, utsending, ferdigstilt, opprettet, status, bestilling)
+                values (:sendingsId, :ident, :erBatch, :erUtsattVarsel, :varsler, :utsending, :ferdigstilt, :opprettet, :status, :bestilling)
             """,
             mapOf(
                 "sendingsId" to eksternVarsling.sendingsId,
@@ -553,10 +581,9 @@ fun Database.insertEksternVarsling(eksternVarsling: EksternVarsling) {
                 "erUtsattVarsel" to eksternVarsling.erUtsattVarsel,
                 "varsler" to eksternVarsling.varsler.toJsonb(),
                 "utsending" to eksternVarsling.utsending,
-                "kanal" to eksternVarsling.kanal?.name,
                 "ferdigstilt" to eksternVarsling.ferdigstilt,
                 "status" to eksternVarsling.status.name,
-                "revarsling" to eksternVarsling.revarsling.toJsonb(),
+                "bestilling" to eksternVarsling.bestilling?.toJsonb(),
                 "opprettet" to eksternVarsling.opprettet,
             )
         )
