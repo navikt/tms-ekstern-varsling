@@ -110,11 +110,10 @@ class OpprettetVarselSubscriber(
             erUtsattVarsel = utsettSendingTil != null,
             varsler = listOf(varsel),
             utsending = utsending,
-            kanal = null,
             ferdigstilt = null,
             status = Sendingsstatus.Venter,
             eksternStatus = null,
-            revarsling = null,
+            bestilling = null,
             opprettet = jsonMessage["opprettet"].asText().let(ZonedDateTime::parse)
         )
 

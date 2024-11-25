@@ -97,11 +97,11 @@ fun varselOpprettetEventUtenEksternVarsling(
         "tekst": "Dummy tekst",
         "link": "https://nav.no",
         "tekster": [
-        {
-            "spraakkode": "nb",
-            "tekst": "Dummy tekst",
-            "default": true
-        }
+            {
+                "spraakkode": "nb",
+                "tekst": "Dummy tekst",
+                "default": true
+            }
         ]
     },
         "produsent": {
@@ -162,7 +162,7 @@ fun eksternVarslingDBRow(
     opprettet: ZonedDateTime = ZonedDateTimeHelper.nowAtUtc().minusSeconds(30),
     status: Sendingsstatus = Sendingsstatus.Venter,
     eksternStatus: EksternStatus.Oversikt? = null,
-    revarsling: Revarsling? = null
+    bestilling: Bestilling? = null
 ) = EksternVarsling(
     sendingsId = sendingsId,
     ident = ident,
@@ -170,10 +170,9 @@ fun eksternVarslingDBRow(
     erUtsattVarsel = erUtsattVarsel,
     varsler = varsler,
     utsending = utsending,
-    kanal = null,
     ferdigstilt = ferdigstilt,
     opprettet = opprettet,
     status = status,
     eksternStatus = eksternStatus,
-    revarsling = revarsling
+    bestilling = bestilling
 )

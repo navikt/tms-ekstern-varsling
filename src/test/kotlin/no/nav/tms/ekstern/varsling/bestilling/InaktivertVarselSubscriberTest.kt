@@ -105,7 +105,11 @@ class InaktivertVarselSubscriberTest {
                 status = Sendingsstatus.Sendt,
                 ferdigstilt = ZonedDateTimeHelper.nowAtUtc().minusHours(1),
                 varsler = listOf(createVarsel(varselId = varselId)),
-                revarsling = Revarsling(1, 7)
+                bestilling = Bestilling(
+                    preferertKanal = Kanal.SMS,
+                    tekster = null,
+                    revarsling = Revarsling(1, 7)
+                )
             )
         )
 

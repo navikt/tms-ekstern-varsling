@@ -46,7 +46,7 @@ class InaktivertVarselSubscriber (
                 varsler.all { !it.aktiv }
             }
 
-        if (eksternVarsling.status == Sendingsstatus.Sendt && eksternVarsling.revarsling != null && alleVarslerInaktivert) {
+        if (eksternVarsling.status == Sendingsstatus.Sendt && eksternVarsling.bestilling?.revarsling != null && alleVarslerInaktivert) {
 
             log.info { "Sender doknotifikasjonstopp for sendingsId ${eksternVarsling.sendingsId}" }
 

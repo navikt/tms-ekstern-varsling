@@ -21,11 +21,10 @@ class EksternVarslingRepository(val database: Database) {
                         erUtsattVarsel,
                         varsler,
                         utsending,
-                        kanal,
                         ferdigstilt,
                         status,
                         eksternStatus,
-                        revarsling,
+                        bestilling,
                         opprettet
                     ) values (
                         :sendingsId,
@@ -34,11 +33,10 @@ class EksternVarslingRepository(val database: Database) {
                         :erUtsattVarsel,
                         :varsler,
                         :utsending,
-                        :kanal,
                         :ferdigstilt,
                         :status,
                         :eksternStatus,
-                        :revarsling,
+                        :bestilling,
                         :opprettet
                     )
                 """, mapOf(
@@ -48,11 +46,10 @@ class EksternVarslingRepository(val database: Database) {
                     "erUtsattVarsel" to dbVarsel.erUtsattVarsel,
                     "varsler" to dbVarsel.varsler.toJsonb(objectMapper),
                     "utsending" to dbVarsel.utsending,
-                    "kanal" to dbVarsel.kanal?.name,
                     "ferdigstilt" to dbVarsel.ferdigstilt,
                     "status" to dbVarsel.status.name,
                     "eksternStatus" to dbVarsel.eksternStatus.toJsonb(objectMapper),
-                    "revarsling" to dbVarsel.revarsling.toJsonb(objectMapper),
+                    "bestilling" to dbVarsel.bestilling.toJsonb(objectMapper),
                     "opprettet" to dbVarsel.opprettet
                 )
             )
@@ -69,11 +66,10 @@ class EksternVarslingRepository(val database: Database) {
                     erUtsattVarsel,
                     varsler,
                     utsending,
-                    kanal,
                     ferdigstilt,
                     status,
                     eksternStatus,
-                    revarsling,
+                    bestilling,
                     opprettet
                 from 
                     ekstern_varsling
@@ -96,11 +92,10 @@ class EksternVarslingRepository(val database: Database) {
                     erUtsattVarsel,
                     varsler,
                     utsending,
-                    kanal,
                     ferdigstilt,
                     status,
                     eksternStatus,
-                    revarsling,
+                    bestilling,
                     opprettet
                 from 
                     ekstern_varsling
@@ -140,11 +135,10 @@ class EksternVarslingRepository(val database: Database) {
                     erUtsattVarsel,
                     varsler,
                     utsending,
-                    kanal,
                     ferdigstilt,
                     status,
                     eksternStatus,
-                    revarsling,
+                    bestilling,
                     opprettet
                 from 
                     ekstern_varsling 
@@ -180,11 +174,10 @@ class EksternVarslingRepository(val database: Database) {
                     erUtsattVarsel,
                     varsler,
                     utsending,
-                    kanal,
                     ferdigstilt,
                     status,
                     eksternStatus,
-                    revarsling,
+                    bestilling,
                     opprettet
                 from 
                     ekstern_varsling
@@ -201,7 +194,7 @@ class EksternVarslingRepository(val database: Database) {
         }
     }
 
-    fun markAsSent(sendingsId: String, ferdigstilt: ZonedDateTime, kanal: Kanal, revarsling: Revarsling?) {
+    fun markAsSent(sendingsId: String, ferdigstilt: ZonedDateTime, bestilling: Bestilling) {
         database.update {
             queryOf(
                 """
@@ -210,8 +203,7 @@ class EksternVarslingRepository(val database: Database) {
                 set 
                     ferdigstilt = :ferdigstilt,
                     status = :status,
-                    kanal = :kanal,
-                    revarsling = :revarsling
+                    bestilling = :bestilling
                 where 
                     sendingsId = :sendingsId
                 """,
@@ -219,8 +211,7 @@ class EksternVarslingRepository(val database: Database) {
                     "ferdigstilt" to ferdigstilt,
                     "sendingsId" to sendingsId,
                     "status" to Sendingsstatus.Sendt.name,
-                    "kanal" to kanal.name,
-                    "revarsling" to revarsling.toJsonb(objectMapper)
+                    "bestilling" to bestilling.toJsonb(objectMapper)
                 )
             )
         }
@@ -268,11 +259,10 @@ class EksternVarslingRepository(val database: Database) {
         erUtsattVarsel = row.boolean("erUtsattVarsel"),
         varsler = row.json<List<Varsel>>("varsler", objectMapper),
         utsending = row.zonedDateTimeOrNull("utsending"),
-        kanal = row.stringOrNull("kanal")?.let { Kanal.valueOf(it) },
         ferdigstilt = row.zonedDateTimeOrNull("ferdigstilt"),
         status = row.string("status").let { Sendingsstatus.valueOf(it) },
         eksternStatus = row.jsonOrNull("eksternStatus", objectMapper),
-        revarsling = row.jsonOrNull("revarsling", objectMapper),
+        bestilling = row.jsonOrNull("bestilling", objectMapper),
         opprettet = row.zonedDateTime("opprettet")
     )
 }
