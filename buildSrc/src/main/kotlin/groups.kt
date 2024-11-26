@@ -25,7 +25,6 @@ object Micrometer: MicrometerDefaults
 object Mockk: MockkDefaults
 object Postgresql: PostgresqlDefaults
 object Prometheus: PrometheusDefaults
-object RapidsAndRivers: RapidsAndRiversDefaults
 object Shadow: ShadowDefaults
 object TestContainers: TestContainersDefaults
 object TmsCommonLib: TmsCommonLibDefaults

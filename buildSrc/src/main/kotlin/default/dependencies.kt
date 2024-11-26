@@ -16,7 +16,7 @@ interface DependencyGroup {
 
 interface FlywayDefaults: DependencyGroup {
     override val groupId get() = "org.flywaydb"
-    override val version get() = "10.17.0"
+    override val version get() = "11.0.0"
 
     val pluginId get() = "org.flywaydb.flyway"
     val core get() = dependency("flyway-core")
@@ -25,13 +25,13 @@ interface FlywayDefaults: DependencyGroup {
 
 interface HikariDefaults: DependencyGroup {
     override val groupId get() = "com.zaxxer"
-    override val version get() = "5.1.0"
+    override val version get() = "6.2.1"
 
     val cp get() = dependency("HikariCP")
 }
 
 interface JacksonDatatypeDefaults: DependencyGroup {
-    override val version get() = "2.17.2"
+    override val version get() = "2.18.1"
 
     val datatypeJsr310 get() = dependency("jackson-datatype-jsr310", groupId = "com.fasterxml.jackson.datatype")
     val moduleKotlin get() = dependency("jackson-module-kotlin", groupId = "com.fasterxml.jackson.module")
@@ -39,7 +39,7 @@ interface JacksonDatatypeDefaults: DependencyGroup {
 
 interface JunitDefaults: DependencyGroup {
     override val groupId get() = "org.junit.jupiter"
-    override val version get() = "5.10.3"
+    override val version get() = "5.11.3"
 
     val api get() = dependency("junit-jupiter-api")
     val engine get() = dependency("junit-jupiter-engine")
@@ -58,7 +58,7 @@ interface JjwtDefaults: DependencyGroup {
 
 interface KafkaDefaults: DependencyGroup {
     override val groupId get() = "org.apache.kafka"
-    override val version get() = "3.8.0"
+    override val version get() = "3.9.0"
 
     val clients get() = dependency("kafka-clients")
     val kafka_2_12 get() = dependency("kafka_2.12")
@@ -83,7 +83,7 @@ interface KotestDefaults: DependencyGroup {
 
 interface KotlinDefaults: DependencyGroup {
     override val groupId get() = "org.jetbrains.kotlin"
-    override val version get() = "2.0.0"
+    override val version get() = "2.0.21"
 
     val reflect get() = dependency("kotlin-reflect")
 }
@@ -98,7 +98,7 @@ interface KotlinLoggingDefaults: DependencyGroup {
 interface KotlinxDefaults: DependencyGroup {
     override val groupId get() = "org.jetbrains.kotlinx"
 
-    val coroutines get() = dependency("kotlinx-coroutines-core", version = "1.8.1")
+    val coroutines get() = dependency("kotlinx-coroutines-core", version = "1.9.0")
 }
 
 interface KotliQueryDefaults: DependencyGroup {
@@ -163,21 +163,21 @@ interface LogstashDefaults: DependencyGroup {
 
 interface MicrometerDefaults: DependencyGroup {
     override val groupId get() = "io.micrometer"
-    override val version get() = "1.13.2"
+    override val version get() = "1.14.1"
 
     val registryPrometheus get() = dependency("micrometer-registry-prometheus")
 }
 
 interface MockkDefaults: DependencyGroup {
     override val groupId get() = "io.mockk"
-    override val version get() = "1.13.12"
+    override val version get() = "1.13.13"
 
     val mockk get() = dependency("mockk")
 }
 
 interface PostgresqlDefaults: DependencyGroup {
     override val groupId get() = "org.postgresql"
-    override val version get() = "42.7.3"
+    override val version get() = "42.7.4"
 
     val postgresql get() = dependency("postgresql")
 }
@@ -193,13 +193,6 @@ interface PrometheusDefaults: DependencyGroup {
     val simpleClient get() = dependency("simpleclient")
 }
 
-interface RapidsAndRiversDefaults: DependencyGroup {
-    override val groupId get() = "com.github.navikt"
-    override val version get() = "2024010209171704183456.6d035b91ffb4"
-
-    val rapidsAndRivers get() = dependency("rapids-and-rivers")
-}
-
 interface ShadowDefaults: DependencyGroup {
     override val version get() = "8.1.1"
 
@@ -207,7 +200,7 @@ interface ShadowDefaults: DependencyGroup {
 }
 
 interface TestContainersDefaults: DependencyGroup {
-    override val version get() = "1.20.0"
+    override val version get() = "1.20.4"
     override val groupId get() = "org.testcontainers"
 
     val junitJupiter get() = dependency("junit-jupiter")
