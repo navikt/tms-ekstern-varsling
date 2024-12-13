@@ -2,7 +2,7 @@ package no.nav.tms.ekstern.varsling.status
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.prometheus.client.Counter
+import io.prometheus.metrics.core.metrics.Counter
 import no.nav.tms.ekstern.varsling.bestilling.EksternStatus
 import no.nav.tms.ekstern.varsling.bestilling.Produsent
 import no.nav.tms.ekstern.varsling.bestilling.Varseltype
@@ -23,7 +23,7 @@ class EksternVarslingOppdatertProducer(private val kafkaProducer: Producer<Strin
 
         kafkaProducer.send(producerRecord)
 
-        EKSTERN_STATUS_OPPDATERT.labels(
+        EKSTERN_STATUS_OPPDATERT.labelValues(
             oppdatering.varseltype.name.lowercase(),
             oppdatering.status.name.lowercase(),
             oppdatering.kanal ?: "",
@@ -61,9 +61,8 @@ data class EksternStatusOppdatering(
     val tidspunkt = nowAtUtc()
 }
 
-private val EKSTERN_STATUS_OPPDATERT: Counter = Counter.build()
-    .name("ekstern_varsling_status_oppdatert")
-    .namespace("tms_ekstern_varsling_v2")
+private val EKSTERN_STATUS_OPPDATERT: Counter = Counter.builder()
+    .name("tms_ekstern_varsling_v2_ekstern_varsling_status_oppdatert")
     .help("Ekstern varsling status oppdatert")
     .labelNames("varseltype", "status", "kanal", "renotifikasjon", "batch")
     .register()

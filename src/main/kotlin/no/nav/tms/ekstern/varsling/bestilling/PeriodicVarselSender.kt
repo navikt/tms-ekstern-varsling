@@ -1,7 +1,7 @@
 package no.nav.tms.ekstern.varsling.bestilling
 
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.prometheus.client.Counter
+import io.prometheus.metrics.core.metrics.Counter
 import no.nav.doknotifikasjon.schemas.Doknotifikasjon
 import no.nav.doknotifikasjon.schemas.PrefererteKanal
 import no.nav.tms.common.kubernetes.PodLeaderElection
@@ -98,7 +98,7 @@ class PeriodicVarselSender(
             sendingsId = varsling.sendingsId, ferdigstilt = nowAtUtc(), bestilling = bestilling
         )
 
-        EKSTERN_VARSLING_SENDT.labels(
+        EKSTERN_VARSLING_SENDT.labelValues(
             varsling.erBatch.toString(),
             kanal.name,
             varsling.erUtsattVarsel.toString()
@@ -183,15 +183,13 @@ private fun mapKanal(kanal: Kanal) = when(kanal) {
     else -> throw IllegalArgumentException("Kun SMS og EPOST lar seg oversette direkte til doknot preferert kanal")
 }
 
-private val EKSTERN_VARSLING_SENDT: Counter = Counter.build()
-    .name("ekstern_varsling_bestilt")
-    .namespace("tms_ekstern_varsling_v2")
+private val EKSTERN_VARSLING_SENDT: Counter = Counter.builder()
+    .name("tms_ekstern_varsling_v2_ekstern_varsling_bestilt")
     .help("Ekstern varsling bestilt")
     .labelNames("er_batch","kanal", "er_utsatt")
     .register()
 
-private val EKSTERN_VARSLING_KANSELLERT: Counter = Counter.build()
-    .name("ekstern_varsling_kansellert")
-    .namespace("tms_ekstern_varsling_v2")
+private val EKSTERN_VARSLING_KANSELLERT: Counter = Counter.builder()
+    .name("tms_ekstern_varsling_v2_ekstern_varsling_kansellert")
     .help("Ekstern varsling kansellert")
     .register()
