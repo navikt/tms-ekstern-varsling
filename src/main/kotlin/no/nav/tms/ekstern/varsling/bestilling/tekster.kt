@@ -7,11 +7,15 @@ data class Tekster(
 )
 
 fun bestemTekster(eksternVarsling: EksternVarsling): Tekster {
-    if (eksternVarsling.varsler.size > 1) {
+    val antallAktive = eksternVarsling.varsler
+        .filter { it.aktiv }
+        .size
+
+    if (antallAktive > 1) {
         return batchTekster(eksternVarsling)
     }
 
-    val varsel = eksternVarsling.varsler.first()
+    val varsel = eksternVarsling.varsler.first { it.aktiv }
 
     val standardtekster = when(varsel.varseltype) {
         Varseltype.Oppgave -> OppgaveTekster
