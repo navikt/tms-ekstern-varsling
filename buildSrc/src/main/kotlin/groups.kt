@@ -30,3 +30,7 @@ object TestContainers: TestContainersDefaults
 object TmsCommonLib: TmsCommonLibDefaults
 object TmsKafkaTools: TmsKafkaToolsDefaults
 object TmsKtorTokenSupport: TmsKtorTokenSupportDefaults
+
+object TmsJarBundling {
+    const val plugin = "no.nav.tms.jar-bundling"
+}
