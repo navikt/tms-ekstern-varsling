@@ -4,7 +4,7 @@ plugins {
     // Apply the Kotlin JVM plugin to add support for Kotlin on the JVM.
     kotlin("jvm").version(Kotlin.version)
 
-    id(Shadow.pluginId) version (Shadow.version)
+    id(TmsJarBundling.plugin)
 
     // Apply the application plugin to add support for building a CLI application.
     application
@@ -12,7 +12,7 @@ plugins {
 
 kotlin {
     jvmToolchain {
-        languageVersion.set(JavaLanguageVersion.of(17))
+        languageVersion.set(JavaLanguageVersion.of(21))
     }
 }
 
@@ -23,12 +23,6 @@ repositories {
         url = uri("https://github-package-registry-mirror.gc.nav.no/cached/maven-release")
     }
     mavenLocal()
-}
-
-tasks {
-    shadowJar {
-        mergeServiceFiles()
-    }
 }
 
 dependencies {
