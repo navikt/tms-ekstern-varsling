@@ -1,6 +1,5 @@
-FROM gcr.io/distroless/java17-debian11
-COPY build/libs/tms-ekstern-varsling-all.jar app/app.jar
-ENV PORT=8080
-EXPOSE $PORT
-WORKDIR app
-CMD ["app.jar"]
+FROM ghcr.io/navikt/baseimages/temurin:21
+
+ENV JAVA_OPTS='-XX:MaxRAMPercentage=75'
+
+COPY build/libs/*.jar ./

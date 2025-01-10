@@ -1,5 +1,6 @@
 plugins {
     `kotlin-dsl`
+    `maven-publish`
 }
 
 repositories {
@@ -8,6 +9,21 @@ repositories {
 
 kotlin {
     jvmToolchain {
-        languageVersion.set(JavaLanguageVersion.of(17))
+        languageVersion.set(JavaLanguageVersion.of(21))
+    }
+}
+
+gradlePlugin {
+    plugins {
+        create("jar-bundling") {
+            id = "no.nav.tms.jar-bundling"
+            implementationClass = "JarBundling"
+        }
+    }
+}
+
+publishing {
+    repositories {
+        mavenLocal()
     }
 }
