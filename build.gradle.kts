@@ -53,8 +53,8 @@ dependencies {
     implementation(TmsKafkaTools.kafkaApplication)
     implementation(Prometheus.metricsCore)
 
-    testRuntimeOnly(Junit.engine)
-    testImplementation(Junit.api)
+    testImplementation(JunitPlatform.launcher)
+    testImplementation(JunitJupiter.api)
     testImplementation(Mockk.mockk)
     testImplementation(TestContainers.postgresql)
     testImplementation(Kotest.runnerJunit5)

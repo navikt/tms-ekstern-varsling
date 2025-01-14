@@ -5,7 +5,8 @@ import default.*
 object Flyway: FlywayDefaults
 object Hikari: HikariDefaults
 object JacksonDatatype: JacksonDatatypeDefaults
-object Junit: JunitDefaults
+object JunitJupiter: JunitJupiterDefaults
+object JunitPlatform: JunitPlatformDefaults
 object Jjwt: JjwtDefaults
 object Kafka: KafkaDefaults
 object Kluent: KluentDefaults
@@ -25,7 +26,6 @@ object Micrometer: MicrometerDefaults
 object Mockk: MockkDefaults
 object Postgresql: PostgresqlDefaults
 object Prometheus: PrometheusDefaults
-object Shadow: ShadowDefaults
 object TestContainers: TestContainersDefaults
 object TmsCommonLib: TmsCommonLibDefaults
 object TmsKafkaTools: TmsKafkaToolsDefaults
