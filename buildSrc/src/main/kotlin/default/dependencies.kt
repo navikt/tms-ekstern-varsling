@@ -16,7 +16,7 @@ interface DependencyGroup {
 
 interface FlywayDefaults: DependencyGroup {
     override val groupId get() = "org.flywaydb"
-    override val version get() = "11.1.1"
+    override val version get() = "11.3.4"
 
     val pluginId get() = "org.flywaydb.flyway"
     val core get() = dependency("flyway-core")
@@ -31,7 +31,7 @@ interface HikariDefaults: DependencyGroup {
 }
 
 interface JacksonDatatypeDefaults: DependencyGroup {
-    override val version get() = "2.18.2"
+    override val version get() = "2.18.3"
 
     val datatypeJsr310 get() = dependency("jackson-datatype-jsr310", groupId = "com.fasterxml.jackson.datatype")
     val moduleKotlin get() = dependency("jackson-module-kotlin", groupId = "com.fasterxml.jackson.module")
@@ -49,7 +49,7 @@ interface JjwtDefaults: DependencyGroup {
 
 interface JunitJupiterDefaults: DependencyGroup {
     override val groupId get() = "org.junit.jupiter"
-    override val version get() = "5.11.4"
+    override val version get() = "5.12.0"
 
     val api get() = dependency("junit-jupiter-api")
     val engine get() = dependency("junit-jupiter-engine")
@@ -58,7 +58,7 @@ interface JunitJupiterDefaults: DependencyGroup {
 
 interface JunitPlatformDefaults: DependencyGroup {
     override val groupId get() = "org.junit.platform"
-    override val version get() = "1.11.4"
+    override val version get() = "1.12.0"
 
     val launcher get() = dependency("junit-platform-launcher")
 }
@@ -90,14 +90,14 @@ interface KotestDefaults: DependencyGroup {
 
 interface KotlinDefaults: DependencyGroup {
     override val groupId get() = "org.jetbrains.kotlin"
-    override val version get() = "2.1.0"
+    override val version get() = "2.1.10"
 
     val reflect get() = dependency("kotlin-reflect")
 }
 
 interface KotlinLoggingDefaults: DependencyGroup {
     override val groupId get() = "io.github.oshai"
-    override val version get() = "7.0.3"
+    override val version get() = "7.0.4"
 
     val logging get() = dependency("kotlin-logging")
 }
@@ -116,7 +116,7 @@ interface KotliQueryDefaults: DependencyGroup {
 }
 
 object KtorDefaults {
-    val version get() = "3.0.3"
+    val version get() = "3.1.1"
     val groupId get() = "io.ktor"
 
     interface ServerDefaults: DependencyGroup {
@@ -170,21 +170,21 @@ interface LogstashDefaults: DependencyGroup {
 
 interface MicrometerDefaults: DependencyGroup {
     override val groupId get() = "io.micrometer"
-    override val version get() = "1.14.2"
+    override val version get() = "1.14.4"
 
     val registryPrometheus get() = dependency("micrometer-registry-prometheus")
 }
 
 interface MockkDefaults: DependencyGroup {
     override val groupId get() = "io.mockk"
-    override val version get() = "1.13.16"
+    override val version get() = "1.13.17"
 
     val mockk get() = dependency("mockk")
 }
 
 interface PostgresqlDefaults: DependencyGroup {
     override val groupId get() = "org.postgresql"
-    override val version get() = "42.7.4"
+    override val version get() = "42.7.5"
 
     val postgresql get() = dependency("postgresql")
 }
@@ -198,7 +198,7 @@ interface PrometheusDefaults: DependencyGroup {
 }
 
 interface TestContainersDefaults: DependencyGroup {
-    override val version get() = "1.20.4"
+    override val version get() = "1.20.5"
     override val groupId get() = "org.testcontainers"
 
     val junitJupiter get() = dependency("junit-jupiter")
