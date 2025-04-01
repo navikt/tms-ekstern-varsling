@@ -26,8 +26,10 @@ class InaktivertVarselSubscriberTest {
     )
 
     private val repository = EksternVarslingRepository(database)
-    private val opprettetVarselBroadcaster = MessageBroadcaster(listOf(OpprettetVarselSubscriber(repository, mockk(relaxed = true), enableBatch = true)))
-    private val inaktiverVarselBroadcaster = MessageBroadcaster(listOf(InaktivertVarselSubscriber(repository, stopTopic, "dummyTopic")))
+    private val broadcaster = MessageBroadcaster(
+        OpprettetVarselSubscriber(repository, mockk(relaxed = true), enableBatch = true),
+        InaktivertVarselSubscriber(repository, stopTopic, "dummyTopic")
+    )
 
     @AfterEach
     fun cleanup() {
@@ -42,35 +44,35 @@ class InaktivertVarselSubscriberTest {
         val inarkivertVarselIdEn = UUID.randomUUID().toString()
         val inarkivertVarselIdTwo = UUID.randomUUID().toString()
 
-        opprettetVarselBroadcaster.broadcastJson(
+        broadcaster.broadcastJson(
             varselOpprettetEvent(
                 id = UUID.randomUUID().toString(),
                 kanBatches = true,
                 ident = testFnr
             )
         )
-        opprettetVarselBroadcaster.broadcastJson(
+        broadcaster.broadcastJson(
             varselOpprettetEvent(
                 id = UUID.randomUUID().toString(),
                 kanBatches = true,
                 ident = testFnr
             )
         )
-        opprettetVarselBroadcaster.broadcastJson(
+        broadcaster.broadcastJson(
             varselOpprettetEvent(
                 id = inarkivertVarselIdEn,
                 kanBatches = true,
                 ident = testFnr
             )
         )
-        opprettetVarselBroadcaster.broadcastJson(
+        broadcaster.broadcastJson(
             varselOpprettetEvent(
                 id = inarkivertVarselIdTwo,
                 kanBatches = true,
                 ident = testFnr
             )
         )
-        opprettetVarselBroadcaster.broadcastJson(
+        broadcaster.broadcastJson(
             varselOpprettetEvent(
                 id = UUID.randomUUID().toString(),
                 kanBatches = true,
@@ -78,8 +80,8 @@ class InaktivertVarselSubscriberTest {
             )
         )
 
-        inaktiverVarselBroadcaster.broadcastJson(inaktivertEvent(id = inarkivertVarselIdEn))
-        inaktiverVarselBroadcaster.broadcastJson(inaktivertEvent(id = inarkivertVarselIdTwo))
+        broadcaster.broadcastJson(inaktivertEvent(id = inarkivertVarselIdEn))
+        broadcaster.broadcastJson(inaktivertEvent(id = inarkivertVarselIdTwo))
 
 
 
@@ -112,7 +114,7 @@ class InaktivertVarselSubscriberTest {
             )
         )
 
-        inaktiverVarselBroadcaster.broadcastJson(inaktivertEvent(id = varselId))
+        broadcaster.broadcastJson(inaktivertEvent(id = varselId))
 
         stopTopic.history().firstOrNull().let {
             it.shouldNotBeNull()
