@@ -6,6 +6,7 @@ import no.nav.tms.common.observability.traceVarsel
 import no.nav.tms.ekstern.varsling.status.EksternStatusOppdatering
 import no.nav.tms.ekstern.varsling.status.EksternVarslingOppdatertProducer
 import no.nav.tms.kafka.application.JsonMessage
+import no.nav.tms.kafka.application.MessageException
 import no.nav.tms.kafka.application.Subscriber
 import no.nav.tms.kafka.application.Subscription
 import java.time.ZonedDateTime
@@ -45,7 +46,7 @@ class OpprettetVarselSubscriber(
 
         if (isDuplicate(varsel)) {
             log.info { "Ignorerer duplikat varsel" }
-            return@traceVarsel
+            throw DuplicateVarselException()
         }
 
         findExistingBatch(jsonMessage)
@@ -158,3 +159,5 @@ class OpprettetVarselSubscriber(
         }
     }
 }
+
+class DuplicateVarselException: MessageException("Ekstern varsling er allerede registrert for varsel")

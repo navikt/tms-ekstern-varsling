@@ -15,5 +15,4 @@ data class Environment(
     val smsSendingsStart: LocalTime = getEnvVar("SMS_SENDING_START").let(LocalTime::parse),
     val smsSendingsEnd: LocalTime = getEnvVar("SMS_SENDING_END").let(LocalTime::parse),
     val smsTimezone: ZoneId = getEnvVar("SMS_TIMEZONE").let(ZoneId::of)
-
 )

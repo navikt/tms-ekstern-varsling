@@ -8,7 +8,6 @@ import no.nav.doknotifikasjon.schemas.DoknotifikasjonStopp
 import no.nav.tms.ekstern.varsling.setup.DummySerializer
 import no.nav.tms.ekstern.varsling.setup.LocalPostgresDatabase
 import no.nav.tms.ekstern.varsling.setup.json
-import no.nav.tms.ekstern.varsling.status.EksternVarslingOppdatertProducer
 import no.nav.tms.kafka.application.MessageBroadcaster
 import org.apache.kafka.clients.producer.MockProducer
 import org.apache.kafka.common.serialization.StringSerializer
@@ -124,13 +123,4 @@ class InaktivertVarselSubscriberTest {
             doknotStopp.bestillingsId shouldBe sendingsId
         }
     }
-
-    private fun tellAktiveVarsler(sendingsId: String) = database.singleOrNull {
-            queryOf(
-                "select varsler from ekstern_varsling where sendingsId = :sendingsId",
-                mapOf("sendingsId" to sendingsId)
-            )
-                .map { it.json<List<Varsel>>("varsler").count { it.aktiv } }.asSingle
-        }
-
 }

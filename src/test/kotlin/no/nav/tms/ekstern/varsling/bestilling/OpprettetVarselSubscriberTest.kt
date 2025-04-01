@@ -32,13 +32,17 @@ class OpprettetVarselSubscriberTest {
     private val statusProducer = EksternVarslingOppdatertProducer(statusTopic, "dummy-topic")
 
     private val repository = EksternVarslingRepository(database)
-    private val broadcaster = MessageBroadcaster(listOf(OpprettetVarselSubscriber(repository, statusProducer, enableBatch = true)))
+    private val broadcaster = MessageBroadcaster(
+        OpprettetVarselSubscriber(repository, statusProducer, enableBatch = true),
+        enableTracking = true
+    )
 
     @AfterEach
     fun cleanup() {
         database.update {
             queryOf("delete from ekstern_varsling")
         }
+        broadcaster.clearHistory()
         statusTopic.clear()
     }
 
@@ -183,6 +187,12 @@ class OpprettetVarselSubscriberTest {
         broadcaster.broadcastJson(varselOpprettetEventUtenEksternVarsling(id = UUID.randomUUID().toString(), ident = testFnr))
         broadcaster.broadcastJson(varselOpprettetEventUtenEksternVarsling(id = UUID.randomUUID().toString(), ident = testFnr))
 
+        broadcaster.history().collectAggregate(OpprettetVarselSubscriber::class).let {
+            it.shouldNotBeNull()
+            it.accepted shouldBe 2
+            it.ignored shouldBe 3
+        }
+
         database.singleOrNull {
             queryOf("select count(*) as antall from ekstern_varsling")
                 .map { it.int("antall") }
@@ -225,6 +235,13 @@ class OpprettetVarselSubscriberTest {
 
         broadcaster.broadcastJson(varselOpprettetEvent(id = eventId, ident = testFnr))
         broadcaster.broadcastJson(varselOpprettetEvent(id = eventId, ident = testFnr))
+
+        broadcaster.history().findFailedOutcome(OpprettetVarselSubscriber::class) {
+            it["varselId"].asText() == eventId
+        }.let {
+            it.shouldNotBeNull()
+            it.cause::class shouldBe DuplicateVarselException::class
+        }
 
         database.singleOrNull {
             queryOf("select count(*) as antall from ekstern_varsling")
