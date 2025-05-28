@@ -26,7 +26,7 @@ jobs:
           distribution: 'temurin'
 
       - name: Sett opp gradle
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@v4
 
       - name: Bygg og test prosjekt
         run: ./gradlew build
