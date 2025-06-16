@@ -90,7 +90,7 @@ interface KotestDefaults: DependencyGroup {
 
 interface KotlinDefaults: DependencyGroup {
     override val groupId get() = "org.jetbrains.kotlin"
-    override val version get() = "2.1.20"
+    override val version get() = "2.1.21"
 
     val reflect get() = dependency("kotlin-reflect")
 }
@@ -208,7 +208,7 @@ interface TestContainersDefaults: DependencyGroup {
 
 interface TmsCommonLibDefaults: DependencyGroup {
     override val groupId get() = "no.nav.tms.common"
-    override val version get() = "5.0.1"
+    override val version get() = "5.0.3"
 
     val metrics get() = dependency("metrics")
     val observability get() = dependency("observability")
@@ -219,14 +219,14 @@ interface TmsCommonLibDefaults: DependencyGroup {
 
 interface TmsKafkaToolsDefaults: DependencyGroup {
     override val groupId get() = "no.nav.tms.kafka"
-    override val version get() = "2.1.1"
+    override val version get() = "2.1.4"
 
     val kafkaApplication get() = dependency("kafka-application")
 }
 
 interface TmsKtorTokenSupportDefaults: DependencyGroup {
     override val groupId get() = "no.nav.tms.token.support"
-    override val version get() = "5.0.1"
+    override val version get() = "5.0.4"
 
     val azureExchange get() = dependency("azure-exchange")
     val azureValidation get() = dependency("azure-validation")
