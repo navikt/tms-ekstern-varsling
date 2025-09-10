@@ -1,21 +1,20 @@
 # tms-ekstern-varsling
 Prosjekt for bestilling av eksterne varsler (SMS og e-post) for brukervarsel-tjenesten.
 
-## Funksjon for app
-Appen `tms-ekstern-varsling` har følgende hovedfunksjoner:
+## Hovedfunksjoner
 
 - Mottar og lagrer bestillinger om ekstern varsling fra internet topic `min-side.brukervarsel-v1`.
-- Oppretter bestilling for utsending av SMS og e-post til eksterne varslingssystemer på topicen `teamdokumenthandtering.privat-dok-notifikasjon`
-- Overvåker og oppdaterer status for utsendte bestillinger slik at andre systemer kan reagere på endringer i status.
+- Oppretter bestilling for utsending av SMS og e-post til eksterne varslingssystemer på topicen `teamdokumenthandtering.privat-dok-notifikasjon`.
+- Overvåker og oppdaterer status på bestillinger slik at andre systemer kan reagere på endringer i status.
 - Håndterer utsendelser av varsler i batch og bestillinger som skal sendes på et framtidig tidspunkt.
-- Håndterer kansellering eller inaktivering av varsler etter behov
-  - Ved allerede utført bestilling opprettes event på topic `teamdokumenthandtering.privat-dok-notifikasjon-stopp`
+- Håndterer kansellering eller inaktivering av varsler etter behov.
+  - Ved allerede utført bestilling opprettes event på topic `teamdokumenthandtering.privat-dok-notifikasjon-stopp`.
 
-## Ulike eventer appen forholder seg på topic `min-side.brukervarsel-v1`
-- `opprett`: Lytter etter nye bestillinger
-- `inaktivert`: Lytter for evt. kansellering av bestilling
-- `eksternVarslingStatus`: Lytter for status på ekstern bestilling
-- `eksternVarslingStatusOppdatert`: Sender status på bestlling
+## Eventtyper appen håndterer på topic `min-side.brukervarsel-v1`.
+- **opprett**: Lytter etter nye bestillinger om ekstern varsling.
+- **inaktivert**: Lytter for eventuelle kanselleringer av bestilling.
+- **eksternVarslingStatus**: Lytter for status på ekstern bestilling.
+- **eksternVarslingStatusOppdatert**: Sender oppdatert status på bestilling.
 
 ## Dokumentasjon
 
