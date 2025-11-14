@@ -21,6 +21,7 @@ object Ktor {
     object Serialization: KtorDefaults.SerializationDefaults
     object Test: KtorDefaults.TestDefaults
 }
+object Logback: LogbackDefaults
 object Logstash: LogstashDefaults
 object Micrometer: MicrometerDefaults
 object Mockk: MockkDefaults
