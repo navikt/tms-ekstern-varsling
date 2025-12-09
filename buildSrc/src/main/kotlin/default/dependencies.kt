@@ -213,13 +213,13 @@ interface TestContainersDefaults: DependencyGroup {
 
 interface TmsCommonLibDefaults: DependencyGroup {
     override val groupId get() = "no.nav.tms.common"
-    override val version get() = "5.0.5"
+    override val version get() = "5.1.1"
 
+    val kubernetes get() = dependency("kubernetes")
     val metrics get() = dependency("metrics")
     val observability get() = dependency("observability")
+    val teamLogger get() = dependency("team-logger")
     val utils get() = dependency("utils")
-    val kubernetes get() = dependency("kubernetes")
-    val testutils get () = dependency("testutils")
 }
 
 interface TmsKafkaToolsDefaults: DependencyGroup {
