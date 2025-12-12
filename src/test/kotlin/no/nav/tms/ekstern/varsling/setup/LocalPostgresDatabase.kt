@@ -1,13 +1,9 @@
 package no.nav.tms.ekstern.varsling.setup
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.zaxxer.hikari.HikariDataSource
-import io.github.oshai.kotlinlogging.KotlinLogging
-import kotlinx.serialization.json.Json
 import kotliquery.queryOf
 import org.flywaydb.core.Flyway
-import org.flywaydb.core.internal.info.MigrationInfoDumper
-import org.testcontainers.containers.PostgreSQLContainer
+import org.testcontainers.postgresql.PostgreSQLContainer
 
 class LocalPostgresDatabase private constructor() : Database {
 
