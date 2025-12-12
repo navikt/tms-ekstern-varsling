@@ -5,6 +5,7 @@ import io.prometheus.metrics.core.metrics.Counter
 import no.nav.doknotifikasjon.schemas.Doknotifikasjon
 import no.nav.doknotifikasjon.schemas.PrefererteKanal
 import no.nav.tms.common.kubernetes.PodLeaderElection
+import no.nav.tms.common.logging.TeamLogs
 import no.nav.tms.common.observability.traceVarsel
 import no.nav.tms.common.util.scheduling.PeriodicJob
 import no.nav.tms.ekstern.varsling.TmsEksternVarsling
@@ -27,7 +28,7 @@ class PeriodicVarselSender(
 ) : PeriodicJob(interval) {
 
     private val log = KotlinLogging.logger {}
-    private val securelog = KotlinLogging.logger("secureLog")
+    private val teamLog = TeamLogs.logger { }
 
     override val job = initializeJob {
         if (leaderElection.isLeader()) {
@@ -38,7 +39,7 @@ class PeriodicVarselSender(
                     .forEach(::processRequest)
             } catch (e: Exception) {
                 log.error { "Feil ved prosessering av varsel-kø" }
-                securelog.error(e) { "Feil ved prosessering av varsel-kø" }
+                teamLog.error(e) { "Feil ved prosessering av varsel-kø" }
             }
         }
     }

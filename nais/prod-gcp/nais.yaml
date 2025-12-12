@@ -17,12 +17,15 @@ spec:
   prometheus:
     enabled: true
     path: /metrics
-  secureLogs:
-    enabled: true
   observability:
     autoInstrumentation:
       enabled: true
       runtime: java
+  accessPolicy:
+    outbound:
+      rules:
+        - application: logging
+          namespace: nais-system
   leaderElection: true
   replicas:
     min: 2
