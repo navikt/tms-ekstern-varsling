@@ -49,7 +49,7 @@ interface JjwtDefaults: DependencyGroup {
 
 interface JunitJupiterDefaults: DependencyGroup {
     override val groupId get() = "org.junit.jupiter"
-    override val version get() = "6.0.1"
+    override val version get() = "6.0.2"
 
     val api get() = dependency("junit-jupiter-api")
     val engine get() = dependency("junit-jupiter-engine")
@@ -58,7 +58,7 @@ interface JunitJupiterDefaults: DependencyGroup {
 
 interface JunitPlatformDefaults: DependencyGroup {
     override val groupId get() = "org.junit.platform"
-    override val version get() = "6.0.1"
+    override val version get() = "6.0.2"
 
     val launcher get() = dependency("junit-platform-launcher")
 }
@@ -95,7 +95,7 @@ interface KotlinDefaults: DependencyGroup {
 
 interface KotlinLoggingDefaults: DependencyGroup {
     override val groupId get() = "io.github.oshai"
-    override val version get() = "7.0.13"
+    override val version get() = "7.0.14"
 
     val logging get() = dependency("kotlin-logging")
 }
@@ -160,7 +160,7 @@ object KtorDefaults {
 }
 
 interface LogbackDefaults: DependencyGroup {
-    override val version get() = "1.5.21"
+    override val version get() = "1.5.24"
     override val groupId get() = "ch.qos.logback"
 
     val classic get() = dependency("logback-classic")
@@ -213,25 +213,26 @@ interface TestContainersDefaults: DependencyGroup {
 
 interface TmsCommonLibDefaults: DependencyGroup {
     override val groupId get() = "no.nav.tms.common"
-    override val version get() = "5.1.2"
+    override val version get() = "5.2.0"
 
     val kubernetes get() = dependency("kubernetes")
     val metrics get() = dependency("metrics")
     val observability get() = dependency("observability")
+    val postgres get() = dependency("postgres")
     val teamLogger get() = dependency("team-logger")
     val utils get() = dependency("utils")
 }
 
 interface TmsKafkaToolsDefaults: DependencyGroup {
     override val groupId get() = "no.nav.tms.kafka"
-    override val version get() = "2.2.1"
+    override val version get() = "2.2.2"
 
     val kafkaApplication get() = dependency("kafka-application")
 }
 
 interface TmsKtorTokenSupportDefaults: DependencyGroup {
     override val groupId get() = "no.nav.tms.token.support"
-    override val version get() = "5.0.5"
+    override val version get() = "5.0.6"
 
     val azureExchange get() = dependency("azure-exchange")
     val azureValidation get() = dependency("azure-validation")
