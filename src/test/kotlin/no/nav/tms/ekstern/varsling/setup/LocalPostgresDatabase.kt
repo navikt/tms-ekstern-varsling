@@ -2,53 +2,36 @@ package no.nav.tms.ekstern.varsling.setup
 
 import com.zaxxer.hikari.HikariDataSource
 import kotliquery.queryOf
+import no.nav.tms.common.postgres.Postgres
+import no.nav.tms.common.postgres.PostgresDatabase
 import org.flywaydb.core.Flyway
 import org.testcontainers.postgresql.PostgreSQLContainer
 
-class LocalPostgresDatabase private constructor() : Database {
+object LocalPostgresDatabase {
 
-    private val memDataSource: HikariDataSource
     private val container = PostgreSQLContainer("postgres:15")
+        .apply { start() }
 
-    companion object {
-        private val instance by lazy {
-            LocalPostgresDatabase().also {
-                it.migrate(expectedMigrations = 6)
-            }
-        }
-
-        fun cleanDb(): LocalPostgresDatabase {
-            instance.update { queryOf("delete from ekstern_varsling") }
-            return instance
+    private val database: PostgresDatabase by lazy {
+        Postgres.connectToContainer(container).also {
+            migrate(it.dataSource, expectedMigrations = 6)
         }
     }
 
-    init {
-        container.start()
-        memDataSource = createDataSource()
+    fun getInstance(): PostgresDatabase {
+        return database
     }
 
-    override val dataSource: HikariDataSource
-        get() = memDataSource
-
-    private fun createDataSource(): HikariDataSource {
-        return HikariDataSource().apply {
-            jdbcUrl = container.jdbcUrl
-            username = container.username
-            password = container.password
-            isAutoCommit = true
-            validate()
-        }
+    fun resetInstance() {
+        database.update { queryOf("delete from ekstern_varsling") }
     }
 
-    private fun migrate(expectedMigrations: Int) {
+    private fun migrate(dataSource: HikariDataSource, expectedMigrations: Int) {
         Flyway.configure()
             .connectRetries(3)
-            .validateMigrationNaming(true)
             .dataSource(dataSource)
             .load()
             .migrate()
             .let { assert(it.migrationsExecuted == expectedMigrations) }
-
     }
 }

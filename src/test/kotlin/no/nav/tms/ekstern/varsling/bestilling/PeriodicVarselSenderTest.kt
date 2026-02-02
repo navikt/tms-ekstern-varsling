@@ -10,8 +10,9 @@ import kotlinx.coroutines.runBlocking
 import kotliquery.queryOf
 import no.nav.doknotifikasjon.schemas.Doknotifikasjon
 import no.nav.tms.common.kubernetes.PodLeaderElection
+import no.nav.tms.common.postgres.JsonbHelper.toJsonb
+import no.nav.tms.common.postgres.PostgresDatabase
 import no.nav.tms.ekstern.varsling.setup.*
-import no.nav.tms.ekstern.varsling.status.EksternStatusOppdatering
 import no.nav.tms.ekstern.varsling.status.EksternVarslingOppdatertProducer
 import org.apache.kafka.clients.producer.MockProducer
 import org.apache.kafka.common.serialization.StringSerializer
@@ -26,7 +27,7 @@ import java.util.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class PeriodicVarselSenderTest {
-    private val database = LocalPostgresDatabase.cleanDb()
+    private val database = LocalPostgresDatabase.getInstance()
     private val repository = EksternVarslingRepository(database)
     private val testFnr = "12345678910"
 
@@ -532,28 +533,28 @@ class PeriodicVarselSenderTest {
     }
 }
 
-private fun Database.tellAntallSendt() = singleOrNull {
+private fun PostgresDatabase.tellAntallSendt() = singleOrNull {
     queryOf(
         "select count(*) filter(where status = :status) as antall from ekstern_varsling where ferdigstilt is not Null",
         mapOf("status" to Sendingsstatus.Sendt.name)
-    ).map { it.int("antall") }.asSingle
+    ).map { it.int("antall") }
 }
 
-private fun Database.tellAntallKansellert() = singleOrNull {
+private fun PostgresDatabase.tellAntallKansellert() = singleOrNull {
     queryOf(
         "select count(*) filter(where status = :status) as antall from ekstern_varsling where ferdigstilt is not Null",
         mapOf("status" to Sendingsstatus.Kansellert.name)
-    ).map { it.int("antall") }.asSingle
+    ).map { it.int("antall") }
 }
 
-private fun Database.tellAntallSendtFørDato(sendtEtterDato: ZonedDateTime) = singleOrNull {
+private fun PostgresDatabase.tellAntallSendtFørDato(sendtEtterDato: ZonedDateTime) = singleOrNull {
     queryOf(
         "select count(*) as antall from ekstern_varsling where ferdigstilt < :sendtEtterDato",
         mapOf("sendtEtterDato" to sendtEtterDato)
-    ).map { it.int("antall") }.asSingle
+    ).map { it.int("antall") }
 }
 
-private fun Database.tellAntallForKanal(kanal: Kanal?) = singleOrNull {
+private fun PostgresDatabase.tellAntallForKanal(kanal: Kanal?) = singleOrNull {
     if (kanal != null) {
         queryOf(
             "select count(*) as antall from ekstern_varsling where bestilling->>'preferertKanal' = :kanal",
@@ -563,11 +564,11 @@ private fun Database.tellAntallForKanal(kanal: Kanal?) = singleOrNull {
         queryOf(
             "select count(*) as antall from ekstern_varsling where bestilling->>'preferertKanal' is null"
         )
-    }.map { it.int("antall") }.asSingle
+    }.map { it.int("antall") }
 
 }
 
-fun Database.insertEksternVarsling(eksternVarsling: EksternVarsling) {
+fun PostgresDatabase.insertEksternVarsling(eksternVarsling: EksternVarsling) {
     update {
         queryOf(
             """

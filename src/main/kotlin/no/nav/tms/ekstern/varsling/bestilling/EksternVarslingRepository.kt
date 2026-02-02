@@ -2,13 +2,14 @@ package no.nav.tms.ekstern.varsling.bestilling
 
 import kotliquery.Row
 import kotliquery.queryOf
+import no.nav.tms.common.postgres.JsonbHelper.json
+import no.nav.tms.common.postgres.JsonbHelper.jsonOrNull
+import no.nav.tms.common.postgres.JsonbHelper.toJsonb
+import no.nav.tms.common.postgres.PostgresDatabase
 import no.nav.tms.ekstern.varsling.setup.*
-import java.time.Duration
 import java.time.ZonedDateTime
 
-class EksternVarslingRepository(val database: Database) {
-
-    private val objectMapper = defaultObjectMapper()
+class EksternVarslingRepository(val database: PostgresDatabase) {
 
     fun insertEksternVarsling(dbVarsel: EksternVarsling) {
         database.update {
@@ -44,12 +45,12 @@ class EksternVarslingRepository(val database: Database) {
                     "ident" to dbVarsel.ident,
                     "erBatch" to dbVarsel.erBatch,
                     "erUtsattVarsel" to dbVarsel.erUtsattVarsel,
-                    "varsler" to dbVarsel.varsler.toJsonb(objectMapper),
+                    "varsler" to dbVarsel.varsler.toJsonb(),
                     "utsending" to dbVarsel.utsending,
                     "ferdigstilt" to dbVarsel.ferdigstilt,
                     "status" to dbVarsel.status.name,
-                    "eksternStatus" to dbVarsel.eksternStatus.toJsonb(objectMapper),
-                    "bestilling" to dbVarsel.bestilling.toJsonb(objectMapper),
+                    "eksternStatus" to dbVarsel.eksternStatus.toJsonb(),
+                    "bestilling" to dbVarsel.bestilling.toJsonb(),
                     "opprettet" to dbVarsel.opprettet
                 )
             )
@@ -79,7 +80,6 @@ class EksternVarslingRepository(val database: Database) {
             mapOf("sendingsId" to sendingsId)
         )
             .map(::mapEksternVarsling)
-            .asSingle
     }
 
     fun findExistingBatch(ident: String): EksternVarsling? = database.singleOrNull {
@@ -108,7 +108,6 @@ class EksternVarslingRepository(val database: Database) {
             mapOf("ident" to ident)
         )
             .map(::mapEksternVarsling)
-            .asSingle
     }
 
     fun addVarselToExisting(sendingsId: String, varsel: Varsel) {
@@ -118,7 +117,7 @@ class EksternVarslingRepository(val database: Database) {
                     update ekstern_varsling set varsler = :varsel || varsler where sendingsId = :sendingsId 
                 """, mapOf(
                     "sendingsId" to sendingsId,
-                    "varsel" to listOf(varsel).toJsonb(objectMapper)
+                    "varsel" to listOf(varsel).toJsonb()
                 )
 
             )
@@ -148,7 +147,6 @@ class EksternVarslingRepository(val database: Database) {
                 mapOf("varsel" to varselId.toParam(aktiv))
             )
                 .map(::mapEksternVarsling)
-                .asSingle
         }
     }
 
@@ -159,7 +157,7 @@ class EksternVarslingRepository(val database: Database) {
                 mapOf("varsel" to varselId.toParam())
             ).map {
                 true
-            }.asSingle
+            }
         } ?: false
     }
 
@@ -190,7 +188,6 @@ class EksternVarslingRepository(val database: Database) {
                     "now" to ZonedDateTimeHelper.nowAtUtc()
                 )
             ).map(::mapEksternVarsling)
-            .asList
         }
     }
 
@@ -211,7 +208,7 @@ class EksternVarslingRepository(val database: Database) {
                     "ferdigstilt" to ferdigstilt,
                     "sendingsId" to sendingsId,
                     "status" to Sendingsstatus.Sendt.name,
-                    "bestilling" to bestilling.toJsonb(objectMapper)
+                    "bestilling" to bestilling.toJsonb()
                 )
             )
         }
@@ -229,16 +226,16 @@ class EksternVarslingRepository(val database: Database) {
     }
 
     private fun String.toParam(aktiv: Boolean? = null) = if (aktiv == null) {
-        listOf(mapOf("varselId" to this)).toJsonb(objectMapper)
+        listOf(mapOf("varselId" to this)).toJsonb()
     } else {
-        listOf(mapOf("varselId" to this, "aktiv" to aktiv)).toJsonb(objectMapper)
+        listOf(mapOf("varselId" to this, "aktiv" to aktiv)).toJsonb()
     }
 
     fun updateVarsler(sendingsId: String, varsler: List<Varsel>){
         database.update {
             queryOf(
                 "update ekstern_varsling set varsler = :varsler where sendingsId = :sendingsId",
-                mapOf("sendingsId" to sendingsId, "varsler" to varsler.toJsonb(objectMapper))
+                mapOf("sendingsId" to sendingsId, "varsler" to varsler.toJsonb())
             )
         }
     }
@@ -257,12 +254,12 @@ class EksternVarslingRepository(val database: Database) {
         ident = row.string("ident"),
         erBatch = row.boolean("erBatch"),
         erUtsattVarsel = row.boolean("erUtsattVarsel"),
-        varsler = row.json<List<Varsel>>("varsler", objectMapper),
+        varsler = row.json<List<Varsel>>("varsler"),
         utsending = row.zonedDateTimeOrNull("utsending"),
         ferdigstilt = row.zonedDateTimeOrNull("ferdigstilt"),
         status = row.string("status").let { Sendingsstatus.valueOf(it) },
-        eksternStatus = row.jsonOrNull("eksternStatus", objectMapper),
-        bestilling = row.jsonOrNull("bestilling", objectMapper),
+        eksternStatus = row.jsonOrNull("eksternStatus"),
+        bestilling = row.jsonOrNull("bestilling"),
         opprettet = row.zonedDateTime("opprettet")
     )
 }

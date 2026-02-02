@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test
 import java.util.*
 
 class BehandletAvLegacySubscriberTest {
-    private val database = LocalPostgresDatabase.cleanDb()
+    private val database = LocalPostgresDatabase.getInstance()
     private val repository = EksternVarslingRepository(database)
 
     private val ident = "12345678901"
@@ -36,7 +36,7 @@ class BehandletAvLegacySubscriberTest {
 
     @BeforeEach
     fun resetDb() {
-        database.update { queryOf("delete from ekstern_varsling") }
+        LocalPostgresDatabase.resetInstance()
         mockProducer.clear()
     }
 

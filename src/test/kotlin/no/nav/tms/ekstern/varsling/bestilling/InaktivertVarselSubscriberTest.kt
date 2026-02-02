@@ -5,9 +5,9 @@ import io.kotest.matchers.shouldBe
 import io.mockk.mockk
 import kotliquery.queryOf
 import no.nav.doknotifikasjon.schemas.DoknotifikasjonStopp
+import no.nav.tms.common.postgres.JsonbHelper.json
 import no.nav.tms.ekstern.varsling.setup.DummySerializer
 import no.nav.tms.ekstern.varsling.setup.LocalPostgresDatabase
-import no.nav.tms.ekstern.varsling.setup.json
 import no.nav.tms.kafka.application.MessageBroadcaster
 import org.apache.kafka.clients.producer.MockProducer
 import org.apache.kafka.common.serialization.StringSerializer
@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test
 import java.util.*
 
 class InaktivertVarselSubscriberTest {
-    private val database = LocalPostgresDatabase.cleanDb()
+    private val database = LocalPostgresDatabase.getInstance()
     private val testFnr = "12345678910"
 
     private val stopTopic = MockProducer<String, DoknotifikasjonStopp>(
@@ -33,9 +33,7 @@ class InaktivertVarselSubscriberTest {
 
     @AfterEach
     fun cleanup() {
-        database.update {
-            queryOf("delete from ekstern_varsling")
-        }
+        LocalPostgresDatabase.resetInstance()
         stopTopic.clear()
     }
 
@@ -90,7 +88,7 @@ class InaktivertVarselSubscriberTest {
                 "select varsler from ekstern_varsling where ident = :ident",
                 mapOf("ident" to testFnr)
             )
-                .map { it.json<List<Varsel>>("varsler").count { it.aktiv } }.asSingle
+                .map { it.json<List<Varsel>>("varsler").count { it.aktiv } }
         } shouldBe 3
     }
 

@@ -22,7 +22,7 @@ import java.util.*
 
 class EksternVarslingStatusSubscriberTest {
 
-    private val database = LocalPostgresDatabase.cleanDb()
+    private val database = LocalPostgresDatabase.getInstance()
     private val repository = EksternVarslingRepository(database)
 
     private val ident = "12345678901"
@@ -48,7 +48,7 @@ class EksternVarslingStatusSubscriberTest {
 
     @BeforeEach
     fun resetDb() {
-        database.update { queryOf("delete from ekstern_varsling") }
+        LocalPostgresDatabase.resetInstance()
         mockProducer.clear()
     }
 
