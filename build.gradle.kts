@@ -50,6 +50,7 @@ dependencies {
     implementation(TmsCommonLib.utils)
     implementation(TmsCommonLib.kubernetes)
     implementation(TmsCommonLib.observability)
+    implementation(TmsCommonLib.postgres)
     implementation(TmsCommonLib.teamLogger)
     implementation(TmsKafkaTools.kafkaApplication)
     implementation(Prometheus.metricsCore)

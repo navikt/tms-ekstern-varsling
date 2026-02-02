@@ -7,6 +7,7 @@ import java.time.OffsetTime
 import java.time.ZoneId
 
 data class Environment(
+    val jdbcUrl: String = getEnvVar("DB_JDBC_URL"),
     val varselTopic: String = getEnvVar("VARSEL_TOPIC"),
     val doknotTopic: String = getEnvVar("DOKNOTIFIKASJON_TOPIC"),
     val doknotStoppTopic: String = getEnvVar("DOKNOTIFIKASJON_STOP_TOPIC"),

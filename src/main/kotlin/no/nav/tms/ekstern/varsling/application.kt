@@ -2,20 +2,22 @@ package no.nav.tms.ekstern.varsling
 
 import kotlinx.coroutines.runBlocking
 import no.nav.tms.common.kubernetes.PodLeaderElection
+import no.nav.tms.common.postgres.Postgres
 import no.nav.tms.ekstern.varsling.bestilling.*
-import no.nav.tms.ekstern.varsling.setup.Flyway
-import no.nav.tms.ekstern.varsling.setup.PostgresDatabase
 import no.nav.tms.ekstern.varsling.setup.initializeKafkaProducer
 import no.nav.tms.ekstern.varsling.status.BehandletAvLegacySubscriber
 import no.nav.tms.ekstern.varsling.status.EksternStatusUpdater
 import no.nav.tms.ekstern.varsling.status.EksternVarslingOppdatertProducer
 import no.nav.tms.ekstern.varsling.status.EksternVarslingStatusSubscriber
 import no.nav.tms.kafka.application.KafkaApplication
+import org.flywaydb.core.Flyway
 
 
 fun main() {
-    val eksternVarselRepository = EksternVarslingRepository(PostgresDatabase())
     val environment = Environment()
+
+    val database = Postgres.connectToJdbcUrl(environment.jdbcUrl)
+    val eksternVarselRepository = EksternVarslingRepository(database)
 
     val kanalDecider = PreferertKanalDecider(
         environment.smsSendingsStart,
@@ -58,7 +60,10 @@ fun main() {
             EksternVarslingStatusSubscriber(eksternStatusUpdater),
         )
         onStartup {
-            Flyway.runFlywayMigrations()
+            Flyway.configure()
+                .dataSource(database.dataSource)
+                .load()
+                .migrate()
         }
         onReady {
             varselSender.start()

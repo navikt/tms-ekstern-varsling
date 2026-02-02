@@ -5,9 +5,9 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import kotliquery.queryOf
+import no.nav.tms.common.postgres.JsonbHelper.json
 import no.nav.tms.ekstern.varsling.setup.LocalPostgresDatabase
 import no.nav.tms.ekstern.varsling.setup.defaultObjectMapper
-import no.nav.tms.ekstern.varsling.setup.json
 import no.nav.tms.ekstern.varsling.status.EksternVarslingOppdatertProducer
 import no.nav.tms.kafka.application.MessageBroadcaster
 import org.apache.kafka.clients.producer.MockProducer
@@ -20,7 +20,7 @@ import java.util.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class OpprettetVarselSubscriberTest {
-    private val database = LocalPostgresDatabase.cleanDb()
+    private val database = LocalPostgresDatabase.getInstance()
     private val testFnr = "12345678910"
 
     private val statusTopic = MockProducer(
@@ -61,7 +61,6 @@ class OpprettetVarselSubscriberTest {
                 mapOf("status" to Sendingsstatus.Venter.name)
             )
                 .map { it.int("antall") }
-                .asSingle
         } shouldBe 5
 
         statusTopic.history().size shouldBe 5
@@ -102,19 +101,16 @@ class OpprettetVarselSubscriberTest {
         database.singleOrNull {
             queryOf("select count(*) as antall from ekstern_varsling")
                 .map { it.int("antall") }
-                .asSingle
         } shouldBe 3
 
         database.singleOrNull {
             queryOf("select varsler from ekstern_varsling where erBatch")
                 .map { it.json<List<Varsel>>("varsler").size }
-                .asSingle
         } shouldBe 5
 
         val utsending = database.singleOrNull {
             queryOf("select utsending from ekstern_varsling where erBatch")
                 .map { it.zonedDateTimeOrNull("utsending") }
-                .asSingle
         }
 
         utsending.shouldNotBeNull()
@@ -139,13 +135,11 @@ class OpprettetVarselSubscriberTest {
         database.singleOrNull {
             queryOf("select count(*) as antall from ekstern_varsling")
                 .map { it.int("antall") }
-                .asSingle
         } shouldBe 7
 
         database.singleOrNull {
             queryOf("select count(*) as antall from ekstern_varsling where utsending is null")
                 .map { it.int("antall") }
-                .asSingle
         } shouldBe 7
     }
 
@@ -162,19 +156,16 @@ class OpprettetVarselSubscriberTest {
         database.singleOrNull {
             queryOf("select count(*) as antall from ekstern_varsling")
                 .map { it.int("antall") }
-                .asSingle
         } shouldBe 3
 
         database.singleOrNull {
             queryOf("select varsler from ekstern_varsling where erBatch")
                 .map { it.json<List<Varsel>>("varsler").size }
-                .asSingle
         } shouldBe 3
 
         database.list {
             queryOf("select varsler from ekstern_varsling where not erBatch")
                 .map { it.json<List<Varsel>>("varsler").size }
-                .asList
         }.all { it == 1 } shouldBe true
     }
 
@@ -196,7 +187,6 @@ class OpprettetVarselSubscriberTest {
         database.singleOrNull {
             queryOf("select count(*) as antall from ekstern_varsling")
                 .map { it.int("antall") }
-                .asSingle
         } shouldBe 2
     }
 
@@ -210,7 +200,6 @@ class OpprettetVarselSubscriberTest {
         database.singleOrNull {
             queryOf("select utsending from ekstern_varsling where utsending is not null ")
                 .map { it.zonedDateTime("utsending") }
-                .asSingle
         }?.toEpochSecond() shouldBe utsettSendingTil.toEpochSecond()
     }
 
@@ -225,7 +214,6 @@ class OpprettetVarselSubscriberTest {
         database.singleOrNull {
             queryOf("select count(*) as antall from ekstern_varsling")
                 .map { it.int("antall") }
-                .asSingle
         } shouldBe 2
     }
 
@@ -246,13 +234,11 @@ class OpprettetVarselSubscriberTest {
         database.singleOrNull {
             queryOf("select count(*) as antall from ekstern_varsling")
                 .map { it.int("antall") }
-                .asSingle
         } shouldBe 1
 
         database.singleOrNull {
             queryOf("select varsler from ekstern_varsling")
                 .map { it.json<List<Varsel>>("varsler").size }
-                .asSingle
         } shouldBe 1
     }
 
@@ -266,8 +252,7 @@ class OpprettetVarselSubscriberTest {
             queryOf(
                 "select sendingsId from ekstern_varsling"
             )
-                .map { it.string("sendingsId") }
-                .asSingle
+            .map { it.string("sendingsId") }
         } shouldNotBe varselId
     }
 
@@ -282,7 +267,6 @@ class OpprettetVarselSubscriberTest {
                 "select sendingsId from ekstern_varsling"
             )
                 .map { it.string("sendingsId") }
-                .asSingle
         } shouldBe varselId
     }
 }
