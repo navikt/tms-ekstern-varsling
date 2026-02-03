@@ -13,7 +13,7 @@ spec:
     initialDelay: 30
   readiness:
     path: /isready
-    initialDelay: 5
+    initialDelay: 15
   prometheus:
     enabled: true
     path: /metrics

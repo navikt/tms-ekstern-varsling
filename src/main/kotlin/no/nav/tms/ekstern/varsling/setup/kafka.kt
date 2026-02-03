@@ -21,10 +21,13 @@ fun <V> initializeKafkaProducer(
     val log = KotlinLogging.logger {}
 
     val environment = KafkaEnvironment()
+
+    val clientId = "${TmsEksternVarsling.appnavn}-${UUID.randomUUID()}"
+
     return KafkaProducer<String, V>(
         Properties().apply {
             put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, environment.kafkaBrokers)
-            put(ProducerConfig.CLIENT_ID_CONFIG, TmsEksternVarsling.appnavn)
+            put(ProducerConfig.CLIENT_ID_CONFIG, clientId)
             put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer::class.java)
             if (useAvroSerializer) {
                 log.info { "Using avro serializer" }
