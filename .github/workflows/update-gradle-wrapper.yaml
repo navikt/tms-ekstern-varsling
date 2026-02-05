@@ -1,0 +1,29 @@
+name: Update Gradle Wrapper
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/update-gradle-wrapper.yaml
+  schedule:
+    - cron: "0 10 1 * *"
+
+jobs:
+  update-gradle-wrapper:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Sett opp java
+        uses: actions/setup-java@v4
+        with:
+          java-version: 21
+          distribution: 'temurin'
+
+      - name: Update Gradle Wrapper
+        uses: gradle-update/update-gradle-wrapper-action@v2
