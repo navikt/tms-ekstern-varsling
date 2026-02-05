@@ -27,7 +27,7 @@ import java.util.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class PeriodicVarselSenderTest {
-    private val database = LocalPostgresDatabase.getInstance()
+    private val database = LocalPostgresDatabase.getCleanInstance()
     private val repository = EksternVarslingRepository(database)
     private val testFnr = "12345678910"
 

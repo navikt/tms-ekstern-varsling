@@ -18,7 +18,8 @@ object LocalPostgresDatabase {
         }
     }
 
-    fun getInstance(): PostgresDatabase {
+    fun getCleanInstance(): PostgresDatabase {
+        resetInstance()
         return database
     }
 

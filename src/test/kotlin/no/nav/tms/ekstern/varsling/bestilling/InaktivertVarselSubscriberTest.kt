@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test
 import java.util.*
 
 class InaktivertVarselSubscriberTest {
-    private val database = LocalPostgresDatabase.getInstance()
+    private val database = LocalPostgresDatabase.getCleanInstance()
     private val testFnr = "12345678910"
 
     private val stopTopic = MockProducer<String, DoknotifikasjonStopp>(

@@ -20,7 +20,7 @@ import java.util.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class OpprettetVarselSubscriberTest {
-    private val database = LocalPostgresDatabase.getInstance()
+    private val database = LocalPostgresDatabase.getCleanInstance()
     private val testFnr = "12345678910"
 
     private val statusTopic = MockProducer(

@@ -6,7 +6,6 @@ import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import kotliquery.queryOf
 import no.nav.tms.ekstern.varsling.bestilling.*
 import no.nav.tms.ekstern.varsling.setup.LocalPostgresDatabase
 import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper.nowAtUtc
@@ -22,7 +21,7 @@ import java.util.*
 
 class EksternVarslingStatusSubscriberTest {
 
-    private val database = LocalPostgresDatabase.getInstance()
+    private val database = LocalPostgresDatabase.getCleanInstance()
     private val repository = EksternVarslingRepository(database)
 
     private val ident = "12345678901"
