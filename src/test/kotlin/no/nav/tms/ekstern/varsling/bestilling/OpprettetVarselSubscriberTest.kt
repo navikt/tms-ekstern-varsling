@@ -4,6 +4,9 @@ import io.kotest.matchers.date.shouldBeBetween
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.mockk.every
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
 import kotliquery.queryOf
 import no.nav.tms.common.postgres.JsonbHelper.json
 import no.nav.tms.ekstern.varsling.setup.LocalPostgresDatabase
@@ -44,6 +47,7 @@ class OpprettetVarselSubscriberTest {
         }
         broadcaster.clearHistory()
         statusTopic.clear()
+        unmockkObject(VarseltekstValidation)
     }
 
     @Test
@@ -268,5 +272,27 @@ class OpprettetVarselSubscriberTest {
             )
                 .map { it.string("sendingsId") }
         } shouldBe varselId
+    }
+
+    @Test
+    fun `forkaster varsler dersom validation feiler`() {
+        val varselId = UUID.randomUUID().toString()
+
+        mockkObject(VarseltekstValidation)
+
+        every {
+            VarseltekstValidation.validate(any())
+        } throws VarseltekstValidationException("Feil!")
+
+        val feilendeVarsel = varselOpprettetEvent(id = varselId, ident = testFnr)
+
+        broadcaster.broadcastJson(feilendeVarsel)
+
+        broadcaster.history().findFailedOutcome(OpprettetVarselSubscriber::class) {
+            it["varselId"].asText() == varselId
+        }.let {
+            it.shouldNotBeNull()
+            it.cause::class shouldBe InvalidVarseltekstException::class
+        }
     }
 }

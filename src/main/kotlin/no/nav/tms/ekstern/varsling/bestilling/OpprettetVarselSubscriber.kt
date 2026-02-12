@@ -2,6 +2,7 @@ package no.nav.tms.ekstern.varsling.bestilling
 
 import com.fasterxml.jackson.databind.JsonNode
 import io.github.oshai.kotlinlogging.KotlinLogging
+import no.nav.tms.common.logging.TeamLogs
 import no.nav.tms.common.observability.traceVarsel
 import no.nav.tms.ekstern.varsling.status.EksternStatusOppdatering
 import no.nav.tms.ekstern.varsling.status.EksternVarslingOppdatertProducer
@@ -20,6 +21,7 @@ class OpprettetVarselSubscriber(
 ) : Subscriber() {
 
     private val log = KotlinLogging.logger {}
+    private val teamLog = TeamLogs.logger {}
 
     override fun subscribe() = Subscription.forEvent("opprettet")
         .withFields("type", "varselId", "ident", "eksternVarslingBestilling", "opprettet", "produsent")
@@ -42,7 +44,9 @@ class OpprettetVarselSubscriber(
             produsent = produsent,
             aktiv = true,
             behandletAvLegacy = false
-        )
+        ).also {
+            validate(it)
+        }
 
         if (isDuplicate(varsel)) {
             log.info { "Ignorerer duplikat varsel" }
@@ -69,11 +73,22 @@ class OpprettetVarselSubscriber(
         }
     }
 
-    fun isDuplicate(varsel: Varsel): Boolean {
+    private fun validate(varsel: Varsel) {
+        try {
+            VarseltekstValidation.validate(varsel)
+        } catch (e: VarseltekstValidationException) {
+            log.warn { "Feil ved validering av varseltekser" }
+            teamLog.warn { "Feil ved validering av varseltekster for opprettet varsel [$varsel]: ${e.explanation.joinToString()}" }
+
+            throw InvalidVarseltekstException()
+        }
+    }
+
+    private fun isDuplicate(varsel: Varsel): Boolean {
         return repository.varselExists(varsel.varselId)
     }
 
-    fun addToExistingBatch(varsel: Varsel, existingBatch: EksternVarsling) {
+    private fun addToExistingBatch(varsel: Varsel, existingBatch: EksternVarsling) {
         log.info { "Legger til varsel i eksisterende varsling" }
         repository.addVarselToExisting(
             sendingsId = existingBatch.sendingsId,
@@ -81,7 +96,7 @@ class OpprettetVarselSubscriber(
         )
     }
 
-    fun createNewEksternVarsling(varsel: Varsel, jsonMessage: JsonMessage) {
+    private fun createNewEksternVarsling(varsel: Varsel, jsonMessage: JsonMessage) {
         val kanBatches = if (enableBatch) {
             jsonMessage["eksternVarslingBestilling"]["kanBatches"].asBooleanOrNull() ?: false
         } else {
@@ -122,7 +137,7 @@ class OpprettetVarselSubscriber(
         repository.insertEksternVarsling(eksternVarsling)
     }
 
-    fun findExistingBatch(jsonMessage: JsonMessage): EksternVarsling? {
+    private fun findExistingBatch(jsonMessage: JsonMessage): EksternVarsling? {
         val kanBatches = if (enableBatch) {
             jsonMessage["eksternVarslingBestilling"]["kanBatches"].asBooleanOrNull() ?: false
         } else {
@@ -138,12 +153,12 @@ class OpprettetVarselSubscriber(
         }
     }
 
-    fun parseVarseltype(type: String): Varseltype {
+    private fun parseVarseltype(type: String): Varseltype {
         return Varseltype.entries.find { it.name.lowercase() == type.lowercase() }
             ?: throw IllegalArgumentException("Fant ikke varsel type med type: $type")
     }
 
-    fun JsonNode?.asTextOrNull(): String? {
+    private fun JsonNode?.asTextOrNull(): String? {
         return if (this == null || isNull) {
             null
         } else {
@@ -151,7 +166,7 @@ class OpprettetVarselSubscriber(
         }
     }
 
-    fun JsonNode?.asBooleanOrNull(): Boolean? {
+    private fun JsonNode?.asBooleanOrNull(): Boolean? {
         return if (this == null || isNull) {
             null
         } else {
@@ -161,3 +176,4 @@ class OpprettetVarselSubscriber(
 }
 
 class DuplicateVarselException: MessageException("Ekstern varsling er allerede registrert for varsel")
+class InvalidVarseltekstException: MessageException("Innhold i varseltekster er ikke gyldig")
