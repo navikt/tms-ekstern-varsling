@@ -2,12 +2,14 @@ package no.nav.tms.ekstern.varsling.status
 
 import io.github.oshai.kotlinlogging.KotlinLogging
 import no.nav.tms.common.observability.traceVarsel
-import no.nav.tms.common.observability.withTraceLogging
 import no.nav.tms.ekstern.varsling.TmsEksternVarsling
+import no.nav.tms.ekstern.varsling.status.EksternStatusUpdater.FailureReason.DuplicateStatus
+import no.nav.tms.ekstern.varsling.status.EksternStatusUpdater.FailureReason.EksternVarslingMissing
+import no.nav.tms.ekstern.varsling.status.EksternStatusUpdater.FailureReason.HistorikkSaturated
 import no.nav.tms.kafka.application.JsonMessage
+import no.nav.tms.kafka.application.MessageException
 import no.nav.tms.kafka.application.Subscriber
 import no.nav.tms.kafka.application.Subscription
-import java.time.LocalDateTime
 import java.time.ZonedDateTime
 
 class EksternVarslingStatusSubscriber(
@@ -41,8 +43,26 @@ class EksternVarslingStatusSubscriber(
             tidspunkt = getTidspunkt(jsonMessage)
         )
 
-        eksternStatusUpdater.updateEksternVarslingStatus(eksternVarslingStatus)
-        log.info { "Behandlet eksternVarslingStatus" }
+        try {
+            eksternStatusUpdater.updateEksternVarslingStatus(eksternVarslingStatus)
+            log.info { "Behandlet eksternVarslingStatus" }
+
+        } catch (e: EksternStatusUpdater.StatusUpdateException) {
+            when (e.failureReason) {
+                EksternVarslingMissing -> {
+                    log.warn { "Ignorer status [${eksternVarslingStatus.status}] fordi det ikke tilhørte en kjent ekstern varsling." }
+                    throw UnknownSendingsIdException()
+                }
+                DuplicateStatus -> {
+                    log.warn { "Ignorer status [${eksternVarslingStatus.status}] fordi det var duplikat." }
+                    throw DuplicateStatusException()
+                }
+                HistorikkSaturated -> {
+                    log.warn { "Ignorer status [${eksternVarslingStatus.status}] fordi det ikke var viktig nok å behandle etter historikken allerede var full." }
+                    throw HistorikkSaturatedException()
+                }
+            }
+        }
     }
 
     private fun getTidspunkt(jsonMessage: JsonMessage): ZonedDateTime {
@@ -52,6 +72,10 @@ class EksternVarslingStatusSubscriber(
             ZonedDateTime.parse("${it}Z")
         }
     }
+
+    class UnknownSendingsIdException(): MessageException("Fant ikke fant ekstern varsling tilhørende status")
+    class DuplicateStatusException(): MessageException("Statusoppdatering var duplikat")
+    class HistorikkSaturatedException(): MessageException("Statusoppdatering ignorert fordi historikken var full")
 }
 
 data class DoknotifikasjonStatusEvent(
