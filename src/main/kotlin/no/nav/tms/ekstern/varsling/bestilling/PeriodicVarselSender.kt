@@ -24,6 +24,7 @@ class PeriodicVarselSender(
     private val statusProducer: EksternVarslingOppdatertProducer,
     private val doknotTopic: String,
     private val leaderElection: PodLeaderElection,
+    batchSize: Int = 500,
     interval: Duration = Duration.ofSeconds(1),
 ) : PeriodicJob(interval) {
 
@@ -34,7 +35,7 @@ class PeriodicVarselSender(
         if (leaderElection.isLeader()) {
             try {
                 repository
-                    .nextInVarselQueue()
+                    .nextInVarselQueue(batchSize)
                     .also { logInfo(it) }
                     .forEach(::processRequest)
             } catch (e: Exception) {

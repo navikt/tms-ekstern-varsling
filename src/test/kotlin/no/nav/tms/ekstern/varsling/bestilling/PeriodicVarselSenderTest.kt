@@ -12,6 +12,7 @@ import no.nav.doknotifikasjon.schemas.Doknotifikasjon
 import no.nav.tms.common.kubernetes.PodLeaderElection
 import no.nav.tms.common.postgres.JsonbHelper.toJsonb
 import no.nav.tms.common.postgres.PostgresDatabase
+import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper.nowAtUtc
 import no.nav.tms.ekstern.varsling.setup.*
 import no.nav.tms.ekstern.varsling.status.EksternVarslingOppdatertProducer
 import org.apache.kafka.clients.producer.MockProducer
@@ -86,7 +87,7 @@ class PeriodicVarselSenderTest {
 
     @Test
     fun `behandle kun batch som ikke har blitt behandlet`() = runBlocking<Unit> {
-        val tidligereBehandletDato = ZonedDateTimeHelper.nowAtUtc().minusDays(3)
+        val tidligereBehandletDato = nowAtUtc().minusDays(3)
         database.insertEksternVarsling(
             eksternVarslingDBRow(
                 UUID.randomUUID().toString(),
@@ -530,6 +531,32 @@ class PeriodicVarselSenderTest {
 
         eksternVarsling.shouldNotBeNull()
         eksternVarsling.bestilling?.tekster shouldBe bestemTekster(eksternVarsling)
+    }
+
+    @Test
+    fun `Behandler bestillinger i den rekkefølgen de ble opprettet`() = runBlocking<Unit> {
+        val sendingsId1 = UUID.randomUUID().toString()
+        val sendingsId2 = UUID.randomUUID().toString()
+        val sendingsId3 = UUID.randomUUID().toString()
+
+        database.insertEksternVarsling(eksternVarslingDBRow(sendingsId1, testFnr, opprettet = nowAtUtc()))
+        database.insertEksternVarsling(eksternVarslingDBRow(sendingsId2, testFnr, opprettet = nowAtUtc().minusMinutes(5)))
+        database.insertEksternVarsling(eksternVarslingDBRow(sendingsId3, testFnr, opprettet = nowAtUtc().plusMinutes(5)))
+
+        val periodicVarselSender = PeriodicVarselSender(
+            repository, kanalDecider, doknotTopic, statusProducer,
+            "test-topic", leaderElection, interval = Duration.ofMinutes(1),
+            batchSize = 1
+        )
+
+        coEvery { leaderElection.isLeader() } returns true
+
+        periodicVarselSender.start()
+        delay(500)
+
+        repository.getEksternVarsling(sendingsId1)?.status shouldBe Sendingsstatus.Venter
+        repository.getEksternVarsling(sendingsId2)?.status shouldBe Sendingsstatus.Sendt
+        repository.getEksternVarsling(sendingsId3)?.status shouldBe Sendingsstatus.Venter
     }
 }
 
