@@ -4,7 +4,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import no.nav.tms.common.observability.traceVarsel
 import no.nav.tms.ekstern.varsling.TmsEksternVarsling
 import no.nav.tms.ekstern.varsling.status.EksternStatusUpdater.FailureReason.DuplicateStatus
-import no.nav.tms.ekstern.varsling.status.EksternStatusUpdater.FailureReason.EksternVarslingMissing
+import no.nav.tms.ekstern.varsling.status.EksternStatusUpdater.FailureReason.UnknownEksternVarsling
 import no.nav.tms.ekstern.varsling.status.EksternStatusUpdater.FailureReason.HistorikkSaturated
 import no.nav.tms.kafka.application.JsonMessage
 import no.nav.tms.kafka.application.MessageException
@@ -49,7 +49,7 @@ class EksternVarslingStatusSubscriber(
 
         } catch (e: EksternStatusUpdater.StatusUpdateException) {
             when (e.failureReason) {
-                EksternVarslingMissing -> {
+                UnknownEksternVarsling -> {
                     log.warn { "Ignorer status [${eksternVarslingStatus.status}] fordi det ikke tilhørte en kjent ekstern varsling." }
                     throw UnknownSendingsIdException()
                 }

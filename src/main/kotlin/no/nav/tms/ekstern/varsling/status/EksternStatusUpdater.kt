@@ -21,7 +21,7 @@ class EksternStatusUpdater(
         val varsling = repository.getEksternVarsling(statusEvent.eventId)
 
         if (varsling == null) {
-            throw StatusUpdateException(FailureReason.EksternVarslingMissing)
+            throw StatusUpdateException(FailureReason.UnknownEksternVarsling)
 
         } else if (statusIsDuplicate(varsling, statusEvent)) {
             throw StatusUpdateException(FailureReason.DuplicateStatus)
@@ -135,7 +135,7 @@ class EksternStatusUpdater(
     }
 
     enum class FailureReason {
-        EksternVarslingMissing, DuplicateStatus, HistorikkSaturated
+        UnknownEksternVarsling, DuplicateStatus, HistorikkSaturated
     }
 
     class StatusUpdateException(val failureReason: FailureReason): Exception()
