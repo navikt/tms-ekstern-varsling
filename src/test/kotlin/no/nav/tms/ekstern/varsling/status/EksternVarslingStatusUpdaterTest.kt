@@ -7,6 +7,9 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import no.nav.tms.ekstern.varsling.bestilling.*
+import no.nav.tms.ekstern.varsling.bestilling.EksternStatus.Status.Ferdigstilt
+import no.nav.tms.ekstern.varsling.bestilling.EksternStatus.Status.Info
+import no.nav.tms.ekstern.varsling.bestilling.EksternStatus.Status.Sendt
 import no.nav.tms.ekstern.varsling.setup.LocalPostgresDatabase
 import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper.nowAtUtc
 import no.nav.tms.ekstern.varsling.status.DoknotifikasjonStatusEnum.*
@@ -26,6 +29,8 @@ class EksternVarslingStatusSubscriberTest {
 
     private val ident = "12345678901"
 
+    private val historikkSoftCap = 5
+
     private val mockProducer = MockProducer(
         false,
         StringSerializer(),
@@ -36,19 +41,22 @@ class EksternVarslingStatusSubscriberTest {
     private val eksternVarslingStatusUpdater =
         EksternStatusUpdater(
             repository,
-            eksternVarslingOppdatertProducer
+            eksternVarslingOppdatertProducer,
+            historikkSoftCap
         )
     private val testBroadcaster =
         MessageBroadcaster(
             listOf(
                 EksternVarslingStatusSubscriber(eksternVarslingStatusUpdater),
-            )
+            ),
+            enableTracking = true
         )
 
     @BeforeEach
     fun resetDb() {
         LocalPostgresDatabase.resetInstance()
         mockProducer.clear()
+        testBroadcaster.clearHistory()
     }
 
     @Test
@@ -76,7 +84,7 @@ class EksternVarslingStatusSubscriberTest {
 
         varsling?.eksternStatus.shouldNotBeNull()
 
-        varsling?.eksternStatus?.let {
+        varsling.eksternStatus.let {
             it shouldNotBe null
 
             it.sendt shouldBe true
@@ -86,7 +94,6 @@ class EksternVarslingStatusSubscriberTest {
             it.historikk.first().distribusjonsId shouldBe distribusjonsId
             it.kanal shouldBe kanal
         }
-
 
         mockProducer.history().size shouldBe 1
     }
@@ -116,7 +123,6 @@ class EksternVarslingStatusSubscriberTest {
         val varsling = repository.getEksternVarsling(sendingsId)
 
         varsling?.eksternStatus.shouldBeNull()
-
 
         mockProducer.history().size shouldBe 0
     }
@@ -152,6 +158,13 @@ class EksternVarslingStatusSubscriberTest {
         testBroadcaster.broadcastJson(eksternVarslingStatus(sendingsId))
 
         repository.getEksternVarsling(sendingsId)?.eksternStatus shouldBe null
+
+        testBroadcaster.history().findFailedOutcome(EksternVarslingStatusSubscriber::class) {
+            it["eventId"].asText() == sendingsId
+        }.let {
+            it.shouldNotBeNull()
+            it.cause::class shouldBe EksternVarslingStatusSubscriber.UnknownSendingsIdException::class
+        }
 
         mockProducer.history().size shouldBe 0
     }
@@ -390,6 +403,83 @@ class EksternVarslingStatusSubscriberTest {
             }.let {
                 it["melding"].asText() shouldBe ferdigstilt
             }
+        }
+    }
+
+    @Test
+    fun `ignorerer duplikate statuser`() {
+
+        val sendingsId = UUID.randomUUID().toString()
+
+        repository.insertEksternVarsling(sendtEksternVarsling(sendingsId, ident))
+
+        val sendtEvent = eksternVarslingStatus(
+            eventId = sendingsId,
+            status = FERDIGSTILT,
+            melding = "Varsel sendt",
+            kanal = "SMS"
+        )
+
+        testBroadcaster.broadcastJson(sendtEvent)
+        testBroadcaster.broadcastJson(sendtEvent)
+
+        repository.getEksternVarsling(sendingsId)?.eksternStatus?.sendt shouldBe true
+
+        testBroadcaster.history().findFailedOutcome(EksternVarslingStatusSubscriber::class) {
+            it["eventId"].asText() == sendingsId
+        }.let {
+            it.shouldNotBeNull()
+            it.cause::class shouldBe EksternVarslingStatusSubscriber.DuplicateStatusException::class
+        }
+    }
+
+    @Test
+    fun `ignorerer andre statuser enn FERDIGSTILT dersom historikken allerede har for mange hendelser`() {
+
+        val sendingsId = UUID.randomUUID().toString()
+
+        repository.insertEksternVarsling(sendtEksternVarsling(sendingsId, ident))
+
+        repeat(historikkSoftCap) { i ->
+            testBroadcaster.broadcastJson(
+                eksternVarslingStatus(sendingsId, INFO, melding = "Infomelding #${i + 1}")
+            )
+        }
+
+        testBroadcaster.broadcastJson(eksternVarslingStatus(sendingsId, OVERSENDT, melding = "Oversendt.."))
+        testBroadcaster.broadcastJson(eksternVarslingStatus(sendingsId, INFO, melding = "Infomelding"))
+        testBroadcaster.broadcastJson(eksternVarslingStatus(sendingsId, FEILET, melding = "Feilet!"))
+        testBroadcaster.broadcastJson(eksternVarslingStatus(sendingsId, FERDIGSTILT, kanal = "SMS", melding = "Sendt!"))
+        testBroadcaster.broadcastJson(eksternVarslingStatus(sendingsId, FERDIGSTILT, melding = "Ferdigstilt!"))
+
+        repository.getEksternVarsling(sendingsId)?.eksternStatus?.let { status ->
+            status.shouldNotBeNull()
+
+            status.historikk.size shouldBe historikkSoftCap + 2
+            status.historikk.count { it.status == Info } shouldBe historikkSoftCap
+            status.historikk.count { it.status == Sendt } shouldBe 1
+            status.historikk.count { it.status == Ferdigstilt } shouldBe 1
+        }
+
+        testBroadcaster.history().findFailedOutcome(EksternVarslingStatusSubscriber::class) {
+            it["status"].asText() == OVERSENDT.name
+        }.let {
+            it.shouldNotBeNull()
+            it.cause::class shouldBe EksternVarslingStatusSubscriber.HistorikkSaturatedException::class
+        }
+
+        testBroadcaster.history().findFailedOutcome(EksternVarslingStatusSubscriber::class) {
+            it["status"].asText() == INFO.name
+        }.let {
+            it.shouldNotBeNull()
+            it.cause::class shouldBe EksternVarslingStatusSubscriber.HistorikkSaturatedException::class
+        }
+
+        testBroadcaster.history().findFailedOutcome(EksternVarslingStatusSubscriber::class) {
+            it["status"].asText() == FEILET.name
+        }.let {
+            it.shouldNotBeNull()
+            it.cause::class shouldBe EksternVarslingStatusSubscriber.HistorikkSaturatedException::class
         }
     }
 

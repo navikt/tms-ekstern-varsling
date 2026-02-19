@@ -12,21 +12,28 @@ import java.time.temporal.ChronoUnit
 
 class EksternStatusUpdater(
     private val repository: EksternVarslingRepository,
-    private val eksternVarslingOppdatertProducer: EksternVarslingOppdatertProducer
+    private val eksternVarslingOppdatertProducer: EksternVarslingOppdatertProducer,
+    private val historikkSoftCap: Int = 10
 ) {
     private val log = KotlinLogging.logger {}
 
     fun updateEksternVarslingStatus(statusEvent: DoknotifikasjonStatusEvent) {
         val varsling = repository.getEksternVarsling(statusEvent.eventId)
 
-        if (varsling == null || statusIsDuplicate(varsling, statusEvent)) {
-            log.debug { "Ignorer status [${statusEvent.status}] pga duplikat eller manglende varsel." }
-            return
+        if (varsling == null) {
+            throw StatusUpdateException(FailureReason.UnknownEksternVarsling)
+
+        } else if (statusIsDuplicate(varsling, statusEvent)) {
+            throw StatusUpdateException(FailureReason.DuplicateStatus)
+
+        } else if (historikkIsSaturated(varsling) && statusEvent.status != DoknotifikasjonStatusEnum.FERDIGSTILT.name) {
+            throw StatusUpdateException(FailureReason.HistorikkSaturated)
+
+        } else {
+            val currentStatus = varsling.eksternStatus ?: initOversikt()
+
+            updateExistingStatus(statusEvent, currentStatus, varsling)
         }
-
-        val currentStatus = varsling.eksternStatus ?: initOversikt()
-
-        updateExistingStatus(statusEvent, currentStatus, varsling)
     }
 
     private fun initOversikt() = EksternStatus.Oversikt(
@@ -92,6 +99,10 @@ class EksternStatusUpdater(
         }
     }
 
+    private fun historikkIsSaturated(varsling: EksternVarsling): Boolean {
+        return varsling.eksternStatus != null && varsling.eksternStatus.historikk.size >= historikkSoftCap
+    }
+
     private fun intervalSinceFirstAttempt(currentStatus: EksternStatus.Oversikt, statusEvent: DoknotifikasjonStatusEvent): Duration {
         val previous = currentStatus.historikk
             .filter { it.status == Sendt || it.status == Feilet }
@@ -115,11 +126,17 @@ class EksternStatusUpdater(
 
     private fun determineInternalStatus(statusEvent: DoknotifikasjonStatusEvent): EksternStatus.Status {
         return when(statusEvent.status) {
-            DoknotifikasjonStatusEnum.FERDIGSTILT.name -> if (statusEvent.kanal.isNullOrBlank()) EksternStatus.Status.Ferdigstilt else Sendt
+            DoknotifikasjonStatusEnum.FERDIGSTILT.name -> if (statusEvent.kanal.isNullOrBlank()) Ferdigstilt else Sendt
             DoknotifikasjonStatusEnum.INFO.name -> Info
             DoknotifikasjonStatusEnum.FEILET.name -> Feilet
             DoknotifikasjonStatusEnum.OVERSENDT.name -> Bestilt
             else -> throw IllegalArgumentException("Kjente ikke igjen doknotifikasjon status ${statusEvent.status}.")
         }
     }
+
+    enum class FailureReason {
+        UnknownEksternVarsling, DuplicateStatus, HistorikkSaturated
+    }
+
+    class StatusUpdateException(val failureReason: FailureReason): Exception()
 }

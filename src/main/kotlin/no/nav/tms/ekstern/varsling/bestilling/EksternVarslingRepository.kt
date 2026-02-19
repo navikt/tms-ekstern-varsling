@@ -161,27 +161,29 @@ class EksternVarslingRepository(val database: PostgresDatabase) {
         } ?: false
     }
 
-    fun nextInVarselQueue(batchSize: Int = 100): List<EksternVarsling> {
+    fun nextInVarselQueue(batchSize: Int): List<EksternVarsling> {
         return database.list {
             queryOf(
                 """
-                select 
-                    sendingsId,
-                    ident,
-                    erBatch,
-                    erUtsattVarsel,
-                    varsler,
-                    utsending,
-                    ferdigstilt,
-                    status,
-                    eksternStatus,
-                    bestilling,
-                    opprettet
-                from 
-                    ekstern_varsling
-                where 
-                    ferdigstilt is null and (utsending is null or utsending < :now)
-                limit :antall
+                select * from (
+                    select 
+                        sendingsId,
+                        ident,
+                        erBatch,
+                        erUtsattVarsel,
+                        varsler,
+                        utsending,
+                        ferdigstilt,
+                        status,
+                        eksternStatus,
+                        bestilling,
+                        opprettet
+                    from 
+                        ekstern_varsling
+                    where 
+                        ferdigstilt is null and (utsending is null or utsending < :now)
+                    order by opprettet
+                ) as subquery order by opprettet limit :antall
                 """,
                 mapOf(
                     "antall" to batchSize,
