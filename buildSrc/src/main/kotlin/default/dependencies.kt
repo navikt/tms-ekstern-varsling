@@ -16,7 +16,7 @@ interface DependencyGroup {
 
 interface FlywayDefaults: DependencyGroup {
     override val groupId get() = "org.flywaydb"
-    override val version get() = "11.16.0"
+    override val version get() = "12.4.0"
 
     val pluginId get() = "org.flywaydb.flyway"
     val core get() = dependency("flyway-core")
@@ -31,7 +31,7 @@ interface HikariDefaults: DependencyGroup {
 }
 
 interface JacksonDatatypeDefaults: DependencyGroup {
-    override val version get() = "2.20.1"
+    override val version get() = "2.21.2"
 
     val datatypeJsr310 get() = dependency("jackson-datatype-jsr310", groupId = "com.fasterxml.jackson.datatype")
     val moduleKotlin get() = dependency("jackson-module-kotlin", groupId = "com.fasterxml.jackson.module")
@@ -49,7 +49,7 @@ interface JjwtDefaults: DependencyGroup {
 
 interface JunitJupiterDefaults: DependencyGroup {
     override val groupId get() = "org.junit.jupiter"
-    override val version get() = "6.0.2"
+    override val version get() = "6.0.3"
 
     val api get() = dependency("junit-jupiter-api")
     val engine get() = dependency("junit-jupiter-engine")
@@ -58,14 +58,14 @@ interface JunitJupiterDefaults: DependencyGroup {
 
 interface JunitPlatformDefaults: DependencyGroup {
     override val groupId get() = "org.junit.platform"
-    override val version get() = "6.0.2"
+    override val version get() = "6.0.3"
 
     val launcher get() = dependency("junit-platform-launcher")
 }
 
 interface KafkaDefaults: DependencyGroup {
     override val groupId get() = "org.apache.kafka"
-    override val version get() = "4.1.1"
+    override val version get() = "4.2.0"
 
     val clients get() = dependency("kafka-clients")
 }
@@ -79,7 +79,7 @@ interface KluentDefaults: DependencyGroup {
 
 interface KotestDefaults: DependencyGroup {
     override val groupId get() = "io.kotest"
-    override val version get() = "6.0.4"
+    override val version get() = "6.1.11"
 
     val runnerJunit5 get() = dependency("kotest-runner-junit5")
     val assertionsCore get() = dependency("kotest-assertions-core")
@@ -88,14 +88,14 @@ interface KotestDefaults: DependencyGroup {
 
 interface KotlinDefaults: DependencyGroup {
     override val groupId get() = "org.jetbrains.kotlin"
-    override val version get() = "2.2.21"
+    override val version get() = "2.3.20"
 
     val reflect get() = dependency("kotlin-reflect")
 }
 
 interface KotlinLoggingDefaults: DependencyGroup {
     override val groupId get() = "io.github.oshai"
-    override val version get() = "7.0.14"
+    override val version get() = "8.0.01"
 
     val logging get() = dependency("kotlin-logging")
 }
@@ -114,7 +114,7 @@ interface KotliQueryDefaults: DependencyGroup {
 }
 
 object KtorDefaults {
-    val version get() = "3.3.2"
+    val version get() = "3.4.2"
     val groupId get() = "io.ktor"
 
     interface ServerDefaults: DependencyGroup {
@@ -138,7 +138,7 @@ object KtorDefaults {
         override val version get() = KtorDefaults.version
 
         val core get() = dependency("ktor-client-core")
-        val apache get() = dependency("ktor-client-apache")
+        val apache5 get() = dependency("ktor-client-apache5")
         val contentNegotiation get() = dependency("ktor-client-content-negotiation")
     }
 
@@ -160,7 +160,7 @@ object KtorDefaults {
 }
 
 interface LogbackDefaults: DependencyGroup {
-    override val version get() = "1.5.24"
+    override val version get() = "1.5.32"
     override val groupId get() = "ch.qos.logback"
 
     val classic get() = dependency("logback-classic")
@@ -175,27 +175,27 @@ interface LogstashDefaults: DependencyGroup {
 
 interface MicrometerDefaults: DependencyGroup {
     override val groupId get() = "io.micrometer"
-    override val version get() = "1.16.0"
+    override val version get() = "1.16.5"
 
     val registryPrometheus get() = dependency("micrometer-registry-prometheus")
 }
 
 interface MockkDefaults: DependencyGroup {
     override val groupId get() = "io.mockk"
-    override val version get() = "1.14.6"
+    override val version get() = "1.14.9"
 
     val mockk get() = dependency("mockk")
 }
 
 interface PostgresqlDefaults: DependencyGroup {
     override val groupId get() = "org.postgresql"
-    override val version get() = "42.7.8"
+    override val version get() = "42.7.10"
 
     val postgresql get() = dependency("postgresql")
 }
 
 interface PrometheusDefaults: DependencyGroup {
-    override val version get() = "1.3.4"
+    override val version get() = "1.5.1"
     override val groupId get() = "io.prometheus"
 
     val metricsCore get() = dependency("prometheus-metrics-core")
@@ -203,7 +203,7 @@ interface PrometheusDefaults: DependencyGroup {
 }
 
 interface TestContainersDefaults: DependencyGroup {
-    override val version get() = "2.0.1"
+    override val version get() = "2.0.4"
     override val groupId get() = "org.testcontainers"
 
     val junitJupiter get() = dependency("junit-jupiter")
@@ -213,7 +213,7 @@ interface TestContainersDefaults: DependencyGroup {
 
 interface TmsCommonLibDefaults: DependencyGroup {
     override val groupId get() = "no.nav.tms.common"
-    override val version get() = "5.2.0"
+    override val version get() = "5.3.2"
 
     val kubernetes get() = dependency("kubernetes")
     val metrics get() = dependency("metrics")
@@ -225,21 +225,20 @@ interface TmsCommonLibDefaults: DependencyGroup {
 
 interface TmsKafkaToolsDefaults: DependencyGroup {
     override val groupId get() = "no.nav.tms.kafka"
-    override val version get() = "2.2.2"
+    override val version get() = "2.3.0"
 
     val kafkaApplication get() = dependency("kafka-application")
 }
 
 interface TmsKtorTokenSupportDefaults: DependencyGroup {
     override val groupId get() = "no.nav.tms.token.support"
-    override val version get() = "5.0.6"
+    override val version get() = "6.0.0"
 
-    val azureExchange get() = dependency("azure-exchange")
-    val azureValidation get() = dependency("azure-validation")
-    val tokenXValidation get() = dependency("tokenx-validation")
-    val tokenXValidationMock get() = dependency("tokenx-validation-mock")
-    val azureValidationMock get() = dependency("azure-validation-mock")
-    val tokendingsExchange get() = dependency("tokendings-exchange")
-    val idportenSidecar get() = dependency("idporten-sidecar")
-    val idportenSidecarMock get() = dependency("idporten-sidecar-mock")
+    val entraIdTokenVerification get() = dependency("entra-id-token-verification")
+    val entraIdTokenVerificationMock get() = dependency("entra-id-token-verification-mock")
+    val entraIdTokenFetcher get() = dependency("entra-id-token-fetcher")
+    val userLoginRoutes get() = dependency("user-login-routes")
+    val userTokenVerification get() = dependency("user-token-verification")
+    val userTokenVerificationMock get() = dependency("user-token-verification-mock")
+    val userTokenExchange get() = dependency("user-token-exchange")
 }
