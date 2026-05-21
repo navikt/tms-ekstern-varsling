@@ -279,8 +279,8 @@ class PeriodicVarselSenderTest {
             it.shouldNotBeNull()
 
             it.bestilling?.revarsling.shouldNotBeNull()
-            it.bestilling?.revarsling!!.antall shouldBe 1
-            it.bestilling?.revarsling!!.intervall shouldBe 4
+            it.bestilling.revarsling.antall shouldBe 1
+            it.bestilling.revarsling.intervall shouldBe 4
         }
 
         doknotTopic.history().first().value().let {

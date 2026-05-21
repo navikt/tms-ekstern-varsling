@@ -5,10 +5,10 @@ import no.nav.tms.common.kubernetes.PodLeaderElection
 import no.nav.tms.common.postgres.Postgres
 import no.nav.tms.ekstern.varsling.bestilling.*
 import no.nav.tms.ekstern.varsling.setup.initializeKafkaProducer
-import no.nav.tms.ekstern.varsling.status.BehandletAvLegacySubscriber
 import no.nav.tms.ekstern.varsling.status.EksternStatusUpdater
 import no.nav.tms.ekstern.varsling.status.EksternVarslingOppdatertProducer
 import no.nav.tms.ekstern.varsling.status.EksternVarslingStatusSubscriber
+import no.nav.tms.kafka.application.Domain
 import no.nav.tms.kafka.application.KafkaApplication
 import org.flywaydb.core.Flyway
 
@@ -56,18 +56,20 @@ fun main() {
                 initializeKafkaProducer(useAvroSerializer = true),
                 environment.doknotStoppTopic
             ),
-            BehandletAvLegacySubscriber(eksternVarselRepository),
             EksternVarslingStatusSubscriber(eksternStatusUpdater),
         )
+
         onStartup {
             Flyway.configure()
                 .dataSource(database.dataSource)
                 .load()
                 .migrate()
         }
+
         onReady {
             varselSender.start()
         }
+
         onShutdown {
             runBlocking {
                 varselSender.stop()
@@ -76,6 +78,43 @@ fun main() {
         }
 
         healthCheck("Varselsender", varselSender::isHealthy)
+
+        minSideMdc {
+            domain = Domain.varsel
+
+            idSupplier { message ->
+                val varselIdNode = message.json.get("varselId")
+                val eventIdNode = message.json.get("eventId")
+
+                if (varselIdNode?.isTextual == true) {
+                    varselIdNode.asText()
+                } else if (eventIdNode?.isTextual == true) {
+                    eventIdNode.asText()
+                } else {
+                    "N/A"
+                }
+            }
+
+            producedBySupplier { message ->
+                val produsentNode = message.json.get("produsent")
+
+                if (produsentNode?.isObject == true) {
+                    val cluster = produsentNode["cluster"].asText()
+                    val namespace = produsentNode["namespace"].asText()
+                    val appnavn = produsentNode["appnavn"].asText()
+
+                    "$cluster:$namespace:$appnavn"
+                } else {
+                    val bestillerNode = message.json.get("bestillerAppnavn")
+
+                    if (bestillerNode?.isTextual == true) {
+                        bestillerNode.asText()
+                    } else {
+                        null
+                    }
+                }
+            }
+        }
 
     }.start()
 }

@@ -3,7 +3,6 @@ package no.nav.tms.ekstern.varsling.bestilling
 import com.fasterxml.jackson.databind.JsonNode
 import io.github.oshai.kotlinlogging.KotlinLogging
 import no.nav.tms.common.logging.TeamLogs
-import no.nav.tms.common.observability.traceVarsel
 import no.nav.tms.ekstern.varsling.status.EksternStatusOppdatering
 import no.nav.tms.ekstern.varsling.status.EksternVarslingOppdatertProducer
 import no.nav.tms.kafka.application.JsonMessage
@@ -26,7 +25,7 @@ class OpprettetVarselSubscriber(
     override fun subscribe() = Subscription.forEvent("opprettet")
         .withFields("type", "varselId", "ident", "eksternVarslingBestilling", "opprettet", "produsent")
 
-    override suspend fun receive(jsonMessage: JsonMessage) = traceVarsel(id = jsonMessage["varselId"].asText(), mapOf("action" to "opprett")) {
+    override suspend fun receive(jsonMessage: JsonMessage) {
         val produsent = Produsent(
             cluster = jsonMessage["produsent"]["cluster"].asText(),
             namespace = jsonMessage["produsent"]["namespace"].asText(),

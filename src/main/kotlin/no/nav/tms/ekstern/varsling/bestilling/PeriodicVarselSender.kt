@@ -6,7 +6,6 @@ import no.nav.doknotifikasjon.schemas.Doknotifikasjon
 import no.nav.doknotifikasjon.schemas.PrefererteKanal
 import no.nav.tms.common.kubernetes.PodLeaderElection
 import no.nav.tms.common.logging.TeamLogs
-import no.nav.tms.common.observability.traceVarsel
 import no.nav.tms.common.util.scheduling.PeriodicJob
 import no.nav.tms.ekstern.varsling.TmsEksternVarsling
 import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper.nowAtUtc
@@ -156,7 +155,7 @@ class PeriodicVarselSender(
         }
     }
 
-    private fun logSending(varsling: EksternVarsling, kanal: Kanal) = traceVarsel(id = varsling.sendingsId, mapOf("action" to "sendEksternVarsling")) {
+    private fun logSending(varsling: EksternVarsling, kanal: Kanal) {
         if (varsling.erBatch && varsling.varsler.size > 1) {
             log.info { "Sender ekstern varsling via kanal $kanal for batch med ${varsling.varsler.size} varsler." }
         } else if (varsling.erBatch) {
@@ -168,7 +167,7 @@ class PeriodicVarselSender(
         }
     }
 
-    private fun logKansellering(varsling: EksternVarsling) = traceVarsel(id = varsling.sendingsId, mapOf("action" to "kansellerEksternVarsling")) {
+    private fun logKansellering(varsling: EksternVarsling) {
         if (varsling.varsler.none { it.aktiv }) {
             log.info { "Kansellerer varsling fordi alle (${varsling.varsler.size}) varsler ble markert inaktive." }
         } else if (varsling.varsler.all { it.behandletAvLegacy }) {
