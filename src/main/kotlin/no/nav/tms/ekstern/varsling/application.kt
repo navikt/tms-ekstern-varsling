@@ -86,9 +86,9 @@ fun main() {
                 val varselIdNode = message.json.get("varselId")
                 val eventIdNode = message.json.get("eventId")
 
-                if (varselIdNode.isTextual) {
+                if (varselIdNode?.isTextual == true) {
                     varselIdNode.asText()
-                } else if (eventIdNode.isTextual) {
+                } else if (eventIdNode?.isTextual == true) {
                     eventIdNode.asText()
                 } else {
                     "N/A"
@@ -98,7 +98,7 @@ fun main() {
             producedBySupplier { message ->
                 val produsentNode = message.json.get("produsent")
 
-                if (produsentNode.isObject) {
+                if (produsentNode?.isObject == true) {
                     val cluster = produsentNode["cluster"].asText()
                     val namespace = produsentNode["namespace"].asText()
                     val appnavn = produsentNode["appnavn"].asText()
@@ -107,7 +107,7 @@ fun main() {
                 } else {
                     val bestillerNode = message.json.get("bestillerAppnavn")
 
-                    if (bestillerNode.isTextual) {
+                    if (bestillerNode?.isTextual == true) {
                         bestillerNode.asText()
                     } else {
                         null
