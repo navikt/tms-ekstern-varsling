@@ -43,7 +43,7 @@ dependencies {
     implementation(Ktor.Server.auth)
     implementation(Ktor.Server.authJwt)
     implementation(Ktor.Client.contentNegotiation)
-    implementation(Ktor.Client.apache)
+    implementation(Ktor.Client.apache5)
     implementation(Ktor.Serialization.jackson)
     implementation(Logstash.logbackEncoder)
     implementation(Postgresql.postgresql)
@@ -57,6 +57,7 @@ dependencies {
 
     testImplementation(JunitPlatform.launcher)
     testImplementation(JunitJupiter.api)
+    testImplementation(JunitJupiter.engine)
     testImplementation(Mockk.mockk)
     testImplementation(TestContainers.postgresql)
     testImplementation(Kotest.runnerJunit5)

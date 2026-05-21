@@ -2,12 +2,10 @@ package no.nav.tms.ekstern.varsling.bestilling
 
 import io.github.oshai.kotlinlogging.KotlinLogging
 import no.nav.doknotifikasjon.schemas.DoknotifikasjonStopp
-import no.nav.tms.common.observability.traceVarsel
 import no.nav.tms.ekstern.varsling.TmsEksternVarsling
 import no.nav.tms.kafka.application.JsonMessage
 import no.nav.tms.kafka.application.Subscriber
 import no.nav.tms.kafka.application.Subscription
-import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.Producer
 import org.apache.kafka.clients.producer.ProducerRecord
 
@@ -22,14 +20,14 @@ class InaktivertVarselSubscriber (
     override fun subscribe() = Subscription.forEvent("inaktivert")
         .withFields("varselId", "produsent")
 
-    override suspend fun receive(jsonMessage: JsonMessage) = traceVarsel(id = jsonMessage["varselId"].asText(), mapOf("action" to "inaktiver")) {
+    override suspend fun receive(jsonMessage: JsonMessage) {
 
         val varselId = jsonMessage["varselId"].asText()
         val eksternVarsling = repository.findSendingForVarsel(varselId, aktiv = true)
 
         if (eksternVarsling == null) {
             log.debug { "Fant ingen ekstern varsling tilknyttet varsel" }
-            return@traceVarsel
+            return
         }
 
         log.info { "Markerer varsel som inaktivert" }

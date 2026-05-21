@@ -1,7 +1,6 @@
 package no.nav.tms.ekstern.varsling.status
 
 import io.github.oshai.kotlinlogging.KotlinLogging
-import no.nav.tms.common.observability.traceVarsel
 import no.nav.tms.ekstern.varsling.TmsEksternVarsling
 import no.nav.tms.ekstern.varsling.status.EksternStatusUpdater.FailureReason.DuplicateStatus
 import no.nav.tms.ekstern.varsling.status.EksternStatusUpdater.FailureReason.UnknownEksternVarsling
@@ -31,7 +30,7 @@ class EksternVarslingStatusSubscriber(
         .withOptionalFields("distribusjonsId", "kanal")
 
 
-    override suspend fun receive(jsonMessage: JsonMessage) = traceVarsel(jsonMessage["eventId"].asText(), mapOf("action" to "eksternStatus")) {
+    override suspend fun receive(jsonMessage: JsonMessage) {
 
         val eksternVarslingStatus = DoknotifikasjonStatusEvent(
             eventId = jsonMessage["eventId"].asText(),
