@@ -16,7 +16,9 @@ import org.flywaydb.core.Flyway
 fun main() {
     val environment = Environment()
 
-    val database = Postgres.connectToJdbcUrl(environment.jdbcUrl)
+    val database = Postgres.connectToJdbcUrl(environment.jdbcUrl) {
+        transactionIsolation = "READ_COMMITED"
+    }
     val eksternVarselRepository = EksternVarslingRepository(database)
 
     val kanalDecider = PreferertKanalDecider(
