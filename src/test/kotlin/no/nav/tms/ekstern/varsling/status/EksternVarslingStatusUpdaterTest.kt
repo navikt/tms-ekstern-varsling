@@ -12,10 +12,9 @@ import no.nav.tms.ekstern.varsling.bestilling.EksternStatus.Status.Info
 import no.nav.tms.ekstern.varsling.bestilling.EksternStatus.Status.Sendt
 import no.nav.tms.ekstern.varsling.setup.LocalPostgresDatabase
 import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper.nowAtUtc
+import no.nav.tms.ekstern.varsling.recordqueue.StatusOppdatertQueueRepository
 import no.nav.tms.ekstern.varsling.status.DoknotifikasjonStatusEnum.*
 import no.nav.tms.kafka.application.MessageBroadcaster
-import org.apache.kafka.clients.producer.MockProducer
-import org.apache.kafka.common.serialization.StringSerializer
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.ZonedDateTime
@@ -31,13 +30,8 @@ class EksternVarslingStatusSubscriberTest {
 
     private val historikkSoftCap = 5
 
-    private val mockProducer = MockProducer(
-        false,
-        StringSerializer(),
-        StringSerializer()
-    )
-
-    private val eksternVarslingOppdatertProducer = EksternVarslingOppdatertProducer(mockProducer, "testtopic")
+    private val queueRepository = StatusOppdatertQueueRepository(database)
+    private val eksternVarslingOppdatertProducer = EksternVarslingOppdatertProducer(queueRepository)
     private val eksternVarslingStatusUpdater =
         EksternStatusUpdater(
             repository,
@@ -55,7 +49,6 @@ class EksternVarslingStatusSubscriberTest {
     @BeforeEach
     fun resetDb() {
         LocalPostgresDatabase.resetInstance()
-        mockProducer.clear()
         testBroadcaster.clearHistory()
     }
 
@@ -95,7 +88,7 @@ class EksternVarslingStatusSubscriberTest {
             it.kanal shouldBe kanal
         }
 
-        mockProducer.history().size shouldBe 1
+        queueRepository.statusOppdatertQueueSize() shouldBe 1
     }
 
     @Test
@@ -124,7 +117,7 @@ class EksternVarslingStatusSubscriberTest {
 
         varsling?.eksternStatus.shouldBeNull()
 
-        mockProducer.history().size shouldBe 0
+        queueRepository.statusOppdatertQueueSize() shouldBe 0
     }
 
     @Test
@@ -147,7 +140,7 @@ class EksternVarslingStatusSubscriberTest {
 
         status.sendt shouldBe true
 
-        mockProducer.history().size shouldBe 3
+        queueRepository.statusOppdatertQueueSize() shouldBe 3
     }
 
     @Test
@@ -159,14 +152,14 @@ class EksternVarslingStatusSubscriberTest {
 
         repository.getEksternVarsling(sendingsId)?.eksternStatus shouldBe null
 
-        testBroadcaster.history().findFailedOutcome(EksternVarslingStatusSubscriber::class) {
+        testBroadcaster.history().findSkippedOutcome(EksternVarslingStatusSubscriber::class) {
             it["eventId"].asText() == sendingsId
         }.let {
             it.shouldNotBeNull()
             it.cause::class shouldBe EksternVarslingStatusSubscriber.UnknownSendingsIdException::class
         }
 
-        mockProducer.history().size shouldBe 0
+        queueRepository.statusOppdatertQueueSize() shouldBe 0
     }
 
     @Test
@@ -186,7 +179,7 @@ class EksternVarslingStatusSubscriberTest {
         testBroadcaster.broadcastJson(eksternVarslingStatus(sendingsId, FERDIGSTILT, kanal = "SMS"))
         testBroadcaster.broadcastJson(eksternVarslingStatus(sendingsId, FERDIGSTILT, kanal = null))
 
-        mockProducer.verifyOutput { output ->
+        queueRepository.verifyQueueContents { output ->
             output.find { it["status"].textValue() == "bestilt" } shouldNotBe null
             output.find { it["status"].textValue() == "info" } shouldNotBe null
             output.find { it["status"].textValue() == "feilet" } shouldNotBe null
@@ -219,7 +212,7 @@ class EksternVarslingStatusSubscriberTest {
 
         testBroadcaster.broadcastJson(eksternVarslingStatus(sendingsId, FERDIGSTILT, kanal = "SMS"))
 
-        mockProducer.verifyOutput { output ->
+        queueRepository.verifyQueueContents { output ->
             output.filter { it["status"].textValue() == "sendt" }.size shouldBe 2
 
             output.find { it["varselId"].textValue() == varselId1 }.let {
@@ -312,7 +305,7 @@ class EksternVarslingStatusSubscriberTest {
         status4.renotifikasjonSendt shouldBe false
 
 
-        mockProducer.verifyOutput { output ->
+        queueRepository.verifyQueueContents { output ->
             output.filter {
                 it["status"].textValue() == "sendt" && it["renotifikasjon"].asBoolean()
             }.size shouldBe 3
@@ -353,7 +346,7 @@ class EksternVarslingStatusSubscriberTest {
             )
         )
 
-        mockProducer.verifyOutput { output ->
+        queueRepository.verifyQueueContents { output ->
             output.filter {
                 it["status"].textValue() != "feilet"
             }.forEach {
@@ -385,7 +378,7 @@ class EksternVarslingStatusSubscriberTest {
         testBroadcaster.broadcastJson(eksternVarslingStatus(sendingsId, FERDIGSTILT, kanal = "SMS", melding = sendt, tidspunktZ = nowAtUtc()))
         testBroadcaster.broadcastJson(eksternVarslingStatus(sendingsId, FERDIGSTILT, kanal = null, melding = ferdigstilt, tidspunktZ = nowAtUtc()))
 
-        mockProducer.verifyOutput { output ->
+        queueRepository.verifyQueueContents { output ->
             output.first {
                 it["status"].textValue() == "sendt"
             }.let {
@@ -425,7 +418,7 @@ class EksternVarslingStatusSubscriberTest {
 
         repository.getEksternVarsling(sendingsId)?.eksternStatus?.sendt shouldBe true
 
-        testBroadcaster.history().findFailedOutcome(EksternVarslingStatusSubscriber::class) {
+        testBroadcaster.history().findSkippedOutcome(EksternVarslingStatusSubscriber::class) {
             it["eventId"].asText() == sendingsId
         }.let {
             it.shouldNotBeNull()
@@ -461,21 +454,21 @@ class EksternVarslingStatusSubscriberTest {
             status.historikk.count { it.status == Ferdigstilt } shouldBe 1
         }
 
-        testBroadcaster.history().findFailedOutcome(EksternVarslingStatusSubscriber::class) {
+        testBroadcaster.history().findSkippedOutcome(EksternVarslingStatusSubscriber::class) {
             it["status"].asText() == OVERSENDT.name
         }.let {
             it.shouldNotBeNull()
             it.cause::class shouldBe EksternVarslingStatusSubscriber.HistorikkSaturatedException::class
         }
 
-        testBroadcaster.history().findFailedOutcome(EksternVarslingStatusSubscriber::class) {
+        testBroadcaster.history().findSkippedOutcome(EksternVarslingStatusSubscriber::class) {
             it["status"].asText() == INFO.name
         }.let {
             it.shouldNotBeNull()
             it.cause::class shouldBe EksternVarslingStatusSubscriber.HistorikkSaturatedException::class
         }
 
-        testBroadcaster.history().findFailedOutcome(EksternVarslingStatusSubscriber::class) {
+        testBroadcaster.history().findSkippedOutcome(EksternVarslingStatusSubscriber::class) {
             it["status"].asText() == FEILET.name
         }.let {
             it.shouldNotBeNull()
@@ -497,7 +490,10 @@ class EksternVarslingStatusSubscriberTest {
 
 }
 
-private fun MockProducer<String, String>.verifyOutput(verifier: (List<JsonNode>) -> Unit) {
+private fun StatusOppdatertQueueRepository.verifyQueueContents(verifier: (List<JsonNode>) -> Unit) {
     val objectMapper = jacksonObjectMapper()
-    history().map { it.value() }.map { objectMapper.readTree(it) }.let(verifier)
+    peekStatusOppdatert(500)
+        .map { it.statusinnhold }
+        .map { objectMapper.readTree(it) }
+        .let(verifier)
 }

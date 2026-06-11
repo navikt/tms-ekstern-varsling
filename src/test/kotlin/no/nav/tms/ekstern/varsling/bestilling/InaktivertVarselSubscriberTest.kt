@@ -4,13 +4,10 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.mockk.mockk
 import kotliquery.queryOf
-import no.nav.doknotifikasjon.schemas.DoknotifikasjonStopp
 import no.nav.tms.common.postgres.JsonbHelper.json
-import no.nav.tms.ekstern.varsling.setup.DummySerializer
+import no.nav.tms.ekstern.varsling.recordqueue.DoknotStopQueueRepository
 import no.nav.tms.ekstern.varsling.setup.LocalPostgresDatabase
 import no.nav.tms.kafka.application.MessageBroadcaster
-import org.apache.kafka.clients.producer.MockProducer
-import org.apache.kafka.common.serialization.StringSerializer
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import java.util.*
@@ -19,22 +16,16 @@ class InaktivertVarselSubscriberTest {
     private val database = LocalPostgresDatabase.getCleanInstance()
     private val testFnr = "12345678910"
 
-    private val stopTopic = MockProducer<String, DoknotifikasjonStopp>(
-        false,
-        StringSerializer(),
-        DummySerializer()
-    )
-
     private val repository = EksternVarslingRepository(database)
+    private val queueRepository = DoknotStopQueueRepository(database)
     private val broadcaster = MessageBroadcaster(
         OpprettetVarselSubscriber(repository, mockk(relaxed = true), enableBatch = true),
-        InaktivertVarselSubscriber(repository, stopTopic, "dummyTopic")
+        InaktivertVarselSubscriber(repository, queueRepository)
     )
 
     @AfterEach
     fun cleanup() {
         LocalPostgresDatabase.resetInstance()
-        stopTopic.clear()
     }
 
     @Test
@@ -81,8 +72,6 @@ class InaktivertVarselSubscriberTest {
         broadcaster.broadcastJson(inaktivertEvent(id = inarkivertVarselIdEn))
         broadcaster.broadcastJson(inaktivertEvent(id = inarkivertVarselIdTwo))
 
-
-
         database.singleOrNull {
             queryOf(
                 "select varsler from ekstern_varsling where ident = :ident",
@@ -93,7 +82,7 @@ class InaktivertVarselSubscriberTest {
     }
 
     @Test
-    fun `Sender doknotifikasjon-stopp hvis revarsling er satt`() {
+    fun `Legger doknotifikasjon-stopp i outbox-kø hvis revarsling er satt`() {
         val sendingsId = UUID.randomUUID().toString()
         val varselId = UUID.randomUUID().toString()
 
@@ -114,13 +103,10 @@ class InaktivertVarselSubscriberTest {
 
         broadcaster.broadcastJson(inaktivertEvent(id = varselId))
 
-        stopTopic.history().firstOrNull().let {
+        queueRepository.peekNextDoknotStop(1).firstOrNull().let {
             it.shouldNotBeNull()
 
-            val doknotStopp = it.value()
-
-            doknotStopp.bestillerId shouldBe "tms-ekstern-varsling"
-            doknotStopp.bestillingsId shouldBe sendingsId
+            it.sendingsId shouldBe sendingsId
         }
     }
 }

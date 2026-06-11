@@ -14,7 +14,7 @@ object LocalPostgresDatabase {
 
     private val database: PostgresDatabase by lazy {
         Postgres.connectToContainer(container).also {
-            migrate(it.dataSource, expectedMigrations = 6)
+            migrate(it.dataSource, expectedMigrations = 7)
         }
     }
 
@@ -25,6 +25,8 @@ object LocalPostgresDatabase {
 
     fun resetInstance() {
         database.update { queryOf("delete from ekstern_varsling") }
+        database.update { queryOf("delete from status_oppdatert_record_queue") }
+        database.update { queryOf("delete from doknot_stopp_record_queue") }
     }
 
     private fun migrate(dataSource: HikariDataSource, expectedMigrations: Int) {

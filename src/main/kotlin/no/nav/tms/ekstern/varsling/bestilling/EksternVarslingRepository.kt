@@ -6,7 +6,6 @@ import no.nav.tms.common.postgres.JsonbHelper.json
 import no.nav.tms.common.postgres.JsonbHelper.jsonOrNull
 import no.nav.tms.common.postgres.JsonbHelper.toJsonb
 import no.nav.tms.common.postgres.PostgresDatabase
-import no.nav.tms.ekstern.varsling.setup.*
 import java.time.ZonedDateTime
 
 class EksternVarslingRepository(val database: PostgresDatabase) {

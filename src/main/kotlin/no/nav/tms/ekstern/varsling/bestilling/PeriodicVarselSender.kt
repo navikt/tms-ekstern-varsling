@@ -12,12 +12,14 @@ import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper.nowAtUtc
 import no.nav.tms.ekstern.varsling.status.EksternStatusOppdatering
 import no.nav.tms.ekstern.varsling.status.EksternVarslingOppdatertProducer
 import no.nav.tms.kafka.application.AppHealth
+import no.nav.tms.kafka.producer.ProducerSendUtils.sendSynchronized
+import no.nav.tms.kafka.producer.RetriableSendException
 import org.apache.kafka.clients.producer.Producer
 import org.apache.kafka.clients.producer.ProducerRecord
 import java.time.Duration
 
 class PeriodicVarselSender(
-    private val repository: EksternVarslingRepository,
+    private val varslingRepository: EksternVarslingRepository,
     private val kanalDecider: PreferertKanalDecider,
     private val kafkaProducer: Producer<String, Doknotifikasjon>,
     private val statusProducer: EksternVarslingOppdatertProducer,
@@ -33,7 +35,7 @@ class PeriodicVarselSender(
     override val job = initializeJob {
         if (leaderElection.isLeader()) {
             try {
-                repository
+                varslingRepository
                     .nextInVarselQueue(batchSize)
                     .also { logInfo(it) }
                     .forEach(::processRequest)
@@ -61,7 +63,7 @@ class PeriodicVarselSender(
             sendEksternVarsling(eksternVarsling)
         } else {
             logKansellering(eksternVarsling)
-            repository.markAsCancelled(ferdigstilt = nowAtUtc(), eksternVarsling.sendingsId)
+            varslingRepository.markAsCancelled(ferdigstilt = nowAtUtc(), eksternVarsling.sendingsId)
             sendKansellertStatus(eksternVarsling)
             EKSTERN_VARSLING_KANSELLERT.inc()
         }
@@ -94,16 +96,22 @@ class PeriodicVarselSender(
             tekster = tekster
         )
 
-        kafkaProducer.send(ProducerRecord(doknotTopic, varsling.sendingsId, doknot))
-        repository.markAsSent(
-            sendingsId = varsling.sendingsId, ferdigstilt = nowAtUtc(), bestilling = bestilling
-        )
+        try {
+            kafkaProducer.sendSynchronized(ProducerRecord(doknotTopic, varsling.sendingsId, doknot))
 
-        EKSTERN_VARSLING_SENDT.labelValues(
-            varsling.erBatch.toString(),
-            kanal.name,
-            varsling.erUtsattVarsel.toString()
-        ).inc()
+            varslingRepository.markAsSent(
+                sendingsId = varsling.sendingsId, ferdigstilt = nowAtUtc(), bestilling = bestilling
+            )
+
+            EKSTERN_VARSLING_SENDT.labelValues(
+                varsling.erBatch.toString(),
+                kanal.name,
+                varsling.erUtsattVarsel.toString()
+            ).inc()
+        } catch (re: RetriableSendException) {
+            log.warn { "Klarte ikke sende ekstern varsling til kafka. Forsøker igjen senere" }
+            teamLog.warn(re) { "Klarte ikke sende ekstern varsling til kafka. Forsøker igjen senere" }
+        }
     }
 
     private fun sendKansellertStatus(varsling: EksternVarsling) {

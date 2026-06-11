@@ -6,7 +6,7 @@ import no.nav.tms.ekstern.varsling.status.EksternStatusUpdater.FailureReason.Dup
 import no.nav.tms.ekstern.varsling.status.EksternStatusUpdater.FailureReason.UnknownEksternVarsling
 import no.nav.tms.ekstern.varsling.status.EksternStatusUpdater.FailureReason.HistorikkSaturated
 import no.nav.tms.kafka.application.JsonMessage
-import no.nav.tms.kafka.application.MessageException
+import no.nav.tms.kafka.application.SkippableMessageException
 import no.nav.tms.kafka.application.Subscriber
 import no.nav.tms.kafka.application.Subscription
 import java.time.ZonedDateTime
@@ -72,9 +72,9 @@ class EksternVarslingStatusSubscriber(
         }
     }
 
-    class UnknownSendingsIdException(): MessageException("Fant ikke fant ekstern varsling tilhørende status")
-    class DuplicateStatusException(): MessageException("Statusoppdatering var duplikat")
-    class HistorikkSaturatedException(): MessageException("Statusoppdatering ignorert fordi historikken var full")
+    class UnknownSendingsIdException(): SkippableMessageException("Fant ikke fant ekstern varsling tilhørende status")
+    class DuplicateStatusException(): SkippableMessageException("Statusoppdatering var duplikat")
+    class HistorikkSaturatedException(): SkippableMessageException("Statusoppdatering ignorert fordi historikken var full")
 }
 
 data class DoknotifikasjonStatusEvent(
