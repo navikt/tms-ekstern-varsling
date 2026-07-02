@@ -17,7 +17,7 @@ fun main() {
     val environment = Environment()
 
     val database = Postgres.connectToJdbcUrl(environment.jdbcUrl) {
-        transactionIsolation = "READ_COMMITED"
+        transactionIsolation = "TRANSACTION_READ_COMMITTED"
     }
     val eksternVarselRepository = EksternVarslingRepository(database)
 
