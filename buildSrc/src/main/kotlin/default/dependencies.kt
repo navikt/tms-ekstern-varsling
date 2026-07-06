@@ -225,14 +225,14 @@ interface TmsCommonLibDefaults: DependencyGroup {
 
 interface TmsKafkaToolsDefaults: DependencyGroup {
     override val groupId get() = "no.nav.tms.kafka"
-    override val version get() = "2.3.0"
+    override val version get() = "2.4.0"
 
     val kafkaApplication get() = dependency("kafka-application")
 }
 
 interface TmsKtorTokenSupportDefaults: DependencyGroup {
     override val groupId get() = "no.nav.tms.token.support"
-    override val version get() = "6.0.1"
+    override val version get() = "6.0.2"
 
     val entraIdTokenVerification get() = dependency("entra-id-token-verification")
     val entraIdTokenVerificationMock get() = dependency("entra-id-token-verification-mock")
