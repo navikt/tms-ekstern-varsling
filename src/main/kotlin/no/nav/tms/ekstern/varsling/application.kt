@@ -1,9 +1,11 @@
 package no.nav.tms.ekstern.varsling
 
 import io.confluent.kafka.serializers.KafkaAvroSerializer
+import io.confluent.kafka.serializers.KafkaAvroSerializerConfig
 import kotlinx.coroutines.runBlocking
 import no.nav.tms.common.kubernetes.PodLeaderElection
 import no.nav.tms.common.postgres.Postgres
+import no.nav.tms.common.util.config.StringEnvVar.getEnvVar
 import no.nav.tms.ekstern.varsling.bestilling.*
 import no.nav.tms.ekstern.varsling.recordqueue.DoknotStopQueueRepository
 import no.nav.tms.ekstern.varsling.recordqueue.PeriodicDoknotStoppQueueProcessor
@@ -43,10 +45,7 @@ fun main() {
     val varselSender = PeriodicVarselSender(
         varslingRepository = eksternVarselRepository,
         kanalDecider = kanalDecider,
-        kafkaProducer = KafkaProducerBuilder.producer(
-            keySerializer = StringSerializer::class,
-            valueSerializer = KafkaAvroSerializer::class
-        ),
+        kafkaProducer = avroRecordProducer(),
         doknotTopic = environment.doknotTopic,
         leaderElection = leaderElection,
         statusProducer = statusOppdatertProducer
@@ -59,10 +58,7 @@ fun main() {
 
     val doknotStopQueueProcessor = PeriodicDoknotStoppQueueProcessor(
         repository = doknotStopQueueRepository,
-        recordProducer = KafkaProducerBuilder.producer(
-            keySerializer = StringSerializer::class,
-            valueSerializer = KafkaAvroSerializer::class
-        ),
+        recordProducer = avroRecordProducer(),
         leaderElection = leaderElection,
         doknotStoppTopic = environment.doknotStoppTopic,
     )
@@ -153,6 +149,19 @@ fun main() {
         }
 
     }.start()
+}
+
+private fun <T> avroRecordProducer() = KafkaProducerBuilder.producer<String, T>(
+    keySerializer = StringSerializer::class,
+    valueSerializer = KafkaAvroSerializer::class
+) {
+    val schemaRegistry: String = getEnvVar("KAFKA_SCHEMA_REGISTRY")
+    val schemaRegistryUser: String = getEnvVar("KAFKA_SCHEMA_REGISTRY_USER")
+    val schemaRegistryPassword: String = getEnvVar("KAFKA_SCHEMA_REGISTRY_PASSWORD")
+
+    put(KafkaAvroSerializerConfig.BASIC_AUTH_CREDENTIALS_SOURCE, "USER_INFO")
+    put(KafkaAvroSerializerConfig.SCHEMA_REGISTRY_URL_CONFIG, schemaRegistry)
+    put(KafkaAvroSerializerConfig.USER_INFO_CONFIG, "$schemaRegistryUser:$schemaRegistryPassword")
 }
 
 object TmsEksternVarsling {
