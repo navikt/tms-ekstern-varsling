@@ -19,7 +19,7 @@ import org.apache.kafka.clients.producer.ProducerRecord
 import java.time.Duration
 
 class PeriodicVarselSender(
-    private val varslingRepository: EksternVarslingRepository,
+    private val repository: EksternVarslingRepository,
     private val kanalDecider: PreferertKanalDecider,
     private val kafkaProducer: Producer<String, Doknotifikasjon>,
     private val statusProducer: EksternVarslingOppdatertProducer,
@@ -35,7 +35,7 @@ class PeriodicVarselSender(
     override val job = initializeJob {
         if (leaderElection.isLeader()) {
             try {
-                varslingRepository
+                repository
                     .nextInVarselQueue(batchSize)
                     .also { logInfo(it) }
                     .forEach(::processRequest)
@@ -63,7 +63,7 @@ class PeriodicVarselSender(
             sendEksternVarsling(eksternVarsling)
         } else {
             logKansellering(eksternVarsling)
-            varslingRepository.markAsCancelled(ferdigstilt = nowAtUtc(), eksternVarsling.sendingsId)
+            repository.markAsCancelled(ferdigstilt = nowAtUtc(), eksternVarsling.sendingsId)
             sendKansellertStatus(eksternVarsling)
             EKSTERN_VARSLING_KANSELLERT.inc()
         }
@@ -99,7 +99,7 @@ class PeriodicVarselSender(
         try {
             kafkaProducer.sendSynchronized(ProducerRecord(doknotTopic, varsling.sendingsId, doknot))
 
-            varslingRepository.markAsSent(
+            repository.markAsSent(
                 sendingsId = varsling.sendingsId, ferdigstilt = nowAtUtc(), bestilling = bestilling
             )
 

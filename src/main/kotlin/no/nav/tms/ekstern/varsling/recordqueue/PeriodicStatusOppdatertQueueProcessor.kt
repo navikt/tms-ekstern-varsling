@@ -50,7 +50,7 @@ class PeriodicStatusOppdatertQueueProcessor(
 
                     sendInBatch(record) {
                         repository.dequeueStatusOppdatert(dto.id)
-                        reportEntryProcessed()
+                        reportEntryProcessed(dto.statusnavn)
                     }
                 }
             }
@@ -84,8 +84,8 @@ class PeriodicStatusOppdatertQueueProcessor(
         STATUS_OPPDATERT_QUEUE_SIZE.set(repository.statusOppdatertQueueSize().toDouble())
     }
 
-    private fun reportEntryProcessed() {
-        STATUS_OPPDATERT_QUEUE_PROCESSED.inc()
+    private fun reportEntryProcessed(status: String) {
+        STATUS_OPPDATERT_QUEUE_PROCESSED.labelValues(status.lowercase()).inc()
     }
 
     companion object {
@@ -95,7 +95,7 @@ class PeriodicStatusOppdatertQueueProcessor(
         private val STATUS_OPPDATERT_QUEUE_PROCESSED: Counter = Counter.builder()
             .name(STATUS_OPPDATERT_QUEUE_PROCESSED_NAME)
             .help("Antall utgående status-oppdatert elementer prosessert fra kø")
-            .labelNames("topic")
+            .labelNames("status")
             .register()
 
         private val STATUS_OPPDATERT_QUEUE_SIZE: Gauge = Gauge.builder()

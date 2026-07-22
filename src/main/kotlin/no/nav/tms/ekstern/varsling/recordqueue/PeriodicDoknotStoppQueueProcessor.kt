@@ -100,13 +100,12 @@ class PeriodicDoknotStoppQueueProcessor(
 
         private val DOKNOT_STOPP_QUEUE_PROCESSED: Counter = Counter.builder()
             .name(DOKNOT_STOPP_QUEUE_PROCESSED_NAME)
-            .help("Antall utgående kafka-records prosessert fra kø")
-            .labelNames("topic")
+            .help("Antall utgående doknotstopp-elementer prosessert fra kø")
             .register()
 
         private val DOKNOT_STOPP_QUEUE_SIZE: Gauge = Gauge.builder()
             .name(DOKNOT_STOPP_QUEUE_SIZE_NAME)
-            .help("Totalt antall utgående kafka-records i kø")
+            .help("Totalt antall utgående doknotstopp-elementer i kø")
             .register()
     }
 }

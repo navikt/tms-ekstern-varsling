@@ -43,7 +43,7 @@ fun main() {
     val leaderElection = PodLeaderElection()
 
     val varselSender = PeriodicVarselSender(
-        varslingRepository = eksternVarselRepository,
+        repository = eksternVarselRepository,
         kanalDecider = kanalDecider,
         kafkaProducer = avroRecordProducer(),
         doknotTopic = environment.doknotTopic,
