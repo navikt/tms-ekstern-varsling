@@ -53,6 +53,7 @@ dependencies {
     implementation(TmsCommonLib.postgres)
     implementation(TmsCommonLib.teamLogger)
     implementation(TmsKafkaTools.kafkaApplication)
+    implementation(TmsKafkaTools.kafkaProducerUtils)
     implementation(Prometheus.metricsCore)
 
     testImplementation(JunitPlatform.launcher)

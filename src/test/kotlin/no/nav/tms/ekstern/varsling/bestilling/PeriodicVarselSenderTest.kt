@@ -13,9 +13,12 @@ import no.nav.tms.common.kubernetes.PodLeaderElection
 import no.nav.tms.common.postgres.JsonbHelper.toJsonb
 import no.nav.tms.common.postgres.PostgresDatabase
 import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper.nowAtUtc
+import no.nav.tms.ekstern.varsling.defaultObjectMapper
+import no.nav.tms.ekstern.varsling.recordqueue.StatusOppdatertQueueRepository
 import no.nav.tms.ekstern.varsling.setup.*
 import no.nav.tms.ekstern.varsling.status.EksternVarslingOppdatertProducer
 import org.apache.kafka.clients.producer.MockProducer
+import org.apache.kafka.common.errors.TimeoutException
 import org.apache.kafka.common.serialization.StringSerializer
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
@@ -33,19 +36,14 @@ class PeriodicVarselSenderTest {
     private val testFnr = "12345678910"
 
     private val doknotTopic = MockProducer<String, Doknotifikasjon>(
-        false,
+        true,
         StringSerializer(),
         DummySerializer()
     )
 
-    private val statusTopic = MockProducer(
-        false,
-        StringSerializer(),
-        StringSerializer()
-    )
-
+    private val queueRepository = StatusOppdatertQueueRepository(database)
     private val statusProducer = EksternVarslingOppdatertProducer(
-        statusTopic, "dummytopic"
+        queueRepository
     )
 
     private val kanalDecider = PreferertKanalDecider(
@@ -58,9 +56,7 @@ class PeriodicVarselSenderTest {
 
     @AfterEach
     fun cleanup() {
-        database.update {
-            queryOf("delete from ekstern_varsling")
-        }
+        LocalPostgresDatabase.resetInstance()
         doknotTopic.clear()
         unmockkObject(LocalTimeHelper)
     }
@@ -192,8 +188,8 @@ class PeriodicVarselSenderTest {
 
         val objectMapper = defaultObjectMapper()
 
-        statusTopic.history()
-            .map { objectMapper.readTree(it.value()) }
+        queueRepository.peekStatusOppdatert(10)
+            .map { objectMapper.readTree(it.statusinnhold) }
             .let { statusEvents ->
                 statusEvents.firstOrNull { it["varselId"].asText() == varselId1 }.shouldBeNull()
 
@@ -314,8 +310,8 @@ class PeriodicVarselSenderTest {
             it.shouldNotBeNull()
 
             it.bestilling?.revarsling.shouldNotBeNull()
-            it.bestilling?.revarsling!!.antall shouldBe 1
-            it.bestilling?.revarsling!!.intervall shouldBe 7
+            it.bestilling.revarsling.antall shouldBe 1
+            it.bestilling.revarsling.intervall shouldBe 7
         }
 
         doknotTopic.history().first().value().let {
@@ -557,6 +553,41 @@ class PeriodicVarselSenderTest {
         repository.getEksternVarsling(sendingsId1)?.status shouldBe Sendingsstatus.Venter
         repository.getEksternVarsling(sendingsId2)?.status shouldBe Sendingsstatus.Sendt
         repository.getEksternVarsling(sendingsId3)?.status shouldBe Sendingsstatus.Venter
+    }
+
+    @Test
+    fun `prøver igjen senere dersom sending til kafka feiler med RetriableSendException`() = runBlocking<Unit> {
+        database.insertEksternVarsling(eksternVarslingDBRow(UUID.randomUUID().toString(), testFnr))
+
+        val failingProducer = MockProducer<String, Doknotifikasjon>(
+            false,
+            StringSerializer(),
+            DummySerializer()
+        )
+
+        failingProducer.sendException = TimeoutException()
+
+        val periodicVarselSender = PeriodicVarselSender(
+            repository, kanalDecider, failingProducer, statusProducer,
+            "test-topic", leaderElection, interval = Duration.ofMillis(200)
+        )
+
+        coEvery { leaderElection.isLeader() } returns true
+
+        periodicVarselSender.start()
+        delay(500)
+
+        failingProducer.history().size shouldBe 0
+        database.tellAntallSendt() shouldBe 0
+
+        failingProducer.sendException = null
+
+        delay(250)
+        failingProducer.completeNext()
+        delay(250)
+
+        failingProducer.history().size shouldBe 1
+        database.tellAntallSendt() shouldBe 1
     }
 }
 

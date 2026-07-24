@@ -225,9 +225,10 @@ interface TmsCommonLibDefaults: DependencyGroup {
 
 interface TmsKafkaToolsDefaults: DependencyGroup {
     override val groupId get() = "no.nav.tms.kafka"
-    override val version get() = "2.4.0"
+    override val version get() = "2.5.0"
 
     val kafkaApplication get() = dependency("kafka-application")
+    val kafkaProducerUtils get() = dependency("kafka-producer-utils")
 }
 
 interface TmsKtorTokenSupportDefaults: DependencyGroup {

@@ -1,18 +1,14 @@
 package no.nav.tms.ekstern.varsling.bestilling
 
 import io.github.oshai.kotlinlogging.KotlinLogging
-import no.nav.doknotifikasjon.schemas.DoknotifikasjonStopp
-import no.nav.tms.ekstern.varsling.TmsEksternVarsling
+import no.nav.tms.ekstern.varsling.recordqueue.DoknotStopQueueRepository
 import no.nav.tms.kafka.application.JsonMessage
 import no.nav.tms.kafka.application.Subscriber
 import no.nav.tms.kafka.application.Subscription
-import org.apache.kafka.clients.producer.Producer
-import org.apache.kafka.clients.producer.ProducerRecord
 
-class InaktivertVarselSubscriber (
+class InaktivertVarselSubscriber(
     private val repository: EksternVarslingRepository,
-    private val kafkaProducer: Producer<String, DoknotifikasjonStopp>,
-    private val doknotStoppTopic: String
+    private val recordQueueRepository: DoknotStopQueueRepository
 ) : Subscriber() {
 
     private val log = KotlinLogging.logger {}
@@ -46,14 +42,9 @@ class InaktivertVarselSubscriber (
 
         if (eksternVarsling.status == Sendingsstatus.Sendt && eksternVarsling.bestilling?.revarsling != null && alleVarslerInaktivert) {
 
-            log.info { "Sender doknotifikasjonstopp for sendingsId ${eksternVarsling.sendingsId}" }
+            log.info { "Forbereder doknotifikasjonstopp for sendingsId ${eksternVarsling.sendingsId}" }
 
-            DoknotifikasjonStopp.newBuilder()
-                .setBestillingsId(eksternVarsling.sendingsId)
-                .setBestillerId(TmsEksternVarsling.appnavn)
-                .build()
-                .let { ProducerRecord(doknotStoppTopic, eksternVarsling.sendingsId, it) }
-                .let { kafkaProducer.send(it) }
+            recordQueueRepository.enqueueDoknotStopp(eksternVarsling.sendingsId)
         }
     }
 }

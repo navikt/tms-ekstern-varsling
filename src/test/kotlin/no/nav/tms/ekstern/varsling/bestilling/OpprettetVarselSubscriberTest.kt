@@ -10,11 +10,10 @@ import io.mockk.unmockkObject
 import kotliquery.queryOf
 import no.nav.tms.common.postgres.JsonbHelper.json
 import no.nav.tms.ekstern.varsling.setup.LocalPostgresDatabase
-import no.nav.tms.ekstern.varsling.setup.defaultObjectMapper
+import no.nav.tms.ekstern.varsling.defaultObjectMapper
+import no.nav.tms.ekstern.varsling.recordqueue.StatusOppdatertQueueRepository
 import no.nav.tms.ekstern.varsling.status.EksternVarslingOppdatertProducer
 import no.nav.tms.kafka.application.MessageBroadcaster
-import org.apache.kafka.clients.producer.MockProducer
-import org.apache.kafka.common.serialization.StringSerializer
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
@@ -25,14 +24,8 @@ import java.util.*
 class OpprettetVarselSubscriberTest {
     private val database = LocalPostgresDatabase.getCleanInstance()
     private val testFnr = "12345678910"
-
-    private val statusTopic = MockProducer(
-        false,
-        StringSerializer(),
-        StringSerializer()
-    )
-
-    private val statusProducer = EksternVarslingOppdatertProducer(statusTopic, "dummy-topic")
+    private val queueRepository = StatusOppdatertQueueRepository(database)
+    private val statusProducer = EksternVarslingOppdatertProducer(queueRepository)
 
     private val repository = EksternVarslingRepository(database)
     private val broadcaster = MessageBroadcaster(
@@ -42,11 +35,8 @@ class OpprettetVarselSubscriberTest {
 
     @AfterEach
     fun cleanup() {
-        database.update {
-            queryOf("delete from ekstern_varsling")
-        }
+        LocalPostgresDatabase.resetInstance()
         broadcaster.clearHistory()
-        statusTopic.clear()
         unmockkObject(VarseltekstValidation)
     }
 
@@ -67,20 +57,20 @@ class OpprettetVarselSubscriberTest {
                 .map { it.int("antall") }
         } shouldBe 5
 
-        statusTopic.history().size shouldBe 5
+        queueRepository.statusOppdatertQueueSize() shouldBe 5
     }
 
     @Test
-    fun `sender status 'venter' til internt topic`() {
+    fun `legger status 'venter' i outbox-kø for sending til internt topic`() {
         val varselId = UUID.randomUUID().toString()
 
         broadcaster.broadcastJson(varselOpprettetEvent(id = varselId, ident = testFnr, type = "oppgave"))
 
         val objectMapper = defaultObjectMapper()
 
-        statusTopic.history()
+        queueRepository.peekStatusOppdatert(1)
             .first()
-            .value()
+            .statusinnhold
             .let { objectMapper.readTree(it) }
             .let { event ->
                 event["@event_name"].asText() shouldBe "eksternVarslingStatusOppdatert"
@@ -119,7 +109,6 @@ class OpprettetVarselSubscriberTest {
 
         utsending.shouldNotBeNull()
         utsending.shouldBeBetween(ZonedDateTimeHelper.nowAtUtc().plusMinutes(59), ZonedDateTimeHelper.nowAtUtc().plusMinutes(60))
-
     }
 
     @Test
@@ -228,7 +217,7 @@ class OpprettetVarselSubscriberTest {
         broadcaster.broadcastJson(varselOpprettetEvent(id = eventId, ident = testFnr))
         broadcaster.broadcastJson(varselOpprettetEvent(id = eventId, ident = testFnr))
 
-        broadcaster.history().findFailedOutcome(OpprettetVarselSubscriber::class) {
+        broadcaster.history().findSkippedOutcome(OpprettetVarselSubscriber::class) {
             it["varselId"].asText() == eventId
         }.let {
             it.shouldNotBeNull()
@@ -288,7 +277,7 @@ class OpprettetVarselSubscriberTest {
 
         broadcaster.broadcastJson(feilendeVarsel)
 
-        broadcaster.history().findFailedOutcome(OpprettetVarselSubscriber::class) {
+        broadcaster.history().findSkippedOutcome(OpprettetVarselSubscriber::class) {
             it["varselId"].asText() == varselId
         }.let {
             it.shouldNotBeNull()

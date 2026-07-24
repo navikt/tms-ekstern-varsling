@@ -6,7 +6,7 @@ import no.nav.tms.common.logging.TeamLogs
 import no.nav.tms.ekstern.varsling.status.EksternStatusOppdatering
 import no.nav.tms.ekstern.varsling.status.EksternVarslingOppdatertProducer
 import no.nav.tms.kafka.application.JsonMessage
-import no.nav.tms.kafka.application.MessageException
+import no.nav.tms.kafka.application.SkippableMessageException
 import no.nav.tms.kafka.application.Subscriber
 import no.nav.tms.kafka.application.Subscription
 import java.time.ZonedDateTime
@@ -174,5 +174,5 @@ class OpprettetVarselSubscriber(
     }
 }
 
-class DuplicateVarselException: MessageException("Ekstern varsling er allerede registrert for varsel")
-class InvalidVarseltekstException: MessageException("Innhold i varseltekster er ikke gyldig")
+class DuplicateVarselException: SkippableMessageException("Ekstern varsling er allerede registrert for varsel")
+class InvalidVarseltekstException: SkippableMessageException("Innhold i varseltekster er ikke gyldig")

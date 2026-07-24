@@ -7,21 +7,20 @@ import no.nav.tms.ekstern.varsling.bestilling.EksternStatus
 import no.nav.tms.ekstern.varsling.bestilling.Produsent
 import no.nav.tms.ekstern.varsling.bestilling.Varseltype
 import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper.nowAtUtc
-import no.nav.tms.ekstern.varsling.setup.defaultObjectMapper
-import org.apache.kafka.clients.producer.Producer
-import org.apache.kafka.clients.producer.ProducerRecord
+import no.nav.tms.ekstern.varsling.defaultObjectMapper
+import no.nav.tms.ekstern.varsling.recordqueue.StatusOppdatertQueueRepository
 
-class EksternVarslingOppdatertProducer(private val kafkaProducer: Producer<String, String>,
-                                       private val topicName: String
+class EksternVarslingOppdatertProducer(
+    private val queueRepository: StatusOppdatertQueueRepository,
 ) {
     private val log = KotlinLogging.logger { }
     private val objectMapper = defaultObjectMapper()
 
     fun eksternStatusOppdatert(oppdatering: EksternStatusOppdatering) {
 
-        val producerRecord = ProducerRecord(topicName, oppdatering.varselId, objectMapper.writeValueAsString(oppdatering))
+        val statusInnhold = objectMapper.writeValueAsString(oppdatering)
 
-        kafkaProducer.send(producerRecord)
+        queueRepository.enqueueStatusOppdatert(oppdatering.varselId, oppdatering.status.name, statusInnhold)
 
         EKSTERN_STATUS_OPPDATERT.labelValues(
             oppdatering.varseltype.name.lowercase(),
@@ -31,17 +30,7 @@ class EksternVarslingOppdatertProducer(private val kafkaProducer: Producer<Strin
             oppdatering.batch.toString(),
         ).inc()
 
-        log.info { "eksternStatusOppdatert-event produsert til kafka" }
-    }
-
-    fun flushAndClose() {
-        try {
-            kafkaProducer.flush()
-            kafkaProducer.close()
-            log.info { "Produsent for ekstern status oppdatert eventer er flushet og lukket." }
-        } catch (e: Exception) {
-            log.warn { "Klarte ikke å flushe og lukke produsent for ekstern status oppdatert. Det kan være eventer som ikke ble produsert." }
-        }
+        log.info { "eksternStatusOppdatert-record lagt i outbox" }
     }
 }
 
