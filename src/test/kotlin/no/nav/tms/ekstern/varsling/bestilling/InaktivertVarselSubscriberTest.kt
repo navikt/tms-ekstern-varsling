@@ -4,7 +4,15 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.mockk.mockk
 import kotliquery.queryOf
-import no.nav.tms.common.postgres.JsonbHelper.json
+import no.nav.tms.ekstern.varsling.Bestilling
+import no.nav.tms.ekstern.varsling.Kanal
+import no.nav.tms.ekstern.varsling.Produsent
+import no.nav.tms.ekstern.varsling.Revarsling
+import no.nav.tms.ekstern.varsling.Sendingsstatus
+import no.nav.tms.ekstern.varsling.Varsel
+import no.nav.tms.ekstern.varsling.Varseltype
+import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper.nowAtUtc
+import no.nav.tms.ekstern.varsling.insertEksternVarslingWithLegacyVarsel
 import no.nav.tms.ekstern.varsling.recordqueue.DoknotStopQueueRepository
 import no.nav.tms.ekstern.varsling.setup.LocalPostgresDatabase
 import no.nav.tms.kafka.application.MessageBroadcaster
@@ -16,7 +24,7 @@ class InaktivertVarselSubscriberTest {
     private val database = LocalPostgresDatabase.getCleanInstance()
     private val testFnr = "12345678910"
 
-    private val repository = EksternVarslingRepository(database)
+    private val repository = EksternVarslingBestillingRepository(database)
     private val queueRepository = DoknotStopQueueRepository(database)
     private val broadcaster = MessageBroadcaster(
         OpprettetVarselSubscriber(repository, mockk(relaxed = true), enableBatch = true),
@@ -74,10 +82,10 @@ class InaktivertVarselSubscriberTest {
 
         database.singleOrNull {
             queryOf(
-                "select varsler from ekstern_varsling where ident = :ident",
+                "select count(*) as antall from ekstern_varsling as ev join varsel as v on ev.sendingsId = v.sendingsId where ev.ident = :ident and v.aktiv",
                 mapOf("ident" to testFnr)
             )
-                .map { it.json<List<Varsel>>("varsler").count { it.aktiv } }
+                .map { it.int("antall") }
         } shouldBe 3
     }
 
@@ -86,7 +94,7 @@ class InaktivertVarselSubscriberTest {
         val sendingsId = UUID.randomUUID().toString()
         val varselId = UUID.randomUUID().toString()
 
-        database.insertEksternVarsling(
+        repository.insertEksternVarsling(
             eksternVarslingDBRow(
                 sendingsId,
                 testFnr,
@@ -109,4 +117,77 @@ class InaktivertVarselSubscriberTest {
             it.sendingsId shouldBe sendingsId
         }
     }
+
+    @Test
+    fun `håndterer at varsel kan ligge i legacy jsonb-kolonne ved inaktivering`() {
+        val varselId = UUID.randomUUID().toString()
+
+        val sendingsId = UUID.randomUUID().toString()
+
+        eksternVarslingDBRow(
+            sendingsId,
+            testFnr,
+            varsler = listOf(
+                varsel(varselId, legacy = true)
+            )
+        ).let { database.insertEksternVarslingWithLegacyVarsel(it) }
+
+        broadcaster.broadcastJson(inaktivertEvent(id = varselId))
+
+        repository.getEksternVarsling(sendingsId).let {
+            it.shouldNotBeNull()
+            it.varsler
+                .first { it.varselId == varselId }
+                .let {
+                    it.legacyJsonb shouldBe true
+                    it.aktiv shouldBe false
+                }
+        }
+    }
+
+    @Test
+    fun `håndterer at varsel kan ligge i egen tabell ved inaktivering`() {
+        val varselId = UUID.randomUUID().toString()
+
+        val sendingsId = UUID.randomUUID().toString()
+
+        eksternVarslingDBRow(
+            sendingsId,
+            testFnr,
+            varsler = listOf(
+                varsel(varselId, legacy = true)
+            )
+        ).let { repository.insertEksternVarsling(it) }
+
+        broadcaster.broadcastJson(inaktivertEvent(id = varselId))
+
+        repository.getEksternVarsling(sendingsId).let {
+            it.shouldNotBeNull()
+            it.varsler
+                .first { it.varselId == varselId }
+                .let {
+                    it.legacyJsonb shouldBe false
+                    it.aktiv shouldBe false
+                }
+        }
+    }
+
+    private fun varsel(
+        varselId: String,
+        legacy: Boolean
+    ) = Varsel(
+        varselId = varselId,
+        varseltype = Varseltype.Beskjed,
+        preferertKanal = null,
+        smsVarslingstekst = null,
+        epostVarslingstittel = null,
+        epostVarslingstekst = null,
+        produsent = Produsent("cluster", "namespace", "appnavn"),
+        aktiv = true,
+        opprettet = nowAtUtc(),
+        inaktivert = null,
+        legacyJsonb = legacy,
+        prefererteKanaler = emptyList(),
+    )
+
 }

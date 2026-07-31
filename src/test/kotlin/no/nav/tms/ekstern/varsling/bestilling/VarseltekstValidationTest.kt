@@ -2,9 +2,11 @@ package no.nav.tms.ekstern.varsling.bestilling
 
 import io.kotest.assertions.throwables.shouldNotThrow
 import io.kotest.assertions.throwables.shouldThrow
-import io.kotest.matchers.shouldBe
+import no.nav.tms.ekstern.varsling.Kanal
+import no.nav.tms.ekstern.varsling.Produsent
+import no.nav.tms.ekstern.varsling.Varsel
+import no.nav.tms.ekstern.varsling.Varseltype
 import org.junit.jupiter.api.Test
-import java.time.ZonedDateTime
 import java.util.UUID
 
 class VarseltekstValidationTest {
@@ -82,12 +84,11 @@ class VarseltekstValidationTest {
     private fun varselOpprettet() = Varsel(
         varseltype = Varseltype.Beskjed,
         varselId = UUID.randomUUID().toString(),
-        prefererteKanaler = listOf(Kanal.SMS),
+        preferertKanal = Kanal.SMS,
         smsVarslingstekst = "sms tekst",
         epostVarslingstittel = "epost tittel",
         epostVarslingstekst = "epost tekst",
         produsent = Produsent("cluster", "namespace", "appnavn"),
-        aktiv = true,
-        behandletAvLegacy = false
+        aktiv = true
     )
 }

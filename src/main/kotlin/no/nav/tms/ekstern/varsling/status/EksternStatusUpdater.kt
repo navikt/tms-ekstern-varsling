@@ -1,17 +1,17 @@
 package no.nav.tms.ekstern.varsling.status
 
 import io.github.oshai.kotlinlogging.KotlinLogging
-import no.nav.tms.ekstern.varsling.bestilling.EksternStatus
-import no.nav.tms.ekstern.varsling.bestilling.EksternStatus.Status.*
-import no.nav.tms.ekstern.varsling.bestilling.EksternVarsling
-import no.nav.tms.ekstern.varsling.bestilling.EksternVarslingRepository
-import no.nav.tms.ekstern.varsling.bestilling.Varsel
+import no.nav.tms.ekstern.varsling.EksternStatus
+import no.nav.tms.ekstern.varsling.EksternStatus.Status.*
+import no.nav.tms.ekstern.varsling.EksternVarsling
+import no.nav.tms.ekstern.varsling.bestilling.EksternVarslingBestillingRepository
+import no.nav.tms.ekstern.varsling.Varsel
 import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper.nowAtUtc
 import java.time.Duration
 import java.time.temporal.ChronoUnit
 
 class EksternStatusUpdater(
-    private val repository: EksternVarslingRepository,
+    private val repository: EksternVarslingBestillingRepository,
     private val eksternVarslingOppdatertProducer: EksternVarslingOppdatertProducer,
     private val historikkSoftCap: Int = 10
 ) {

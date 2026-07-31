@@ -1,10 +1,8 @@
-package no.nav.tms.ekstern.varsling.bestilling
+package no.nav.tms.ekstern.varsling.utsending
 
-data class Tekster(
-    val smsTekst: String,
-    val epostTittel: String,
-    val epostTekst: String
-)
+import no.nav.tms.ekstern.varsling.EksternVarsling
+import no.nav.tms.ekstern.varsling.Tekster
+import no.nav.tms.ekstern.varsling.Varseltype
 
 fun bestemTekster(eksternVarsling: EksternVarsling): Tekster {
     val antallAktive = eksternVarsling.varsler

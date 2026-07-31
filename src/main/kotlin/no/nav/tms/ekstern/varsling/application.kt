@@ -16,6 +16,9 @@ import no.nav.tms.ekstern.varsling.recordqueue.StatusOppdatertQueueRepository
 import no.nav.tms.ekstern.varsling.status.EksternStatusUpdater
 import no.nav.tms.ekstern.varsling.status.EksternVarslingOppdatertProducer
 import no.nav.tms.ekstern.varsling.status.EksternVarslingStatusSubscriber
+import no.nav.tms.ekstern.varsling.utsending.EksternVarslingUtsendingRepository
+import no.nav.tms.ekstern.varsling.utsending.PeriodicVarselSender
+import no.nav.tms.ekstern.varsling.utsending.PreferertKanalDecider
 import no.nav.tms.kafka.application.Domain
 import no.nav.tms.kafka.application.KafkaApplication
 import no.nav.tms.kafka.producer.KafkaProducerBuilder
@@ -27,7 +30,7 @@ fun main() {
     val environment = Environment()
 
     val database = Postgres.connectToJdbcUrl(environment.jdbcUrl)
-    val eksternVarselRepository = EksternVarslingRepository(database)
+    val eksternVarselRepository = EksternVarslingBestillingRepository(database)
 
     val doknotStopQueueRepository = DoknotStopQueueRepository(database)
     val statusOppdatertQueueRepository = StatusOppdatertQueueRepository(database)
@@ -45,7 +48,7 @@ fun main() {
     val leaderElection = PodLeaderElection()
 
     val varselSender = PeriodicVarselSender(
-        repository = eksternVarselRepository,
+        repository = EksternVarslingUtsendingRepository(database),
         kanalDecider = kanalDecider,
         kafkaProducer = avroRecordProducer(),
         doknotTopic = environment.doknotTopic,
