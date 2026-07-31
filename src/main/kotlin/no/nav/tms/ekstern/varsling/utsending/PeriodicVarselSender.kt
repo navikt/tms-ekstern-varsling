@@ -1,4 +1,4 @@
-package no.nav.tms.ekstern.varsling.bestilling
+package no.nav.tms.ekstern.varsling.utsending
 
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.prometheus.metrics.core.metrics.Counter
@@ -9,6 +9,12 @@ import no.nav.tms.common.kubernetes.PodLeaderElection
 import no.nav.tms.common.logging.TeamLogs
 import no.nav.tms.common.util.scheduling.PeriodicJob
 import no.nav.tms.ekstern.varsling.TmsEksternVarsling
+import no.nav.tms.ekstern.varsling.Bestilling
+import no.nav.tms.ekstern.varsling.EksternStatus
+import no.nav.tms.ekstern.varsling.EksternVarsling
+import no.nav.tms.ekstern.varsling.Kanal
+import no.nav.tms.ekstern.varsling.Revarsling
+import no.nav.tms.ekstern.varsling.Varseltype
 import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper.nowAtUtc
 import no.nav.tms.ekstern.varsling.status.EksternStatusOppdatering
 import no.nav.tms.ekstern.varsling.status.EksternVarslingOppdatertProducer
@@ -18,10 +24,11 @@ import no.nav.tms.kafka.producer.RetriableSendException
 import org.apache.kafka.clients.producer.Producer
 import org.apache.kafka.clients.producer.ProducerRecord
 import java.time.Duration
+import kotlin.collections.forEach
 import java.time.ZonedDateTime
 
 class PeriodicVarselSender(
-    private val repository: EksternVarslingRepository,
+    private val repository: EksternVarslingUtsendingRepository,
     private val kanalDecider: PreferertKanalDecider,
     private val kafkaProducer: Producer<String, Doknotifikasjon>,
     private val statusProducer: EksternVarslingOppdatertProducer,
@@ -64,7 +71,7 @@ class PeriodicVarselSender(
     }
 
     private fun processRequest(eksternVarsling: EksternVarsling) {
-        if (eksternVarsling.varsler.any { it.aktiv && !it.behandletAvLegacy }) {
+        if (eksternVarsling.varsler.any { it.aktiv }) {
             sendEksternVarsling(eksternVarsling)
         } else {
             logKansellering(eksternVarsling)
@@ -183,8 +190,6 @@ class PeriodicVarselSender(
     private fun logKansellering(varsling: EksternVarsling) {
         if (varsling.varsler.none { it.aktiv }) {
             log.info { "Kansellerer varsling fordi alle (${varsling.varsler.size}) varsler ble markert inaktive." }
-        } else if (varsling.varsler.all { it.behandletAvLegacy }) {
-            log.info { "Kansellerer varsling fordi alle (${varsling.varsler.size}) varsler ble markert som behandlet av legacy." }
         } else {
             log.info { "Kansellerer sending av ekstern varsling." }
         }
@@ -194,7 +199,7 @@ class PeriodicVarselSender(
 
     private fun queueSizeCheck() {
         if (lastQueueSizeCheck == null || Duration.between(lastQueueSizeCheck, nowAtUtc()) > queueSizeCheckInterval) {
-            EKSTERN_VARSLING_QUEUE_SIZE.set(repository.readyQueueSize().toDouble())
+            EKSTERN_VARSLING_QUEUE_SIZE.set(repository.varselQueueSize().toDouble())
 
             lastQueueSizeCheck = nowAtUtc()
         }

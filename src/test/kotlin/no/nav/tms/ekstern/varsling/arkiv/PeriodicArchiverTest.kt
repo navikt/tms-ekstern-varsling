@@ -21,16 +21,16 @@ import no.nav.tms.common.postgres.JsonbHelper.json
 import no.nav.tms.common.postgres.PostgresDatabase
 import no.nav.tms.ekstern.varsling.arkiv.ArkivertVarsling.ArkiveringsBegrunnelse.BestillingForeldet
 import no.nav.tms.ekstern.varsling.arkiv.ArkivertVarsling.ArkiveringsBegrunnelse.VarslingFerdigstilt
-import no.nav.tms.ekstern.varsling.bestilling.Bestilling
-import no.nav.tms.ekstern.varsling.bestilling.EksternStatus
-import no.nav.tms.ekstern.varsling.bestilling.EksternVarsling
-import no.nav.tms.ekstern.varsling.bestilling.EksternVarslingRepository
-import no.nav.tms.ekstern.varsling.bestilling.Kanal
-import no.nav.tms.ekstern.varsling.bestilling.Produsent
-import no.nav.tms.ekstern.varsling.bestilling.Sendingsstatus
-import no.nav.tms.ekstern.varsling.bestilling.Tekster
-import no.nav.tms.ekstern.varsling.bestilling.Varsel
-import no.nav.tms.ekstern.varsling.bestilling.Varseltype
+import no.nav.tms.ekstern.varsling.Bestilling
+import no.nav.tms.ekstern.varsling.EksternStatus
+import no.nav.tms.ekstern.varsling.EksternVarsling
+import no.nav.tms.ekstern.varsling.bestilling.EksternVarslingBestillingRepository
+import no.nav.tms.ekstern.varsling.Kanal
+import no.nav.tms.ekstern.varsling.Produsent
+import no.nav.tms.ekstern.varsling.Sendingsstatus
+import no.nav.tms.ekstern.varsling.Tekster
+import no.nav.tms.ekstern.varsling.Varsel
+import no.nav.tms.ekstern.varsling.Varseltype
 import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper.nowAtUtc
 import no.nav.tms.ekstern.varsling.common.enum
 import no.nav.tms.ekstern.varsling.common.updateInTx
@@ -76,7 +76,7 @@ internal class PeriodicArchiverTest {
 
 
     fun createVarsel(vararg varsler: EksternVarsling) {
-        val varselRepository = EksternVarslingRepository(database)
+        val varselRepository = EksternVarslingBestillingRepository(database)
 
         varsler.forEach { varselRepository.insertEksternVarsling(it) }
     }
@@ -274,7 +274,7 @@ internal class PeriodicArchiverTest {
         var lastArchived = 0
 
         archiver.start()
-        withTimeout(50000) {
+        withTimeout(3000) {
             delay(200)
             while (true) {
                 val currentArchived = testRepository.getAllArchivedVarsel().size
@@ -348,7 +348,7 @@ internal class PeriodicArchiverTest {
     private fun varsel() = Varsel(
         varselId = UUID.randomUUID().toString(),
         varseltype = Varseltype.Beskjed,
-        prefererteKanaler = listOf(Kanal.SMS),
+        preferertKanal = Kanal.SMS,
         smsVarslingstekst = "Sms-tekst",
         epostVarslingstittel = "Epost-tittel",
         epostVarslingstekst = "Epost-tekst",
@@ -358,7 +358,7 @@ internal class PeriodicArchiverTest {
             appnavn = "test-appnavn"
         ),
         aktiv = false,
-        behandletAvLegacy = false
+        opprettet = nowAtUtc().minusDays(30)
     )
 
     private fun daysBetween(date1: ZonedDateTime, date2: ZonedDateTime): Long {

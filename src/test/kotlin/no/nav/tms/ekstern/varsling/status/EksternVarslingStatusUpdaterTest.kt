@@ -7,9 +7,12 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import no.nav.tms.ekstern.varsling.bestilling.*
-import no.nav.tms.ekstern.varsling.bestilling.EksternStatus.Status.Ferdigstilt
-import no.nav.tms.ekstern.varsling.bestilling.EksternStatus.Status.Info
-import no.nav.tms.ekstern.varsling.bestilling.EksternStatus.Status.Sendt
+import no.nav.tms.ekstern.varsling.EksternStatus.Status.Ferdigstilt
+import no.nav.tms.ekstern.varsling.EksternStatus.Status.Info
+import no.nav.tms.ekstern.varsling.EksternStatus.Status.Sendt
+import no.nav.tms.ekstern.varsling.Sendingsstatus
+import no.nav.tms.ekstern.varsling.Varsel
+import no.nav.tms.ekstern.varsling.Varseltype
 import no.nav.tms.ekstern.varsling.setup.LocalPostgresDatabase
 import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper.nowAtUtc
 import no.nav.tms.ekstern.varsling.recordqueue.StatusOppdatertQueueRepository
@@ -24,7 +27,7 @@ import java.util.*
 class EksternVarslingStatusSubscriberTest {
 
     private val database = LocalPostgresDatabase.getCleanInstance()
-    private val repository = EksternVarslingRepository(database)
+    private val repository = EksternVarslingBestillingRepository(database)
 
     private val ident = "12345678901"
 

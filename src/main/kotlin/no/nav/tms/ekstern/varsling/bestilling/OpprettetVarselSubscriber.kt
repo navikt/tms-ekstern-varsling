@@ -3,20 +3,31 @@ package no.nav.tms.ekstern.varsling.bestilling
 import com.fasterxml.jackson.databind.JsonNode
 import io.github.oshai.kotlinlogging.KotlinLogging
 import no.nav.tms.common.logging.TeamLogs
+import no.nav.tms.ekstern.varsling.EksternStatus
+import no.nav.tms.ekstern.varsling.EksternVarsling
+import no.nav.tms.ekstern.varsling.Kanal
+import no.nav.tms.ekstern.varsling.Produsent
+import no.nav.tms.ekstern.varsling.Sendingsstatus
+import no.nav.tms.ekstern.varsling.Varsel
+import no.nav.tms.ekstern.varsling.Varseltype
+import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper.asZonedDateTime
+import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper.nowAtUtc
 import no.nav.tms.ekstern.varsling.status.EksternStatusOppdatering
 import no.nav.tms.ekstern.varsling.status.EksternVarslingOppdatertProducer
 import no.nav.tms.kafka.application.JsonMessage
 import no.nav.tms.kafka.application.SkippableMessageException
 import no.nav.tms.kafka.application.Subscriber
 import no.nav.tms.kafka.application.Subscription
+import java.time.Duration
 import java.time.ZonedDateTime
 import java.util.*
 
 
 class OpprettetVarselSubscriber(
-    private val repository: EksternVarslingRepository,
+    private val repository: EksternVarslingBestillingRepository,
     private val statusProducer: EksternVarslingOppdatertProducer,
-    private val enableBatch: Boolean
+    private val enableBatch: Boolean,
+    private val batchMargin: Duration = Duration.ofMinutes(1)
 ) : Subscriber() {
 
     private val log = KotlinLogging.logger {}
@@ -35,14 +46,16 @@ class OpprettetVarselSubscriber(
         val varsel = Varsel(
             varseltype = jsonMessage["type"].asText().let(::parseVarseltype),
             varselId = jsonMessage["varselId"].asText(),
-            prefererteKanaler = jsonMessage["eksternVarslingBestilling"]["prefererteKanaler"].map {
-                Kanal.valueOf(it.asText()) },
+            preferertKanal = jsonMessage["eksternVarslingBestilling"]["prefererteKanaler"].map {
+                Kanal.valueOf(it.asText())
+            }
+                .firstOrNull(),
             smsVarslingstekst = jsonMessage["eksternVarslingBestilling"]["smsVarslingstekst"].asTextOrNull(),
             epostVarslingstittel = jsonMessage["eksternVarslingBestilling"]["epostVarslingstittel"].asTextOrNull(),
             epostVarslingstekst = jsonMessage["eksternVarslingBestilling"]["epostVarslingstekst"].asTextOrNull(),
             produsent = produsent,
-            aktiv = true,
-            behandletAvLegacy = false
+            opprettet = jsonMessage["opprettet"].asZonedDateTime(),
+            aktiv = true
         ).also {
             validate(it)
         }
@@ -87,10 +100,10 @@ class OpprettetVarselSubscriber(
         return repository.varselExists(varsel.varselId)
     }
 
-    private fun addToExistingBatch(varsel: Varsel, existingBatch: EksternVarsling) {
+    private fun addToExistingBatch(varsel: Varsel, existingBatch: String) {
         log.info { "Legger til varsel i eksisterende varsling" }
-        repository.addVarselToExisting(
-            sendingsId = existingBatch.sendingsId,
+        repository.addVarsel(
+            sendingsId = existingBatch,
             varsel = varsel
         )
     }
@@ -107,7 +120,7 @@ class OpprettetVarselSubscriber(
         val (erBatch, utsending) = if (utsettSendingTil != null) {
             false to utsettSendingTil
         } else if (kanBatches){
-            true to ZonedDateTimeHelper.nowAtUtc().plusHours(1)
+            true to nowAtUtc().plusHours(1)
         } else {
             false to null
         }
@@ -136,7 +149,7 @@ class OpprettetVarselSubscriber(
         repository.insertEksternVarsling(eksternVarsling)
     }
 
-    private fun findExistingBatch(jsonMessage: JsonMessage): EksternVarsling? {
+    private fun findExistingBatch(jsonMessage: JsonMessage): String? {
         val kanBatches = if (enableBatch) {
             jsonMessage["eksternVarslingBestilling"]["kanBatches"].asBooleanOrNull() ?: false
         } else {
@@ -146,7 +159,10 @@ class OpprettetVarselSubscriber(
         val utsettSendingTil = jsonMessage["eksternVarslingBestilling"]["utsettSendingTil"].asTextOrNull()?.let { ZonedDateTime.parse(it) }
 
         return if (kanBatches && utsettSendingTil == null) {
-            repository.findExistingBatch(jsonMessage["ident"].asText())
+            repository.findExistingBatch(
+                ident = jsonMessage["ident"].asText(),
+                utsendingEtter = nowAtUtc() + batchMargin
+            )
         } else {
             null
         }
