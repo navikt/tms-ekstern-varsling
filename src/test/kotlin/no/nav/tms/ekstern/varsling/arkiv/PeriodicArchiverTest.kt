@@ -1,7 +1,7 @@
 package no.nav.tms.ekstern.varsling.arkiv
 
 import io.kotest.matchers.collections.shouldContainExactly
-import io.kotest.matchers.ints.shouldBeGreaterThan
+import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
@@ -81,8 +81,8 @@ internal class PeriodicArchiverTest {
 
         coEvery { leaderElection.isLeader() } returns true
 
-        val opprettetAgeTreshold = 30
-        val ferdigstiltAgeThreshold = 3
+        val opprettetAgeTreshold = 30L
+        val ferdigstiltAgeThreshold = 3L
 
         runArchiverToCompletion(
             opprettetThreshold = opprettetAgeTreshold,
@@ -103,8 +103,8 @@ internal class PeriodicArchiverTest {
 
         coEvery { leaderElection.isLeader() } returns true
 
-        val opprettetAgeTreshold = 20
-        val ferdigstiltAgeThreshold = 15
+        val opprettetAgeTreshold = 20L
+        val ferdigstiltAgeThreshold = 15L
 
         runArchiverToCompletion(
             opprettetThreshold = opprettetAgeTreshold,
@@ -124,8 +124,8 @@ internal class PeriodicArchiverTest {
 
         coEvery { leaderElection.isLeader() } returns true
 
-        val opprettetAgeTreshold = 0
-        val ferdigstiltAgeThreshold = 0
+        val opprettetAgeTreshold = 0L
+        val ferdigstiltAgeThreshold = 0L
 
         runArchiverToCompletion(
             opprettetThreshold = opprettetAgeTreshold,
@@ -204,11 +204,11 @@ internal class PeriodicArchiverTest {
         testRepository.getAllArchivedVarsel().size shouldBe 0
     }
 
-    private fun runArchiverToCompletion(opprettetThreshold: Int, ferdigstiltThreshold: Int) = runBlocking {
+    private fun runArchiverToCompletion(opprettetThreshold: Long, ferdigstiltThreshold: Long) = runBlocking {
         val archiver = PeriodicArchiver(
-            varselArchivingRepository = archiveRepository,
-            opprettetThresholdDays = opprettetThreshold,
-            ferdigstiltThresholdDays = ferdigstiltThreshold,
+            arkivRepository = archiveRepository,
+            ageThresholdDaysOpprettet = opprettetThreshold,
+            ageThresholdDaysFerdigstilt = ferdigstiltThreshold,
             interval = Duration.ofMillis(50),
             leaderElection = leaderElection,
         )
@@ -303,12 +303,12 @@ internal class PeriodicArchiverTest {
         behandletAvLegacy = false
     )
 
-    private fun daysBetween(date1: ZonedDateTime, date2: ZonedDateTime): Int {
+    private fun daysBetween(date1: ZonedDateTime, date2: ZonedDateTime): Long {
         val deltaSeconds = date1.toEpochSecond() - date2.toEpochSecond()
 
         val secondsInDay = Duration.ofDays(1).toSeconds()
 
-        return (deltaSeconds.absoluteValue / secondsInDay).toInt()
+        return deltaSeconds.absoluteValue / secondsInDay
     }
 
     private infix fun ZonedDateTime?.shouldBeSameInstantAs(other: ZonedDateTime?) {

@@ -72,3 +72,7 @@ spec:
       value: "09:00:00"
     - name: SMS_SENDING_END
       value: "17:00:00"
+    - name: ARCHIVING_THRESHOLD_OPPRETTET
+      value: "365"
+    - name: ARCHIVING_THRESHOLD_FERDIGSTILT
+      value: "14"
