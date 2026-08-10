@@ -6,6 +6,8 @@ import kotlinx.coroutines.runBlocking
 import no.nav.tms.common.kubernetes.PodLeaderElection
 import no.nav.tms.common.postgres.Postgres
 import no.nav.tms.common.util.config.StringEnvVar.getEnvVar
+import no.nav.tms.ekstern.varsling.arkiv.ArkivRepository
+import no.nav.tms.ekstern.varsling.arkiv.PeriodicArchiver
 import no.nav.tms.ekstern.varsling.bestilling.*
 import no.nav.tms.ekstern.varsling.recordqueue.DoknotStopQueueRepository
 import no.nav.tms.ekstern.varsling.recordqueue.PeriodicDoknotStoppQueueProcessor
@@ -70,6 +72,13 @@ fun main() {
         varseltopic = environment.varseltopic
     )
 
+    val archiver = PeriodicArchiver(
+        arkivRepository = ArkivRepository(database),
+        ageThresholdDaysOpprettet = environment.archivingThresholdOpprettet,
+        ageThresholdDaysFerdigstilt = environment.archivingThresholdFerdigstilt,
+        leaderElection = leaderElection,
+    )
+
     KafkaApplication.build {
         kafkaConfig {
             groupId = environment.groupId
@@ -95,6 +104,7 @@ fun main() {
             varselSender.start()
             doknotStopQueueProcessor.start()
             statusOppdatertQueueProcessor.start()
+            archiver.start()
         }
 
         onShutdown {
@@ -110,6 +120,7 @@ fun main() {
         healthCheck("Varselsender", varselSender::isHealthy)
         healthCheck("DoknotStopQueueProcessor", doknotStopQueueProcessor::isHealthy)
         healthCheck("StatusOppdatertQueueProcessor", statusOppdatertQueueProcessor::isHealthy)
+        healthCheck("Archiver", archiver::isHealthy)
 
         minSideMdc {
             domain = Domain.varsel
