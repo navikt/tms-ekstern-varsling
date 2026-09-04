@@ -104,7 +104,7 @@ fun main() {
             varselSender.start()
             doknotStopQueueProcessor.start()
             statusOppdatertQueueProcessor.start()
-            archiver.start()
+            //archiver.start()
         }
 
         onShutdown {
@@ -120,7 +120,7 @@ fun main() {
         healthCheck("Varselsender", varselSender::isHealthy)
         healthCheck("DoknotStopQueueProcessor", doknotStopQueueProcessor::isHealthy)
         healthCheck("StatusOppdatertQueueProcessor", statusOppdatertQueueProcessor::isHealthy)
-        healthCheck("Archiver", archiver::isHealthy)
+        //healthCheck("Archiver", archiver::isHealthy)
 
         minSideMdc {
             domain = Domain.varsel
