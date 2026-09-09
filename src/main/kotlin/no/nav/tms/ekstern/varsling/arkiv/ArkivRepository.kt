@@ -86,7 +86,7 @@ class ArkivRepository(private val database: PostgresDatabase) {
                     :ferdigstilt,
                     :arkivert,
                     :begrunnelse
-                )
+                ) on conflict do nothing
             """,
             varsler.map {
                 val serializedData = it.serializedData

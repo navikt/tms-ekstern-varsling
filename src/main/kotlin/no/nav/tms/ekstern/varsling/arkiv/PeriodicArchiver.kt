@@ -3,6 +3,7 @@ package no.nav.tms.ekstern.varsling.arkiv
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.prometheus.metrics.core.metrics.Counter
 import no.nav.tms.common.kubernetes.PodLeaderElection
+import no.nav.tms.common.logging.TeamLogs
 import no.nav.tms.common.util.scheduling.PeriodicJob
 import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper.nowAtUtc
 import no.nav.tms.kafka.application.AppHealth
@@ -13,11 +14,12 @@ class PeriodicArchiver(
     private val ageThresholdDaysOpprettet: Long,
     private val ageThresholdDaysFerdigstilt: Long,
     private val leaderElection: PodLeaderElection,
-    private val batchSize: Int = 10_000,
+    private val batchSize: Int = 1_000,
     interval: Duration = Duration.ofSeconds(10)
 ): PeriodicJob(interval) {
 
     private val log = KotlinLogging.logger {}
+    private val teamLog = TeamLogs.logger {}
 
     override val job = initializeJob {
         if (leaderElection.isLeader()) {
@@ -39,7 +41,8 @@ class PeriodicArchiver(
             }
 
         } catch (e: Exception) {
-            log.error(e) { "Fikk feil mot databasen ved arkivering av beskjed. Forsøker igjen senere." }
+            log.error { "Fikk feil mot databasen ved arkivering av beskjed. Forsøker igjen senere." }
+            teamLog.error(e) { "Fikk feil mot databasen ved arkivering av beskjed. Forsøker igjen senere." }
         }
     }
 

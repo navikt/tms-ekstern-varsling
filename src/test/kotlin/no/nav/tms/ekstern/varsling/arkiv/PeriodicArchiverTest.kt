@@ -195,6 +195,42 @@ internal class PeriodicArchiverTest {
     }
 
     @Test
+    fun `ignorerer duplikate varsler i arkiv-tabell`() = runBlocking<Unit> {
+        coEvery { leaderElection.isLeader() } returns true
+
+        val sendingsId = "id-x"
+        val varsling = varsling(sendingsId = sendingsId, opprettet = nowAtUtc().minusDays(100), ferdigstilt = null)
+
+        createVarsel(varsling)
+
+        testRepository.varslingExists(sendingsId) shouldBe true
+        testRepository.getAllArchivedVarsel().size shouldBe 0
+
+        runArchiverToCompletion(
+            opprettetThreshold = 50,
+            ferdigstiltThreshold = 50
+        )
+
+        testRepository.varslingExists(sendingsId) shouldBe false
+        testRepository.getAllArchivedVarsel().size shouldBe 1
+
+
+        // Simulate erroneous archival
+        createVarsel(varsling)
+
+        testRepository.varslingExists(sendingsId) shouldBe true
+        testRepository.getAllArchivedVarsel().size shouldBe 1
+
+        runArchiverToCompletion(
+            opprettetThreshold = 50,
+            ferdigstiltThreshold = 50
+        )
+
+        testRepository.varslingExists(sendingsId) shouldBe false
+        testRepository.getAllArchivedVarsel().size shouldBe 1
+    }
+
+    @Test
     fun `does nothing when not leader`() = runBlocking<Unit> {
         coEvery { leaderElection.isLeader() } returns false
 
@@ -322,6 +358,17 @@ class ArkivTestRepository(private val database: PostgresDatabase) {
             queryOf("select * from ekstern_varsling_arkiv")
                 .map(::toArkivertVarsling)
         }
+    }
+
+    fun varslingExists(sendingsId: String): Boolean {
+        return database.singleOrNull {
+            queryOf(
+                "select true from ekstern_varsling where sendingsId = :sendingsId",
+                mapOf("sendingsId" to sendingsId)
+            ).map {
+                it.boolean(1)
+            }
+        } ?: false
     }
 
     private fun toArkivertVarsling(row: Row) = ArkivertVarsling(
