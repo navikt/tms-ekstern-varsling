@@ -1,6 +1,7 @@
 package no.nav.tms.ekstern.varsling.arkiv
 
 import kotliquery.Row
+import kotliquery.TransactionalSession
 import kotliquery.queryOf
 import no.nav.tms.common.postgres.JsonbHelper.json
 import no.nav.tms.common.postgres.JsonbHelper.jsonOrNull
@@ -11,7 +12,10 @@ import no.nav.tms.ekstern.varsling.bestilling.EksternStatus
 import no.nav.tms.ekstern.varsling.bestilling.Sendingsstatus
 import no.nav.tms.ekstern.varsling.bestilling.Varsel
 import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper
+import no.nav.tms.ekstern.varsling.common.batchUpdateInTx
 import no.nav.tms.ekstern.varsling.common.enum
+import no.nav.tms.ekstern.varsling.common.transaction
+import no.nav.tms.ekstern.varsling.common.updateInTx
 import java.time.ZonedDateTime
 import kotlin.collections.map
 
@@ -30,8 +34,10 @@ class ArkivRepository(private val database: PostgresDatabase) {
         )
 
         if (arkivVarsler.isNotEmpty()) {
-            insertArkiverteVarsler(arkivVarsler)
-            deleteEksternVarsling(arkivVarsler.map { it.sendingsId })
+            database.transaction {
+                insertArkiverteVarsler(arkivVarsler)
+                deleteEksternVarsling(arkivVarsler.map { it.sendingsId })
+            }
         }
 
         return arkivVarsler
@@ -64,8 +70,8 @@ class ArkivRepository(private val database: PostgresDatabase) {
         }
     }
 
-    private fun insertArkiverteVarsler(varsler: List<ArkivertVarsling>) {
-        database.batchUpdate(
+    private fun TransactionalSession.insertArkiverteVarsler(varsler: List<ArkivertVarsling>) {
+        batchUpdateInTx(
             """
                 insert into ekstern_varsling_arkiv(
                     sendingsId,
@@ -106,10 +112,10 @@ class ArkivRepository(private val database: PostgresDatabase) {
         )
     }
 
-    private fun deleteEksternVarsling(sendingsIds: List<String>) {
 
-        database.update {
-            val sendingsIdArray = it.createArrayOf("TEXT", sendingsIds)
+    private fun TransactionalSession.deleteEksternVarsling(sendingsIds: List<String>) {
+        updateInTx {
+            val sendingsIdArray = createArrayOf("TEXT", sendingsIds)
 
             queryOf(
                 "delete from ekstern_varsling where sendingsId = any(:sendingsIds)",
@@ -117,6 +123,7 @@ class ArkivRepository(private val database: PostgresDatabase) {
             )
         }
     }
+
 
     private fun toArkivertVarsling(row: Row) =
         ArkivertVarsling(

@@ -1,16 +1,20 @@
 package no.nav.tms.ekstern.varsling.arkiv
 
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotliquery.Row
+import kotliquery.TransactionalSession
 import kotliquery.queryOf
 import no.nav.tms.common.kubernetes.PodLeaderElection
 import no.nav.tms.common.postgres.JsonbHelper.json
@@ -29,6 +33,7 @@ import no.nav.tms.ekstern.varsling.bestilling.Varsel
 import no.nav.tms.ekstern.varsling.bestilling.Varseltype
 import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper.nowAtUtc
 import no.nav.tms.ekstern.varsling.common.enum
+import no.nav.tms.ekstern.varsling.common.updateInTx
 import no.nav.tms.ekstern.varsling.setup.LocalPostgresDatabase
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -171,6 +176,23 @@ internal class PeriodicArchiverTest {
                 eksternStatus shouldBe gammelFerdigstiltVarsling.eksternStatus
             }
         }
+    }
+
+    @Test
+    fun `Kaster exception og ruller tilbake insert i ekstern_varsling_arkiv hvis delete fra ekstern_varsling feiler`() {
+        mockkStatic("no.nav.tms.ekstern.varsling.common.DbTransactionsKt") {
+            every { any<TransactionalSession>().updateInTx(any()) } throws RuntimeException("simulert feil ved delete")
+            shouldThrow<Exception> {
+                archiveRepository.archiveEntriesByThresholds(
+                    opprettetThreshold = nowAtUtc(),
+                    ferdigstiltThreshold = nowAtUtc(),
+                    limit = 10
+                )
+            }
+        }
+
+        testRepository.getAllArchivedVarsel().size shouldBe 0
+        varslingInDbCount() shouldBe 4
     }
 
     @Test
