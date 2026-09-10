@@ -215,7 +215,7 @@ internal class PeriodicArchiverTest {
         testRepository.getAllArchivedVarsel().size shouldBe 1
 
 
-        // Simulate erroneous archival
+        // Simuler feilaktig arkivering
         createVarsel(varsling)
 
         testRepository.varslingExists(sendingsId) shouldBe true
