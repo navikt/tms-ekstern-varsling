@@ -180,7 +180,6 @@ internal class PeriodicArchiverTest {
 
     @Test
     fun `Kaster exception og ruller tilbake insert i arkiv-db hvis delete fra ekstern_varsling feiler`() {
-        coEvery { leaderElection.isLeader() } returns true
         mockkStatic("no.nav.tms.ekstern.varsling.common.DbTransactionsKt") {
             every { any<TransactionalSession>().updateInTx(any()) } throws RuntimeException("simulert feil ved delete")
             shouldThrow<Exception> {
