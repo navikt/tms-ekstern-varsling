@@ -160,6 +160,26 @@ class EksternVarslingRepository(val database: PostgresDatabase) {
         } ?: false
     }
 
+    fun readyQueueSize(): Int {
+        return database.single {
+            queryOf(
+                """
+                    select
+                       count(*) as antall
+                    from 
+                        ekstern_varsling
+                    where 
+                        ferdigstilt is null and (utsending is null or utsending < :now)
+                """,
+                mapOf(
+                    "now" to ZonedDateTimeHelper.nowAtUtc()
+                )
+            ).map {
+                it.int("antall")
+            }
+        }
+    }
+
     fun nextInVarselQueue(batchSize: Int): List<EksternVarsling> {
         return database.list {
             queryOf(
