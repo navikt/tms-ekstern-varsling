@@ -2,6 +2,7 @@ package no.nav.tms.ekstern.varsling.bestilling
 
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.prometheus.metrics.core.metrics.Counter
+import io.prometheus.metrics.core.metrics.Gauge
 import no.nav.doknotifikasjon.schemas.Doknotifikasjon
 import no.nav.doknotifikasjon.schemas.PrefererteKanal
 import no.nav.tms.common.kubernetes.PodLeaderElection
@@ -17,6 +18,7 @@ import no.nav.tms.kafka.producer.RetriableSendException
 import org.apache.kafka.clients.producer.Producer
 import org.apache.kafka.clients.producer.ProducerRecord
 import java.time.Duration
+import java.time.ZonedDateTime
 
 class PeriodicVarselSender(
     private val repository: EksternVarslingRepository,
@@ -25,6 +27,7 @@ class PeriodicVarselSender(
     private val statusProducer: EksternVarslingOppdatertProducer,
     private val doknotTopic: String,
     private val leaderElection: PodLeaderElection,
+    private val queueSizeCheckInterval: Duration = Duration.ofMinutes(1),
     batchSize: Int = 500,
     interval: Duration = Duration.ofSeconds(1),
 ) : PeriodicJob(interval) {
@@ -34,6 +37,8 @@ class PeriodicVarselSender(
 
     override val job = initializeJob {
         if (leaderElection.isLeader()) {
+            queueSizeCheck()
+
             try {
                 repository
                     .nextInVarselQueue(batchSize)
@@ -184,6 +189,16 @@ class PeriodicVarselSender(
             log.info { "Kansellerer sending av ekstern varsling." }
         }
     }
+
+    private var lastQueueSizeCheck: ZonedDateTime? = null
+
+    private fun queueSizeCheck() {
+        if (lastQueueSizeCheck == null || Duration.between(lastQueueSizeCheck, nowAtUtc()) > queueSizeCheckInterval) {
+            EKSTERN_VARSLING_QUEUE_SIZE.set(repository.readyQueueSize().toDouble())
+
+            lastQueueSizeCheck = nowAtUtc()
+        }
+    }
 }
 
 private fun mapKanal(kanal: Kanal) = when(kanal) {
@@ -201,4 +216,9 @@ private val EKSTERN_VARSLING_SENDT: Counter = Counter.builder()
 private val EKSTERN_VARSLING_KANSELLERT: Counter = Counter.builder()
     .name("tms_ekstern_varsling_v2_ekstern_varsling_kansellert")
     .help("Ekstern varsling kansellert")
+    .register()
+
+private val EKSTERN_VARSLING_QUEUE_SIZE: Gauge = Gauge.builder()
+    .name("tms_ekstern_varsling_v2_ekstern_varsling_queue_size")
+    .help("Antall eksterne varsling i kø klare for sending")
     .register()
