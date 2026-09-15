@@ -29,11 +29,11 @@ class EksternStatusUpdater(
         } else if (historikkIsSaturated(varsling) && statusEvent.status != DoknotifikasjonStatusEnum.FERDIGSTILT.name) {
             throw StatusUpdateException(FailureReason.HistorikkSaturated)
 
-        } else {
-            val currentStatus = varsling.eksternStatus ?: initOversikt()
-
-            updateExistingStatus(statusEvent, currentStatus, varsling)
         }
+
+        val currentStatus = varsling.eksternStatus ?: initOversikt()
+
+        updateExistingStatus(statusEvent, currentStatus, varsling)
     }
 
     private fun initOversikt() = EksternStatus.Oversikt(
