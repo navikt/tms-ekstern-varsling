@@ -15,8 +15,8 @@ import no.nav.tms.ekstern.varsling.Varseltype
 import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper.nowAtUtc
 import no.nav.tms.ekstern.varsling.setup.LocalPostgresDatabase
 import no.nav.tms.ekstern.varsling.defaultObjectMapper
-import no.nav.tms.ekstern.varsling.insertEksternVarslingWithLegacyVarsel
 import no.nav.tms.ekstern.varsling.recordqueue.StatusOppdatertQueueRepository
+import no.nav.tms.ekstern.varsling.setup.TestRepository
 import no.nav.tms.ekstern.varsling.status.EksternVarslingOppdatertProducer
 import no.nav.tms.kafka.application.MessageBroadcaster
 import org.junit.jupiter.api.AfterEach
@@ -29,9 +29,11 @@ import java.util.*
 class OpprettetVarselSubscriberTest {
     private val database = LocalPostgresDatabase.getCleanInstance()
     private val testFnr = "12345678910"
+
     private val queueRepository = StatusOppdatertQueueRepository(database)
     private val statusProducer = EksternVarslingOppdatertProducer(queueRepository)
 
+    private val testRepository = TestRepository(database)
     private val repository = EksternVarslingBestillingRepository(database)
     private val broadcaster = MessageBroadcaster(
         OpprettetVarselSubscriber(repository, statusProducer, enableBatch = true),
@@ -302,7 +304,7 @@ class OpprettetVarselSubscriberTest {
             varsler = listOf(
                 varsel(varselId, legacy = true)
             )
-        ).let { database.insertEksternVarslingWithLegacyVarsel(it) }
+        ).let { testRepository.insertEksternVarslingWithLegacyVarsel(it) }
 
         broadcaster.broadcastJson(varselOpprettetEvent(id = varselId, ident = testFnr))
 
@@ -326,7 +328,7 @@ class OpprettetVarselSubscriberTest {
             varsler = listOf(
                 varsel(varselId, legacy = true)
             )
-        ).let { repository.insertEksternVarsling(it) }
+        ).let { testRepository.insertEksternVarsling(it) }
 
         broadcaster.broadcastJson(varselOpprettetEvent(id = varselId, ident = testFnr))
 

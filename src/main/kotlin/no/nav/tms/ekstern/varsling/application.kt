@@ -13,6 +13,7 @@ import no.nav.tms.ekstern.varsling.recordqueue.DoknotStopQueueRepository
 import no.nav.tms.ekstern.varsling.recordqueue.PeriodicDoknotStoppQueueProcessor
 import no.nav.tms.ekstern.varsling.recordqueue.PeriodicStatusOppdatertQueueProcessor
 import no.nav.tms.ekstern.varsling.recordqueue.StatusOppdatertQueueRepository
+import no.nav.tms.ekstern.varsling.status.EksternStatusRepository
 import no.nav.tms.ekstern.varsling.status.EksternStatusUpdater
 import no.nav.tms.ekstern.varsling.status.EksternVarslingOppdatertProducer
 import no.nav.tms.ekstern.varsling.status.EksternVarslingStatusSubscriber
@@ -57,7 +58,7 @@ fun main() {
     )
 
     val eksternStatusUpdater = EksternStatusUpdater(
-        repository = eksternVarselRepository,
+        repository = EksternStatusRepository(database),
         eksternVarslingOppdatertProducer = statusOppdatertProducer
     )
 

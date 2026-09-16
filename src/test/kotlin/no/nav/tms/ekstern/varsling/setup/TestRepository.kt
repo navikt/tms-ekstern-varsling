@@ -1,4 +1,4 @@
-package no.nav.tms.ekstern.varsling.bestilling
+package no.nav.tms.ekstern.varsling.setup
 
 import kotliquery.Row
 import kotliquery.TransactionalSession
@@ -7,16 +7,18 @@ import no.nav.tms.common.postgres.JsonbHelper.json
 import no.nav.tms.common.postgres.JsonbHelper.jsonOrNull
 import no.nav.tms.common.postgres.JsonbHelper.toJsonb
 import no.nav.tms.common.postgres.PostgresDatabase
-import no.nav.tms.ekstern.varsling.EksternStatus
 import no.nav.tms.ekstern.varsling.EksternVarsling
 import no.nav.tms.ekstern.varsling.Kanal
+import no.nav.tms.ekstern.varsling.Kanal.valueOf
 import no.nav.tms.ekstern.varsling.Sendingsstatus
 import no.nav.tms.ekstern.varsling.Varsel
 import no.nav.tms.ekstern.varsling.Varseltype
-import java.time.ZonedDateTime
+import no.nav.tms.ekstern.varsling.bestilling.transaction
+import no.nav.tms.ekstern.varsling.bestilling.updateInTx
 
-class EksternVarslingBestillingRepository(val database: PostgresDatabase) {
-
+class TestRepository(
+    private val database: PostgresDatabase
+) {
     fun insertEksternVarsling(eksternVarsling: EksternVarsling) {
         database.transaction {
             insertEksternVarslingRow(eksternVarsling)
@@ -118,6 +120,53 @@ class EksternVarslingBestillingRepository(val database: PostgresDatabase) {
         }
     }
 
+    fun insertEksternVarslingWithLegacyVarsel(eksternVarsling: EksternVarsling) {
+        database.update {
+            queryOf(
+                """
+                insert into ekstern_varsling(sendingsId, ident, erBatch, erUtsattVarsel, varsler, utsending, ferdigstilt, opprettet, status, bestilling)
+                values (:sendingsId, :ident, :erBatch, :erUtsattVarsel, :varsler, :utsending, :ferdigstilt, :opprettet, :status, :bestilling)
+            """,
+                mapOf(
+                    "sendingsId" to eksternVarsling.sendingsId,
+                    "ident" to eksternVarsling.ident,
+                    "erBatch" to eksternVarsling.erBatch,
+                    "erUtsattVarsel" to eksternVarsling.erUtsattVarsel,
+                    "varsler" to eksternVarsling.varsler.filter{ it.legacyJsonb }.toJsonb(),
+                    "utsending" to eksternVarsling.utsending,
+                    "ferdigstilt" to eksternVarsling.ferdigstilt,
+                    "status" to eksternVarsling.status.name,
+                    "bestilling" to eksternVarsling.bestilling?.toJsonb(),
+                    "opprettet" to eksternVarsling.opprettet,
+                )
+            )
+        }
+
+        eksternVarsling.varsler.filterNot { it.legacyJsonb }.forEach { varsel ->
+            database.update {
+                queryOf(
+                    """
+                insert into varsel(varselId, sendingsId, varseltype, preferertKanal, smsVarslingstekst, epostVarslingstittel, epostVarslingstekst, aktiv, produsent, opprettet, inaktivert)
+                values(:varselId, :sendingsId, :varseltype, :preferertKanal, :smsVarslingstekst, :epostVarslingstittel, :epostVarslingstekst, :aktiv, :produsent, :opprettet, :inaktivert)
+            """,
+                    mapOf(
+                        "sendingsId" to eksternVarsling.sendingsId,
+                        "varselId" to varsel.varselId,
+                        "varseltype" to varsel.varseltype.name,
+                        "preferertKanal" to varsel.preferertKanal?.name,
+                        "smsVarslingstekst" to varsel.smsVarslingstekst,
+                        "epostVarslingstittel" to varsel.epostVarslingstittel,
+                        "epostVarslingstekst" to varsel.epostVarslingstekst,
+                        "aktiv" to varsel.aktiv,
+                        "produsent" to varsel.produsent.toJsonb(),
+                        "opprettet" to varsel.opprettet,
+                        "inaktivert" to varsel.inaktivert
+                    )
+                )
+            }
+        }
+    }
+
     fun getEksternVarsling(sendingsId: String): EksternVarsling? {
         return database.list {
             queryOf(
@@ -140,150 +189,6 @@ class EksternVarslingBestillingRepository(val database: PostgresDatabase) {
         }.let {
             joinEksternVarslingWithVarsel(it)
         }.firstOrNull()
-    }
-
-    fun findExistingBatch(ident: String, utsendingEtter: ZonedDateTime): String? = database.singleOrNull {
-        queryOf(
-            """
-                select 
-                    sendingsId
-                from 
-                    ekstern_varsling
-                where
-                    ident = :ident and
-                    erBatch and
-                    not erUtsattVarsel and
-                    ferdigstilt is null and
-                    utsending > :utsendingEtter
-            """,
-            mapOf(
-                "ident" to ident,
-                "utsendingEtter" to utsendingEtter
-            )
-        )
-            .map {
-                it.string("sendingsId")
-            }
-    }
-
-    fun addVarsel(sendingsId: String, varsel: Varsel) {
-        database.update {
-            queryOf(
-                """
-                    insert into varsel(
-                        varselId,
-                        sendingsId,
-                        varseltype,
-                        preferertKanal,
-                        smsVarslingstekst,
-                        epostVarslingstittel,
-                        epostVarslingstekst,
-                        aktiv,
-                        produsent,
-                        opprettet,
-                        inaktivert
-                    ) values (
-                        :varselId,
-                        :sendingsId,
-                        :varseltype,
-                        :preferertKanal,
-                        :smsVarslingstekst,
-                        :epostVarslingstittel,
-                        :epostVarslingstekst,
-                        :aktiv,
-                        :produsent,
-                        :opprettet,
-                        :inaktivert
-                    )
-                """, mapOf(
-                    "varselId" to varsel.varselId,
-                    "sendingsId" to sendingsId,
-                    "varseltype" to varsel.varseltype.name,
-                    "preferertKanal" to varsel.preferertKanal?.name,
-                    "smsVarslingstekst" to varsel.smsVarslingstekst,
-                    "epostVarslingstittel" to varsel.epostVarslingstittel,
-                    "epostVarslingstekst" to varsel.epostVarslingstekst,
-                    "aktiv" to varsel.aktiv,
-                    "produsent" to varsel.produsent.toJsonb(),
-                    "opprettet" to varsel.opprettet,
-                    "inaktivert" to varsel.inaktivert
-                )
-            )
-        }
-    }
-
-    fun findSendingForVarsel(varselId: String, aktiv: Boolean? = null): EksternVarsling? {
-        return database.list {
-            queryOf(
-                """select 
-                    ev.*,
-                    ev.opprettet as ev_opprettet,
-                    v.*,
-                    v.opprettet as v_opprettet
-                from 
-                    ekstern_varsling as ev 
-                    left join varsel as v on ev.sendingsId = v.sendingsId
-                where 
-                    varsler @> :varsel 
-                    or v.varselId = :varselId
-                """,
-                mapOf(
-                    "varsel" to varselId.toParam(aktiv),
-                    "varselId" to varselId
-                )
-            ).map {
-                mapEksternVarsling(it) to mapVarsel(it)
-            }
-        }.let {
-            joinEksternVarslingWithVarsel(it)
-        }.firstOrNull()
-    }
-
-    fun varselExists(varselId: String): Boolean {
-        return database.singleOrNull {
-            queryOf(
-                """
-                        select 
-                            ev.sendingsId 
-                        from 
-                            ekstern_varsling as ev
-                            left join varsel as v on ev.sendingsId = v.sendingsId
-                        where 
-                            varsler @> :varsel
-                            or v.varselId = :varselId
-                    """,
-                mapOf(
-                    "varsel" to varselId.toParam(),
-                    "varselId" to varselId
-                )
-            ).map {
-                true
-            }
-        } ?: false
-    }
-
-    private fun String.toParam(aktiv: Boolean? = null) = if (aktiv == null) {
-        listOf(mapOf("varselId" to this)).toJsonb()
-    } else {
-        listOf(mapOf("varselId" to this, "aktiv" to aktiv)).toJsonb()
-    }
-
-    fun inaktiverVarsel(varselId: String, inaktivert: ZonedDateTime) {
-        database.update {
-            queryOf(
-                "update varsel set aktiv = false, inaktivert = :inaktivert where varselId = :varselId",
-                mapOf("varselId" to varselId, "inaktivert" to inaktivert)
-            )
-        }
-    }
-
-    fun updateLegacyVarsler(sendingsId: String, varsler: List<Varsel>){
-        database.update {
-            queryOf(
-                "update ekstern_varsling set varsler = :varsler where sendingsId = :sendingsId",
-                mapOf("sendingsId" to sendingsId, "varsler" to varsler.toJsonb())
-            )
-        }
     }
 
     private fun mapEksternVarsling(row: Row) = EksternVarsling(

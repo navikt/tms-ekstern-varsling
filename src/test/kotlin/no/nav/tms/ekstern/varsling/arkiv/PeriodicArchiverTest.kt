@@ -1,6 +1,7 @@
 package no.nav.tms.ekstern.varsling.arkiv
 
 import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -24,7 +25,6 @@ import no.nav.tms.ekstern.varsling.arkiv.ArkivertVarsling.ArkiveringsBegrunnelse
 import no.nav.tms.ekstern.varsling.Bestilling
 import no.nav.tms.ekstern.varsling.EksternStatus
 import no.nav.tms.ekstern.varsling.EksternVarsling
-import no.nav.tms.ekstern.varsling.bestilling.EksternVarslingBestillingRepository
 import no.nav.tms.ekstern.varsling.Kanal
 import no.nav.tms.ekstern.varsling.Produsent
 import no.nav.tms.ekstern.varsling.Sendingsstatus
@@ -35,6 +35,7 @@ import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper.nowAtUtc
 import no.nav.tms.ekstern.varsling.common.enum
 import no.nav.tms.ekstern.varsling.common.updateInTx
 import no.nav.tms.ekstern.varsling.setup.LocalPostgresDatabase
+import no.nav.tms.ekstern.varsling.setup.TestRepository
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -50,7 +51,8 @@ internal class PeriodicArchiverTest {
     private val archiveRepository = ArkivRepository(database)
     private val leaderElection: PodLeaderElection = mockk()
 
-    private val testRepository = ArkivTestRepository(database)
+    private val testRepository = TestRepository(database)
+    private val arkivTestRepository = ArkivTestRepository(database)
 
     private val testIdent = "01234567890"
 
@@ -65,7 +67,7 @@ internal class PeriodicArchiverTest {
 
     @BeforeEach
     fun setup() {
-        createVarsel(gammelUbehandeltVarsling, gammelFerdigstiltVarsling, nyUbehandletVarsling, nyFerdigstiltVarsling)
+        createVarsling(gammelUbehandeltVarsling, gammelFerdigstiltVarsling, nyUbehandletVarsling, nyFerdigstiltVarsling)
     }
 
     @AfterEach
@@ -75,10 +77,8 @@ internal class PeriodicArchiverTest {
     }
 
 
-    fun createVarsel(vararg varsler: EksternVarsling) {
-        val varselRepository = EksternVarslingBestillingRepository(database)
-
-        varsler.forEach { varselRepository.insertEksternVarsling(it) }
+    private fun createVarsling(vararg varsler: EksternVarsling) {
+        varsler.forEach { testRepository.insertEksternVarsling(it) }
     }
 
     @Test
@@ -94,7 +94,7 @@ internal class PeriodicArchiverTest {
             ferdigstiltThreshold = ferdigstiltAgeThreshold
         )
 
-        val arkiverteVarsler = testRepository.getAllArchivedVarsel()
+        val arkiverteVarsler = arkivTestRepository.getAllArchivedVarsel()
         arkiverteVarsler.size shouldBe 2
         arkiverteVarsler.forEach {
             it.ferdigstilt.shouldNotBeNull()
@@ -116,7 +116,7 @@ internal class PeriodicArchiverTest {
             ferdigstiltThreshold = ferdigstiltAgeThreshold
         )
 
-        val arkiverteVarsler = testRepository.getAllArchivedVarsel()
+        val arkiverteVarsler = arkivTestRepository.getAllArchivedVarsel()
         arkiverteVarsler.size shouldBe 2
         arkiverteVarsler.forEach {
             daysBetween(nowAtUtc(), it.opprettet) shouldBeGreaterThan opprettetAgeTreshold
@@ -137,7 +137,7 @@ internal class PeriodicArchiverTest {
             ferdigstiltThreshold = ferdigstiltAgeThreshold
         )
 
-        val arkiverteVarsler = testRepository.getAllArchivedVarsel()
+        val arkiverteVarsler = arkivTestRepository.getAllArchivedVarsel()
         arkiverteVarsler.size shouldBe 4
         arkiverteVarsler.forEach {
             if (it.ferdigstilt != null) {
@@ -158,7 +158,7 @@ internal class PeriodicArchiverTest {
             ferdigstiltThreshold = 8
         )
 
-        val arkiverteVarsler = testRepository.getAllArchivedVarsel()
+        val arkiverteVarsler = arkivTestRepository.getAllArchivedVarsel()
 
         arkiverteVarsler.size shouldBe 1
         arkiverteVarsler.first().apply {
@@ -191,7 +191,7 @@ internal class PeriodicArchiverTest {
             }
         }
 
-        testRepository.getAllArchivedVarsel().size shouldBe 0
+        arkivTestRepository.getAllArchivedVarsel().size shouldBe 0
         varslingInDbCount() shouldBe 4
     }
 
@@ -205,11 +205,11 @@ internal class PeriodicArchiverTest {
             ferdigstiltThreshold = 0
         )
 
-        val arkiverteVarsler = testRepository.getAllArchivedVarsel()
+        val arkiverteVarsler = arkivTestRepository.getAllArchivedVarsel()
 
         arkiverteVarsler.size shouldBe 4
         arkiverteVarsler.forEach {
-            val varselIdsFromColumn = testRepository.varselIdsColumn(it.sendingsId)
+            val varselIdsFromColumn = arkivTestRepository.varselIdsColumn(it.sendingsId)
             val varselIdsFromSerializedData = it.serializedData.varsler.map(Varsel::varselId)
 
             varselIdsFromColumn shouldContainExactly varselIdsFromSerializedData
@@ -223,33 +223,65 @@ internal class PeriodicArchiverTest {
         val sendingsId = "id-x"
         val varsling = varsling(sendingsId = sendingsId, opprettet = nowAtUtc().minusDays(100), ferdigstilt = null)
 
-        createVarsel(varsling)
+        createVarsling(varsling)
 
-        testRepository.varslingExists(sendingsId) shouldBe true
-        testRepository.getAllArchivedVarsel().size shouldBe 0
+        arkivTestRepository.varslingExists(sendingsId) shouldBe true
+        arkivTestRepository.getAllArchivedVarsel().size shouldBe 0
 
         runArchiverToCompletion(
             opprettetThreshold = 50,
             ferdigstiltThreshold = 50
         )
 
-        testRepository.varslingExists(sendingsId) shouldBe false
-        testRepository.getAllArchivedVarsel().size shouldBe 1
+        arkivTestRepository.varslingExists(sendingsId) shouldBe false
+        arkivTestRepository.getAllArchivedVarsel().size shouldBe 1
 
 
         // Simuler feilaktig arkivering
-        createVarsel(varsling)
+        createVarsling(varsling)
 
-        testRepository.varslingExists(sendingsId) shouldBe true
-        testRepository.getAllArchivedVarsel().size shouldBe 1
+        arkivTestRepository.varslingExists(sendingsId) shouldBe true
+        arkivTestRepository.getAllArchivedVarsel().size shouldBe 1
 
         runArchiverToCompletion(
             opprettetThreshold = 50,
             ferdigstiltThreshold = 50
         )
 
-        testRepository.varslingExists(sendingsId) shouldBe false
-        testRepository.getAllArchivedVarsel().size shouldBe 1
+        arkivTestRepository.varslingExists(sendingsId) shouldBe false
+        arkivTestRepository.getAllArchivedVarsel().size shouldBe 1
+    }
+
+    @Test
+    fun `håndterer at varsel kan ligge i legacy jsonb-kolonne og egen tabell`() = runBlocking<Unit> {
+        coEvery { leaderElection.isLeader() } returns true
+
+        val sendingsId = "id-x"
+        val legacyVarsel = varsel().copy(legacyJsonb = true)
+        val varsel = varsel()
+
+        val varsling = varsling(
+            sendingsId,
+            opprettet = nowAtUtc().minusDays(100),
+            ferdigstilt = null,
+            varsler = listOf(legacyVarsel, varsel)
+        )
+
+        testRepository.insertEksternVarslingWithLegacyVarsel(varsling)
+
+        runArchiverToCompletion(
+            opprettetThreshold = 50,
+            ferdigstiltThreshold = 50
+        )
+
+        arkivTestRepository.getAllArchivedVarsel().let {
+            it.size shouldBe 1
+
+            val archivedVarsler = it.first().serializedData.varsler
+            archivedVarsler.size shouldBe 2
+            archivedVarsler.map { it.varselId }.shouldContain(legacyVarsel.varselId)
+            archivedVarsler.map { it.varselId }.shouldContain(varsel.varselId)
+        }
     }
 
     @Test
@@ -259,7 +291,7 @@ internal class PeriodicArchiverTest {
         runArchiverToCompletion(0, 0)
 
         varslingInDbCount() shouldBe 4
-        testRepository.getAllArchivedVarsel().size shouldBe 0
+        arkivTestRepository.getAllArchivedVarsel().size shouldBe 0
     }
 
     private fun runArchiverToCompletion(opprettetThreshold: Long, ferdigstiltThreshold: Long) = runBlocking {
@@ -277,7 +309,7 @@ internal class PeriodicArchiverTest {
         withTimeout(3000) {
             delay(200)
             while (true) {
-                val currentArchived = testRepository.getAllArchivedVarsel().size
+                val currentArchived = arkivTestRepository.getAllArchivedVarsel().size
 
                 if (currentArchived == lastArchived) {
                     break
@@ -300,17 +332,18 @@ internal class PeriodicArchiverTest {
     private fun varsling(
         sendingsId: String,
         opprettet: ZonedDateTime,
-        ferdigstilt: ZonedDateTime?
+        ferdigstilt: ZonedDateTime?,
+        varsler: List<Varsel> = listOf(
+            varsel(),
+            varsel(),
+            varsel()
+        )
     ) = EksternVarsling(
         sendingsId = sendingsId,
         ident = testIdent,
         erBatch = false,
         erUtsattVarsel = false,
-        varsler = listOf(
-            varsel(),
-            varsel(),
-            varsel()
-        ),
+        varsler = varsler,
         utsending = null,
         ferdigstilt = ferdigstilt,
         status = if (ferdigstilt != null) {

@@ -12,9 +12,9 @@ import no.nav.tms.ekstern.varsling.Sendingsstatus
 import no.nav.tms.ekstern.varsling.Varsel
 import no.nav.tms.ekstern.varsling.Varseltype
 import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper.nowAtUtc
-import no.nav.tms.ekstern.varsling.insertEksternVarslingWithLegacyVarsel
 import no.nav.tms.ekstern.varsling.recordqueue.DoknotStopQueueRepository
 import no.nav.tms.ekstern.varsling.setup.LocalPostgresDatabase
+import no.nav.tms.ekstern.varsling.setup.TestRepository
 import no.nav.tms.kafka.application.MessageBroadcaster
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
@@ -24,6 +24,7 @@ class InaktivertVarselSubscriberTest {
     private val database = LocalPostgresDatabase.getCleanInstance()
     private val testFnr = "12345678910"
 
+    private val testRepository = TestRepository(database)
     private val repository = EksternVarslingBestillingRepository(database)
     private val queueRepository = DoknotStopQueueRepository(database)
     private val broadcaster = MessageBroadcaster(
@@ -94,7 +95,7 @@ class InaktivertVarselSubscriberTest {
         val sendingsId = UUID.randomUUID().toString()
         val varselId = UUID.randomUUID().toString()
 
-        repository.insertEksternVarsling(
+        testRepository.insertEksternVarsling(
             eksternVarslingDBRow(
                 sendingsId,
                 testFnr,
@@ -130,11 +131,11 @@ class InaktivertVarselSubscriberTest {
             varsler = listOf(
                 varsel(varselId, legacy = true)
             )
-        ).let { database.insertEksternVarslingWithLegacyVarsel(it) }
+        ).let { testRepository.insertEksternVarslingWithLegacyVarsel(it) }
 
         broadcaster.broadcastJson(inaktivertEvent(id = varselId))
 
-        repository.getEksternVarsling(sendingsId).let {
+        testRepository.getEksternVarsling(sendingsId).let {
             it.shouldNotBeNull()
             it.varsler
                 .first { it.varselId == varselId }
@@ -157,11 +158,11 @@ class InaktivertVarselSubscriberTest {
             varsler = listOf(
                 varsel(varselId, legacy = true)
             )
-        ).let { repository.insertEksternVarsling(it) }
+        ).let { testRepository.insertEksternVarsling(it) }
 
         broadcaster.broadcastJson(inaktivertEvent(id = varselId))
 
-        repository.getEksternVarsling(sendingsId).let {
+        testRepository.getEksternVarsling(sendingsId).let {
             it.shouldNotBeNull()
             it.varsler
                 .first { it.varselId == varselId }
