@@ -11,9 +11,7 @@ import kotlinx.coroutines.runBlocking
 import kotliquery.queryOf
 import no.nav.doknotifikasjon.schemas.Doknotifikasjon
 import no.nav.tms.common.kubernetes.PodLeaderElection
-import no.nav.tms.common.postgres.JsonbHelper.toJsonb
 import no.nav.tms.common.postgres.PostgresDatabase
-import no.nav.tms.ekstern.varsling.EksternVarsling
 import no.nav.tms.ekstern.varsling.Kanal
 import no.nav.tms.ekstern.varsling.Produsent
 import no.nav.tms.ekstern.varsling.Sendingsstatus
@@ -21,7 +19,6 @@ import no.nav.tms.ekstern.varsling.Varsel
 import no.nav.tms.ekstern.varsling.Varseltype
 import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper.nowAtUtc
 import no.nav.tms.ekstern.varsling.defaultObjectMapper
-import no.nav.tms.ekstern.varsling.insertEksternVarslingWithLegacyVarsel
 import no.nav.tms.ekstern.varsling.recordqueue.StatusOppdatertQueueRepository
 import no.nav.tms.ekstern.varsling.setup.*
 import no.nav.tms.ekstern.varsling.status.EksternVarslingOppdatertProducer
@@ -43,8 +40,9 @@ import java.util.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class PeriodicVarselSenderTest {
+
     private val database = LocalPostgresDatabase.getCleanInstance()
-    private val testRepository = EksternVarslingBestillingRepository(database)
+    private val testRepository = TestRepository(database)
     private val utsendingRepository = EksternVarslingUtsendingRepository(database)
     private val testFnr = "12345678910"
 
@@ -602,7 +600,7 @@ class PeriodicVarselSenderTest {
             legacy = false
         )
 
-        database.insertEksternVarslingWithLegacyVarsel(
+        testRepository.insertEksternVarslingWithLegacyVarsel(
             eksternVarslingDBRow(
                 UUID.randomUUID().toString(),
                 testFnr,
@@ -663,7 +661,6 @@ private fun PostgresDatabase.tellAntallForKanal(kanal: Kanal?) = singleOrNull {
             "select count(*) as antall from ekstern_varsling where bestilling->>'preferertKanal' is null"
         )
     }.map { it.int("antall") }
-
 }
 
 private fun varsel(

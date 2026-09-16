@@ -4,8 +4,8 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import no.nav.tms.common.postgres.ConcurrentUpdateException
 import no.nav.tms.ekstern.varsling.TmsEksternVarsling
 import no.nav.tms.ekstern.varsling.status.EksternStatusUpdater.FailureReason.DuplicateStatus
-import no.nav.tms.ekstern.varsling.status.EksternStatusUpdater.FailureReason.UnknownEksternVarsling
 import no.nav.tms.ekstern.varsling.status.EksternStatusUpdater.FailureReason.HistorikkSaturated
+import no.nav.tms.ekstern.varsling.status.EksternStatusUpdater.FailureReason.UnknownEksternVarsling
 import no.nav.tms.kafka.application.JsonMessage
 import no.nav.tms.kafka.application.RetriableMessageException
 import no.nav.tms.kafka.application.SkippableMessageException
