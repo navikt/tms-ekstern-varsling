@@ -213,7 +213,7 @@ interface TestContainersDefaults: DependencyGroup {
 
 interface TmsCommonLibDefaults: DependencyGroup {
     override val groupId get() = "no.nav.tms.common"
-    override val version get() = "5.3.3"
+    override val version get() = "5.3.4"
 
     val kubernetes get() = dependency("kubernetes")
     val metrics get() = dependency("metrics")
@@ -225,7 +225,7 @@ interface TmsCommonLibDefaults: DependencyGroup {
 
 interface TmsKafkaToolsDefaults: DependencyGroup {
     override val groupId get() = "no.nav.tms.kafka"
-    override val version get() = "2.5.0"
+    override val version get() = "2.5.1"
 
     val kafkaApplication get() = dependency("kafka-application")
     val kafkaProducerUtils get() = dependency("kafka-producer-utils")
@@ -233,7 +233,7 @@ interface TmsKafkaToolsDefaults: DependencyGroup {
 
 interface TmsKtorTokenSupportDefaults: DependencyGroup {
     override val groupId get() = "no.nav.tms.token.support"
-    override val version get() = "6.0.2"
+    override val version get() = "6.0.3"
 
     val entraIdTokenVerification get() = dependency("entra-id-token-verification")
     val entraIdTokenVerificationMock get() = dependency("entra-id-token-verification-mock")
