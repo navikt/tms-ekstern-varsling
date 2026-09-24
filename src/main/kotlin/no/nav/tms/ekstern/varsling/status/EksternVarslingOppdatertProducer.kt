@@ -3,9 +3,9 @@ package no.nav.tms.ekstern.varsling.status
 import com.fasterxml.jackson.annotation.JsonProperty
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.prometheus.metrics.core.metrics.Counter
-import no.nav.tms.ekstern.varsling.bestilling.EksternStatus
-import no.nav.tms.ekstern.varsling.bestilling.Produsent
-import no.nav.tms.ekstern.varsling.bestilling.Varseltype
+import no.nav.tms.ekstern.varsling.EksternStatus
+import no.nav.tms.ekstern.varsling.Produsent
+import no.nav.tms.ekstern.varsling.Varseltype
 import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper.nowAtUtc
 import no.nav.tms.ekstern.varsling.defaultObjectMapper
 import no.nav.tms.ekstern.varsling.recordqueue.StatusOppdatertQueueRepository

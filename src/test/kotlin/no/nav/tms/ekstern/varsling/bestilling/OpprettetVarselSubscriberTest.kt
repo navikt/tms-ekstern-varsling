@@ -8,10 +8,15 @@ import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import kotliquery.queryOf
-import no.nav.tms.common.postgres.JsonbHelper.json
+import no.nav.tms.ekstern.varsling.Produsent
+import no.nav.tms.ekstern.varsling.Sendingsstatus
+import no.nav.tms.ekstern.varsling.Varsel
+import no.nav.tms.ekstern.varsling.Varseltype
+import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper.nowAtUtc
 import no.nav.tms.ekstern.varsling.setup.LocalPostgresDatabase
 import no.nav.tms.ekstern.varsling.defaultObjectMapper
 import no.nav.tms.ekstern.varsling.recordqueue.StatusOppdatertQueueRepository
+import no.nav.tms.ekstern.varsling.setup.TestRepository
 import no.nav.tms.ekstern.varsling.status.EksternVarslingOppdatertProducer
 import no.nav.tms.kafka.application.MessageBroadcaster
 import org.junit.jupiter.api.AfterEach
@@ -24,10 +29,12 @@ import java.util.*
 class OpprettetVarselSubscriberTest {
     private val database = LocalPostgresDatabase.getCleanInstance()
     private val testFnr = "12345678910"
+
     private val queueRepository = StatusOppdatertQueueRepository(database)
     private val statusProducer = EksternVarslingOppdatertProducer(queueRepository)
 
-    private val repository = EksternVarslingRepository(database)
+    private val testRepository = TestRepository(database)
+    private val repository = EksternVarslingBestillingRepository(database)
     private val broadcaster = MessageBroadcaster(
         OpprettetVarselSubscriber(repository, statusProducer, enableBatch = true),
         enableTracking = true
@@ -98,8 +105,8 @@ class OpprettetVarselSubscriberTest {
         } shouldBe 3
 
         database.singleOrNull {
-            queryOf("select varsler from ekstern_varsling where erBatch")
-                .map { it.json<List<Varsel>>("varsler").size }
+            queryOf("select count(*) as antall from ekstern_varsling as ev join varsel as v on ev.sendingsId = v.sendingsId where ev.erBatch")
+                .map { it.int("antall") }
         } shouldBe 5
 
         val utsending = database.singleOrNull {
@@ -152,13 +159,13 @@ class OpprettetVarselSubscriberTest {
         } shouldBe 3
 
         database.singleOrNull {
-            queryOf("select varsler from ekstern_varsling where erBatch")
-                .map { it.json<List<Varsel>>("varsler").size }
+            queryOf("select count(*) as antall from ekstern_varsling as ev join varsel as v on ev.sendingsId = v.sendingsId where ev.erBatch")
+                .map { it.int("antall") }
         } shouldBe 3
 
         database.list {
-            queryOf("select varsler from ekstern_varsling where not erBatch")
-                .map { it.json<List<Varsel>>("varsler").size }
+            queryOf("select count(*) as antall from ekstern_varsling as ev join varsel as v on ev.sendingsId = v.sendingsId where not ev.erBatch group by ev.sendingsId")
+                .map { it.int("antall") }
         }.all { it == 1 } shouldBe true
     }
 
@@ -230,8 +237,8 @@ class OpprettetVarselSubscriberTest {
         } shouldBe 1
 
         database.singleOrNull {
-            queryOf("select varsler from ekstern_varsling")
-                .map { it.json<List<Varsel>>("varsler").size }
+            queryOf("select count(*) as antall from ekstern_varsling as ev join varsel as v on ev.sendingsId = v.sendingsId")
+                .map { it.int("antall") }
         } shouldBe 1
     }
 
@@ -284,4 +291,70 @@ class OpprettetVarselSubscriberTest {
             it.cause::class shouldBe InvalidVarseltekstException::class
         }
     }
+
+    @Test
+    fun `håndterer at varsel kan ligge i legacy jsonb-kolonne ved duplikatsjekk`() {
+        val varselId = UUID.randomUUID().toString()
+
+        val sendingsId = UUID.randomUUID().toString()
+
+        eksternVarslingDBRow(
+            sendingsId,
+            testFnr,
+            varsler = listOf(
+                varsel(varselId, legacy = true)
+            )
+        ).let { testRepository.insertEksternVarslingWithLegacyVarsel(it) }
+
+        broadcaster.broadcastJson(varselOpprettetEvent(id = varselId, ident = testFnr))
+
+        broadcaster.history().findSkippedOutcome(OpprettetVarselSubscriber::class) {
+            it["varselId"].asText() == varselId
+        }.let {
+            it.shouldNotBeNull()
+            it.cause::class shouldBe DuplicateVarselException::class
+        }
+    }
+
+    @Test
+    fun `håndterer at varsel kan ligge i egen tabell ved duplikatsjekk`() {
+        val varselId = UUID.randomUUID().toString()
+
+        val sendingsId = UUID.randomUUID().toString()
+
+        eksternVarslingDBRow(
+            sendingsId,
+            testFnr,
+            varsler = listOf(
+                varsel(varselId, legacy = true)
+            )
+        ).let { testRepository.insertEksternVarsling(it) }
+
+        broadcaster.broadcastJson(varselOpprettetEvent(id = varselId, ident = testFnr))
+
+        broadcaster.history().findSkippedOutcome(OpprettetVarselSubscriber::class) {
+            it["varselId"].asText() == varselId
+        }.let {
+            it.shouldNotBeNull()
+            it.cause::class shouldBe DuplicateVarselException::class
+        }
+    }
 }
+
+private fun varsel(
+    varselId: String,
+    legacy: Boolean
+) = Varsel(
+    varselId = varselId,
+    varseltype = Varseltype.Beskjed,
+    preferertKanal = null,
+    smsVarslingstekst = null,
+    epostVarslingstittel = null,
+    epostVarslingstekst = null,
+    produsent = Produsent("cluster", "namespace", "appnavn"),
+    aktiv = true,
+    opprettet = nowAtUtc(),
+    inaktivert = null,
+    legacyJsonb = legacy,
+    prefererteKanaler = emptyList(),
+)

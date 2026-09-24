@@ -1,8 +1,11 @@
-package no.nav.tms.ekstern.varsling.bestilling
+package no.nav.tms.ekstern.varsling.utsending
 
 import io.github.oshai.kotlinlogging.KotlinLogging
+import no.nav.tms.ekstern.varsling.EksternVarsling
+import no.nav.tms.ekstern.varsling.Kanal
+import no.nav.tms.ekstern.varsling.Varsel
+import no.nav.tms.ekstern.varsling.bestilling.LocalTimeHelper
 import java.time.LocalTime
-import java.time.OffsetTime
 import java.time.ZoneId
 
 class PreferertKanalDecider(
@@ -15,7 +18,7 @@ class PreferertKanalDecider(
     fun bestemKanal(eksternVarsling: EksternVarsling): Kanal {
         val kanaler = eksternVarsling.varsler
             .filter { it.aktiv }
-            .flatMap { it.prefererteKanaler }
+            .flatMap { prefererteKanaler(it) }
             .distinct()
 
         return if (eksternVarsling.erBatch) {
@@ -38,6 +41,10 @@ class PreferertKanalDecider(
         } else {
             Kanal.EPOST
         }
+    }
+
+    private fun prefererteKanaler(varsel: Varsel): List<Kanal> {
+        return varsel.preferertKanal?.let { listOf(it) } ?: varsel.prefererteKanaler
     }
 
     private fun prioritertKanal(): Kanal {

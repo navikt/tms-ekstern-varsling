@@ -1,5 +1,6 @@
-package no.nav.tms.ekstern.varsling.bestilling
+package no.nav.tms.ekstern.varsling
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonValue
 import java.time.ZonedDateTime
 
@@ -31,13 +32,18 @@ data class Produsent(
 data class Varsel(
     val varselId: String,
     val varseltype: Varseltype,
-    val prefererteKanaler: List<Kanal> = emptyList(),
+    val preferertKanal: Kanal? = null,
     val smsVarslingstekst: String? = null,
     val epostVarslingstittel: String? = null,
     val epostVarslingstekst: String? = null,
     val produsent: Produsent,
     val aktiv: Boolean,
-    val behandletAvLegacy: Boolean
+    val opprettet: ZonedDateTime? = null,
+    val inaktivert: ZonedDateTime? = null,
+    @JsonIgnore // For å markere hvor varsel kommer fra
+    val legacyJsonb: Boolean = true,
+    @Deprecated("Bruk preferert kanal")
+    val prefererteKanaler: List<Kanal> = emptyList()
 )
 
 data class EksternVarsling(
@@ -58,6 +64,12 @@ data class Bestilling(
     val preferertKanal: Kanal,
     val tekster: Tekster?,
     val revarsling: Revarsling?
+)
+
+data class Tekster(
+    val smsTekst: String,
+    val epostTittel: String,
+    val epostTekst: String
 )
 
 data class Revarsling(

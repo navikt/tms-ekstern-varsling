@@ -1,24 +1,22 @@
 package no.nav.tms.ekstern.varsling.status
 
 import io.github.oshai.kotlinlogging.KotlinLogging
-import no.nav.tms.ekstern.varsling.bestilling.EksternStatus
-import no.nav.tms.ekstern.varsling.bestilling.EksternStatus.Status.*
-import no.nav.tms.ekstern.varsling.bestilling.EksternVarsling
-import no.nav.tms.ekstern.varsling.bestilling.EksternVarslingRepository
-import no.nav.tms.ekstern.varsling.bestilling.Varsel
+import no.nav.tms.ekstern.varsling.EksternStatus
+import no.nav.tms.ekstern.varsling.EksternStatus.Status.*
 import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper.nowAtUtc
+import no.nav.tms.ekstern.varsling.status.EksternStatusRepository.EksternStatusSummary
 import java.time.Duration
 import java.time.temporal.ChronoUnit
 
 class EksternStatusUpdater(
-    private val repository: EksternVarslingRepository,
+    private val repository: EksternStatusRepository,
     private val eksternVarslingOppdatertProducer: EksternVarslingOppdatertProducer,
     private val historikkSoftCap: Int = 10
 ) {
     private val log = KotlinLogging.logger {}
 
     fun updateEksternVarslingStatus(statusEvent: DoknotifikasjonStatusEvent) {
-        val varsling = repository.getEksternVarsling(statusEvent.eventId)
+        val varsling = repository.getEksternStatus(statusEvent.eventId)
 
         if (varsling == null) {
             throw StatusUpdateException(FailureReason.UnknownEksternVarsling)
@@ -29,11 +27,11 @@ class EksternStatusUpdater(
         } else if (historikkIsSaturated(varsling) && statusEvent.status != DoknotifikasjonStatusEnum.FERDIGSTILT.name) {
             throw StatusUpdateException(FailureReason.HistorikkSaturated)
 
-        } else {
-            val currentStatus = varsling.eksternStatus ?: initOversikt()
-
-            updateExistingStatus(statusEvent, currentStatus, varsling)
         }
+
+        val currentStatus = varsling.eksternStatus ?: initOversikt()
+
+        updateExistingStatus(statusEvent, currentStatus, varsling)
     }
 
     private fun initOversikt() = EksternStatus.Oversikt(
@@ -44,7 +42,7 @@ class EksternStatusUpdater(
         sistOppdatert = nowAtUtc()
     )
 
-    private fun updateExistingStatus(statusEvent: DoknotifikasjonStatusEvent, currentStatus: EksternStatus.Oversikt, varsling: EksternVarsling) {
+    private fun updateExistingStatus(statusEvent: DoknotifikasjonStatusEvent, currentStatus: EksternStatus.Oversikt, varsling: EksternStatusSummary) {
         val newEntry = EksternStatus.HistorikkEntry(
             melding = statusEvent.melding,
             status = determineInternalStatus(statusEvent),
@@ -65,11 +63,7 @@ class EksternStatusUpdater(
         log.info { "Oppdaterer status [${newEntry.status}] for ekstern varsling" }
 
         repository.updateEksternStatus(varsling.sendingsId, updatedStatus)
-        varsling.varsler.forEach { varsel ->
-            buildOppdatering(varsling.ident, newEntry, varsel, batch = varsling.varsler.size > 1).let {
-                eksternVarslingOppdatertProducer.eksternStatusOppdatert(it)
-            }
-        }
+        notifyVarsler(varsling, newEntry)
     }
 
     private fun determineIfRenotifikasjon(currentStatus: EksternStatus.Oversikt, statusEvent: DoknotifikasjonStatusEvent): Boolean? {
@@ -85,7 +79,7 @@ class EksternStatusUpdater(
         return currentStatus.historikk.none { it.status == Sendt || it.status == Feilet }
     }
 
-    private fun statusIsDuplicate(varsling: EksternVarsling, statusEvent: DoknotifikasjonStatusEvent): Boolean {
+    private fun statusIsDuplicate(varsling: EksternStatusSummary, statusEvent: DoknotifikasjonStatusEvent): Boolean {
 
         return if (varsling.eksternStatus == null) {
             false
@@ -99,7 +93,7 @@ class EksternStatusUpdater(
         }
     }
 
-    private fun historikkIsSaturated(varsling: EksternVarsling): Boolean {
+    private fun historikkIsSaturated(varsling: EksternStatusSummary): Boolean {
         return varsling.eksternStatus != null && varsling.eksternStatus.historikk.size >= historikkSoftCap
     }
 
@@ -111,7 +105,7 @@ class EksternStatusUpdater(
         return Duration.between(previous, statusEvent.tidspunkt)
     }
 
-    private fun buildOppdatering(ident: String, newEntry: EksternStatus.HistorikkEntry, varsel: Varsel, batch: Boolean) = EksternStatusOppdatering(
+    private fun buildOppdatering(ident: String, newEntry: EksternStatus.HistorikkEntry, varsel: EksternStatusRepository.VarselSummary, batch: Boolean) = EksternStatusOppdatering(
         status = newEntry.status,
         kanal = newEntry.kanal,
         varseltype = varsel.varseltype,
@@ -131,6 +125,30 @@ class EksternStatusUpdater(
             DoknotifikasjonStatusEnum.FEILET.name -> Feilet
             DoknotifikasjonStatusEnum.OVERSENDT.name -> Bestilt
             else -> throw IllegalArgumentException("Kjente ikke igjen doknotifikasjon status ${statusEvent.status}.")
+        }
+    }
+
+    fun notifyVarsler(varsling: EksternStatusSummary, newEntry: EksternStatus.HistorikkEntry) {
+        val varsler = repository.getAffectedVarsler(varsling.sendingsId)
+
+        val batch = varsler.size > 1
+
+        varsler.forEach { varsel ->
+
+            val oppdatering = EksternStatusOppdatering(
+                status = newEntry.status,
+                kanal = newEntry.kanal,
+                varseltype = varsel.varseltype,
+                varselId = varsel.varselId,
+                ident = varsling.ident,
+                renotifikasjon = newEntry.renotifikasjon,
+                melding = if (newEntry.status == Info || newEntry.status == Ferdigstilt) newEntry.melding else null,
+                feilmelding = if (newEntry.status == Feilet) newEntry.melding else null,
+                batch = batch,
+                produsent = varsel.produsent
+            )
+
+            eksternVarslingOppdatertProducer.eksternStatusOppdatert(oppdatering)
         }
     }
 

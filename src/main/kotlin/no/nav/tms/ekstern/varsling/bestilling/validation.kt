@@ -1,5 +1,6 @@
 package no.nav.tms.ekstern.varsling.bestilling
 
+import no.nav.tms.ekstern.varsling.Varsel
 import kotlin.collections.map
 
 object VarseltekstValidation {

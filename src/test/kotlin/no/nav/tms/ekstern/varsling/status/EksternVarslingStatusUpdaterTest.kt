@@ -7,12 +7,16 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import no.nav.tms.ekstern.varsling.bestilling.*
-import no.nav.tms.ekstern.varsling.bestilling.EksternStatus.Status.Ferdigstilt
-import no.nav.tms.ekstern.varsling.bestilling.EksternStatus.Status.Info
-import no.nav.tms.ekstern.varsling.bestilling.EksternStatus.Status.Sendt
+import no.nav.tms.ekstern.varsling.EksternStatus.Status.Ferdigstilt
+import no.nav.tms.ekstern.varsling.EksternStatus.Status.Info
+import no.nav.tms.ekstern.varsling.EksternStatus.Status.Sendt
+import no.nav.tms.ekstern.varsling.Sendingsstatus
+import no.nav.tms.ekstern.varsling.Varsel
+import no.nav.tms.ekstern.varsling.Varseltype
 import no.nav.tms.ekstern.varsling.setup.LocalPostgresDatabase
 import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper.nowAtUtc
 import no.nav.tms.ekstern.varsling.recordqueue.StatusOppdatertQueueRepository
+import no.nav.tms.ekstern.varsling.setup.TestRepository
 import no.nav.tms.ekstern.varsling.status.DoknotifikasjonStatusEnum.*
 import no.nav.tms.kafka.application.MessageBroadcaster
 import org.junit.jupiter.api.BeforeEach
@@ -24,17 +28,18 @@ import java.util.*
 class EksternVarslingStatusSubscriberTest {
 
     private val database = LocalPostgresDatabase.getCleanInstance()
-    private val repository = EksternVarslingRepository(database)
+    private val statusRepository = EksternStatusRepository(database)
 
     private val ident = "12345678901"
 
     private val historikkSoftCap = 5
 
+    private val testRepository = TestRepository(database)
     private val queueRepository = StatusOppdatertQueueRepository(database)
     private val eksternVarslingOppdatertProducer = EksternVarslingOppdatertProducer(queueRepository)
     private val eksternVarslingStatusUpdater =
         EksternStatusUpdater(
-            repository,
+            statusRepository,
             eksternVarslingOppdatertProducer,
             historikkSoftCap
         )
@@ -61,7 +66,7 @@ class EksternVarslingStatusSubscriberTest {
 
         val sendingsId = UUID.randomUUID().toString()
 
-        repository.insertEksternVarsling(sendtEksternVarsling(sendingsId, ident))
+        testRepository.insertEksternVarsling(sendtEksternVarsling(sendingsId, ident))
 
         val doknotEvent = eksternVarslingStatus(
             eventId = sendingsId,
@@ -73,7 +78,7 @@ class EksternVarslingStatusSubscriberTest {
 
         testBroadcaster.broadcastJson(doknotEvent)
 
-        val varsling = repository.getEksternVarsling(sendingsId)
+        val varsling = testRepository.getEksternVarsling(sendingsId)
 
         varsling?.eksternStatus.shouldNotBeNull()
 
@@ -100,7 +105,7 @@ class EksternVarslingStatusSubscriberTest {
 
         val sendingsId = UUID.randomUUID().toString()
 
-        repository.insertEksternVarsling(sendtEksternVarsling(sendingsId, ident))
+        testRepository.insertEksternVarsling(sendtEksternVarsling(sendingsId, ident))
 
         val doknotEvent = eksternVarslingStatus(
             bestillerAppnavn = "annen-app",
@@ -113,7 +118,7 @@ class EksternVarslingStatusSubscriberTest {
 
         testBroadcaster.broadcastJson(doknotEvent)
 
-        val varsling = repository.getEksternVarsling(sendingsId)
+        val varsling = testRepository.getEksternVarsling(sendingsId)
 
         varsling?.eksternStatus.shouldBeNull()
 
@@ -124,7 +129,7 @@ class EksternVarslingStatusSubscriberTest {
     fun `Flere ekstern varsling-statuser oppdaterer basen`() {
         val sendingsId = UUID.randomUUID().toString()
 
-        repository.insertEksternVarsling(sendtEksternVarsling(sendingsId, ident))
+        testRepository.insertEksternVarsling(sendtEksternVarsling(sendingsId, ident))
 
         val infoEvent = eksternVarslingStatus(sendingsId, status = INFO)
         val epostEvent = eksternVarslingStatus(sendingsId, status = FERDIGSTILT, kanal = "EPOST")
@@ -134,7 +139,7 @@ class EksternVarslingStatusSubscriberTest {
         testBroadcaster.broadcastJson(epostEvent)
         testBroadcaster.broadcastJson(smsEvent)
 
-        val status = repository.getEksternVarsling(sendingsId)?.eksternStatus
+        val status = testRepository.getEksternVarsling(sendingsId)?.eksternStatus
         status.shouldNotBeNull()
         status.kanal shouldBe "EPOST"
 
@@ -150,7 +155,7 @@ class EksternVarslingStatusSubscriberTest {
 
         testBroadcaster.broadcastJson(eksternVarslingStatus(sendingsId))
 
-        repository.getEksternVarsling(sendingsId)?.eksternStatus shouldBe null
+        testRepository.getEksternVarsling(sendingsId)?.eksternStatus shouldBe null
 
         testBroadcaster.history().findSkippedOutcome(EksternVarslingStatusSubscriber::class) {
             it["eventId"].asText() == sendingsId
@@ -171,7 +176,7 @@ class EksternVarslingStatusSubscriberTest {
 
         val eksternVarsling = sendtEksternVarsling(sendingsId, ident, varsler = listOf(oppgave))
 
-        repository.insertEksternVarsling(eksternVarsling)
+        testRepository.insertEksternVarsling(eksternVarsling)
 
         testBroadcaster.broadcastJson(eksternVarslingStatus(sendingsId, OVERSENDT))
         testBroadcaster.broadcastJson(eksternVarslingStatus(sendingsId, INFO))
@@ -208,7 +213,7 @@ class EksternVarslingStatusSubscriberTest {
 
         val eksternVarsling = sendtEksternVarsling(sendingsId, ident, varsler = listOf(beskjed1, beskjed2))
 
-        repository.insertEksternVarsling(eksternVarsling)
+        testRepository.insertEksternVarsling(eksternVarsling)
 
         testBroadcaster.broadcastJson(eksternVarslingStatus(sendingsId, FERDIGSTILT, kanal = "SMS"))
 
@@ -239,10 +244,10 @@ class EksternVarslingStatusSubscriberTest {
         val sendingsId3 = UUID.randomUUID().toString()
         val sendingsId4 = UUID.randomUUID().toString()
 
-        repository.insertEksternVarsling(sendtEksternVarsling(sendingsId1, ident))
-        repository.insertEksternVarsling(sendtEksternVarsling(sendingsId2, ident))
-        repository.insertEksternVarsling(sendtEksternVarsling(sendingsId3, ident))
-        repository.insertEksternVarsling(sendtEksternVarsling(sendingsId4, ident))
+        testRepository.insertEksternVarsling(sendtEksternVarsling(sendingsId1, ident))
+        testRepository.insertEksternVarsling(sendtEksternVarsling(sendingsId2, ident))
+        testRepository.insertEksternVarsling(sendtEksternVarsling(sendingsId3, ident))
+        testRepository.insertEksternVarsling(sendtEksternVarsling(sendingsId4, ident))
 
         testBroadcaster.broadcastJson(eksternVarslingStatus(sendingsId1, OVERSENDT, tidspunktZ = nowAtUtc()))
         testBroadcaster.broadcastJson(
@@ -288,19 +293,19 @@ class EksternVarslingStatusSubscriberTest {
         testBroadcaster.broadcastJson(eksternVarslingStatus(sendingsId4, FEILET, tidspunktZ = nowAtUtc()))
         testBroadcaster.broadcastJson(eksternVarslingStatus(sendingsId4, INFO, tidspunktZ = nowAtUtc().plusDays(1)))
 
-        val status1 = repository.getEksternVarsling(sendingsId1)?.eksternStatus
+        val status1 = testRepository.getEksternVarsling(sendingsId1)?.eksternStatus
         status1!!.sendt shouldBe true
         status1.renotifikasjonSendt shouldBe false
 
-        val status2 = repository.getEksternVarsling(sendingsId2)?.eksternStatus
+        val status2 = testRepository.getEksternVarsling(sendingsId2)?.eksternStatus
         status2!!.sendt shouldBe true
         status2.renotifikasjonSendt shouldBe true
 
-        val status3 = repository.getEksternVarsling(sendingsId3)?.eksternStatus
+        val status3 = testRepository.getEksternVarsling(sendingsId3)?.eksternStatus
         status3!!.sendt shouldBe true
         status3.renotifikasjonSendt shouldBe true
 
-        val status4 = repository.getEksternVarsling(sendingsId4)?.eksternStatus
+        val status4 = testRepository.getEksternVarsling(sendingsId4)?.eksternStatus
         status4!!.sendt shouldBe false
         status4.renotifikasjonSendt shouldBe false
 
@@ -325,7 +330,7 @@ class EksternVarslingStatusSubscriberTest {
 
         val sendingsId = UUID.randomUUID().toString()
 
-        repository.insertEksternVarsling(sendtEksternVarsling(sendingsId, ident))
+        testRepository.insertEksternVarsling(sendtEksternVarsling(sendingsId, ident))
 
         testBroadcaster.broadcastJson(eksternVarslingStatus(sendingsId, OVERSENDT, tidspunktZ = nowAtUtc()))
         testBroadcaster.broadcastJson(eksternVarslingStatus(sendingsId, INFO, tidspunktZ = nowAtUtc()))
@@ -368,7 +373,7 @@ class EksternVarslingStatusSubscriberTest {
 
         val sendingsId = UUID.randomUUID().toString()
 
-        repository.insertEksternVarsling(sendtEksternVarsling(sendingsId, ident))
+        testRepository.insertEksternVarsling(sendtEksternVarsling(sendingsId, ident))
 
         val info = "Dette er en infomelding"
         val sendt = "Notifikasjon sendt via SMS"
@@ -404,7 +409,7 @@ class EksternVarslingStatusSubscriberTest {
 
         val sendingsId = UUID.randomUUID().toString()
 
-        repository.insertEksternVarsling(sendtEksternVarsling(sendingsId, ident))
+        testRepository.insertEksternVarsling(sendtEksternVarsling(sendingsId, ident))
 
         val sendtEvent = eksternVarslingStatus(
             eventId = sendingsId,
@@ -416,7 +421,7 @@ class EksternVarslingStatusSubscriberTest {
         testBroadcaster.broadcastJson(sendtEvent)
         testBroadcaster.broadcastJson(sendtEvent)
 
-        repository.getEksternVarsling(sendingsId)?.eksternStatus?.sendt shouldBe true
+        testRepository.getEksternVarsling(sendingsId)?.eksternStatus?.sendt shouldBe true
 
         testBroadcaster.history().findSkippedOutcome(EksternVarslingStatusSubscriber::class) {
             it["eventId"].asText() == sendingsId
@@ -431,7 +436,7 @@ class EksternVarslingStatusSubscriberTest {
 
         val sendingsId = UUID.randomUUID().toString()
 
-        repository.insertEksternVarsling(sendtEksternVarsling(sendingsId, ident))
+        testRepository.insertEksternVarsling(sendtEksternVarsling(sendingsId, ident))
 
         repeat(historikkSoftCap) { i ->
             testBroadcaster.broadcastJson(
@@ -445,7 +450,7 @@ class EksternVarslingStatusSubscriberTest {
         testBroadcaster.broadcastJson(eksternVarslingStatus(sendingsId, FERDIGSTILT, kanal = "SMS", melding = "Sendt!"))
         testBroadcaster.broadcastJson(eksternVarslingStatus(sendingsId, FERDIGSTILT, melding = "Ferdigstilt!"))
 
-        repository.getEksternVarsling(sendingsId)?.eksternStatus?.let { status ->
+        testRepository.getEksternVarsling(sendingsId)?.eksternStatus?.let { status ->
             status.shouldNotBeNull()
 
             status.historikk.size shouldBe historikkSoftCap + 2

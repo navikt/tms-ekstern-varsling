@@ -7,10 +7,12 @@ import no.nav.tms.common.postgres.JsonbHelper.json
 import no.nav.tms.common.postgres.JsonbHelper.jsonOrNull
 import no.nav.tms.common.postgres.JsonbHelper.toJsonb
 import no.nav.tms.common.postgres.PostgresDatabase
-import no.nav.tms.ekstern.varsling.bestilling.Bestilling
-import no.nav.tms.ekstern.varsling.bestilling.EksternStatus
-import no.nav.tms.ekstern.varsling.bestilling.Sendingsstatus
-import no.nav.tms.ekstern.varsling.bestilling.Varsel
+import no.nav.tms.ekstern.varsling.Bestilling
+import no.nav.tms.ekstern.varsling.EksternStatus
+import no.nav.tms.ekstern.varsling.Kanal
+import no.nav.tms.ekstern.varsling.Sendingsstatus
+import no.nav.tms.ekstern.varsling.Varsel
+import no.nav.tms.ekstern.varsling.Varseltype
 import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper
 import no.nav.tms.ekstern.varsling.common.batchUpdateInTx
 import no.nav.tms.ekstern.varsling.common.enum
@@ -34,9 +36,15 @@ class ArkivRepository(private val database: PostgresDatabase) {
         )
 
         if (arkivVarsler.isNotEmpty()) {
+            fillVarsler(arkivVarsler)
+
             database.transaction {
                 insertArkiverteVarsler(arkivVarsler)
-                deleteEksternVarsling(arkivVarsler.map { it.sendingsId })
+
+                val sendingsIds = arkivVarsler.map { it.sendingsId }
+
+                deleteVarsler(sendingsIds)
+                deleteEksternVarsling(sendingsIds)
             }
         }
 
@@ -55,7 +63,7 @@ class ArkivRepository(private val database: PostgresDatabase) {
                         *,
                         ferdigstilt < :ferdigstiltThreshold as ferdigstilt_threshold_passed
                     from 
-                        ekstern_varsling 
+                        ekstern_varsling
                     where
                         opprettet < :opprettetThreshold or
                         ferdigstilt < :ferdigstiltThreshold
@@ -70,7 +78,7 @@ class ArkivRepository(private val database: PostgresDatabase) {
         }
     }
 
-    private fun TransactionalSession.insertArkiverteVarsler(varsler: List<ArkivertVarsling>) {
+    private fun TransactionalSession.insertArkiverteVarsler(varslinger: List<ArkivertVarsling>) {
         batchUpdateInTx(
             """
                 insert into ekstern_varsling_arkiv(
@@ -94,7 +102,7 @@ class ArkivRepository(private val database: PostgresDatabase) {
                     :begrunnelse
                 ) on conflict do nothing
             """,
-            varsler.map {
+            varslinger.map {
                 val serializedData = it.serializedData
                 val varselIds = serializedData.varsler.map(Varsel::varselId)
 
@@ -112,7 +120,52 @@ class ArkivRepository(private val database: PostgresDatabase) {
         )
     }
 
+    private fun fillVarsler(varslinger: List<ArkivertVarsling>) {
+        val varslerBySending = getVarslerBySending(varslinger.map { it.sendingsId })
 
+        varslinger.forEach {
+            it.serializedData.varsler += varslerBySending[it.sendingsId] ?: emptyList()
+        }
+    }
+
+    private fun getVarslerBySending(sendingsIds: List<String>): Map<String, List<Varsel>> {
+        return database.list {
+            val sendingsIdArray = it.createArrayOf("TEXT", sendingsIds)
+
+            queryOf(
+                "select * from varsel where sendingsId = any(:sendingsIds)",
+                mapOf("sendingsIds" to sendingsIdArray)
+            ).map { row ->
+                row.string("sendingsId") to Varsel(
+                    varselId = row.string("varselId"),
+                    varseltype = row.string("varseltype").let(Varseltype::valueOf),
+                    preferertKanal = row.stringOrNull("preferertKanal")?.let(Kanal::valueOf),
+                    smsVarslingstekst = row.stringOrNull("smsVarslingstekst"),
+                    epostVarslingstittel = row.stringOrNull("epostVarslingstittel"),
+                    epostVarslingstekst = row.stringOrNull("epostVarslingstekst"),
+                    produsent = row.json("produsent"),
+                    aktiv = row.boolean("aktiv"),
+                    opprettet = row.zonedDateTime("opprettet"),
+                    inaktivert = row.zonedDateTimeOrNull("inaktivert"),
+                    legacyJsonb = false
+                )
+            }
+        }.groupBy(Pair<String, *>::first) {
+            it.second
+        }
+    }
+
+
+    private fun TransactionalSession.deleteVarsler(sendingsIds: List<String>) {
+        updateInTx {
+            val sendingsIdArray = createArrayOf("TEXT", sendingsIds)
+
+            queryOf(
+                "delete from varsel where sendingsId = any(:sendingsIds)",
+                mapOf("sendingsIds" to sendingsIdArray)
+            )
+        }
+    }
     private fun TransactionalSession.deleteEksternVarsling(sendingsIds: List<String>) {
         updateInTx {
             val sendingsIdArray = createArrayOf("TEXT", sendingsIds)
@@ -157,7 +210,7 @@ data class ArkivertVarsling(
     val begrunnelse: ArkiveringsBegrunnelse
 ) {
     data class SerializedData(
-        val varsler: List<Varsel>,
+        var varsler: List<Varsel>,
         val erBatch: Boolean,
         val erUtsattVarsel: Boolean,
         val utsending: ZonedDateTime?,

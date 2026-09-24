@@ -1,5 +1,14 @@
 package no.nav.tms.ekstern.varsling.bestilling
 
+import no.nav.tms.ekstern.varsling.Bestilling
+import no.nav.tms.ekstern.varsling.EksternStatus
+import no.nav.tms.ekstern.varsling.EksternVarsling
+import no.nav.tms.ekstern.varsling.Kanal
+import no.nav.tms.ekstern.varsling.Produsent
+import no.nav.tms.ekstern.varsling.Sendingsstatus
+import no.nav.tms.ekstern.varsling.Varsel
+import no.nav.tms.ekstern.varsling.Varseltype
+import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper.nowAtUtc
 import java.time.ZonedDateTime
 import java.util.UUID
 
@@ -14,23 +23,22 @@ fun String?.nullableTextToJson(): String {
 fun createVarsel(
     varselId: String = UUID.randomUUID().toString(),
     varseltype: Varseltype = Varseltype.Beskjed,
-    prefererteKanaler: List<Kanal> = listOf(Kanal.SMS),
+    preferertKanal: Kanal? = Kanal.SMS,
     smsVarslingstekst: String? = "Dummy tekst",
     epostVarslingstittel: String? = "Dummy epost tittel",
     epostVarslingstekst: String? = "Dummy epost tekst",
     produsent: Produsent = Produsent("test-cluster", "test-namespace", "test-app"),
-    aktiv: Boolean = true,
-    behandletAvLegacy: Boolean = false,
+    aktiv: Boolean = true
 ) = Varsel(
     varselId = varselId,
     varseltype = varseltype,
-    prefererteKanaler = prefererteKanaler,
+    preferertKanal = preferertKanal,
     smsVarslingstekst = smsVarslingstekst,
     epostVarslingstittel = epostVarslingstittel,
     epostVarslingstekst = epostVarslingstekst,
     produsent = produsent,
     aktiv = aktiv,
-    behandletAvLegacy = behandletAvLegacy,
+    opprettet = ZonedDateTimeHelper.nowAtUtc(),
 )
 
 
@@ -42,7 +50,7 @@ fun varselOpprettetEvent(
     smsVarslingstekst: String? = null,
     epostVarslingstittel: String? = null,
     epostVarslingstekst: String? = null,
-    opprettet: ZonedDateTime = ZonedDateTimeHelper.nowAtUtc(),
+    opprettet: ZonedDateTime = nowAtUtc(),
     kanBatches: Boolean? = null,
     utsettSendingTil: ZonedDateTime? = null,
 ) = """
@@ -54,11 +62,11 @@ fun varselOpprettetEvent(
         "tekst": "Dummy tekst",
         "link": "https://nav.no",
         "tekster": [
-        {
-            "spraakkode": "nb",
-            "tekst": "Dummy tekst",
-            "default": true
-        }
+            {
+                "spraakkode": "nb",
+                "tekst": "Dummy tekst",
+                "default": true
+            }
         ]
     },
         "produsent": {
@@ -125,7 +133,8 @@ fun inaktivertEvent(id: String) = """
             "cluster": "dev-gcp",
             "namespace": "dummy",
             "appnavn": "dummy-app"
-        }
+        },
+        "tidspunkt": "${nowAtUtc()}"
     }
     """
 
@@ -136,30 +145,30 @@ fun eksternVarslingDBRow(
     erUtsattVarsel: Boolean = false,
     varsler: List<Varsel> = listOf(
         Varsel(
-            varselId = "11111",
+            varselId = UUID.randomUUID().toString(),
             varseltype = Varseltype.Oppgave,
-            prefererteKanaler = listOf(Kanal.SMS),
+            preferertKanal = Kanal.SMS,
             smsVarslingstekst = null,
             epostVarslingstittel = null,
             epostVarslingstekst = null,
-            produsent = Produsent("test-clsuter", "test-namespace", "test-app"),
-            aktiv = true,
-            behandletAvLegacy = false,
+            produsent = Produsent("test-cluster", "test-namespace", "test-app"),
+            opprettet = nowAtUtc(),
+            aktiv = true
         ), Varsel(
-            varselId = "22222",
+            varselId = UUID.randomUUID().toString(),
             varseltype = Varseltype.Oppgave,
-            prefererteKanaler = listOf(Kanal.SMS),
+            preferertKanal = Kanal.SMS,
             smsVarslingstekst = null,
             epostVarslingstittel = null,
             epostVarslingstekst = null,
-            produsent = Produsent("test-clsuter", "test-namespace", "test-app"),
-            aktiv = true,
-            behandletAvLegacy = false,
+            produsent = Produsent("test-cluster", "test-namespace", "test-app"),
+            opprettet = nowAtUtc(),
+            aktiv = true
         )
     ),
     utsending: ZonedDateTime? = null,
     ferdigstilt: ZonedDateTime? = null,
-    opprettet: ZonedDateTime = ZonedDateTimeHelper.nowAtUtc().minusSeconds(30),
+    opprettet: ZonedDateTime = nowAtUtc().minusSeconds(30),
     status: Sendingsstatus = Sendingsstatus.Venter,
     eksternStatus: EksternStatus.Oversikt? = null,
     bestilling: Bestilling? = null

@@ -1,11 +1,13 @@
 package no.nav.tms.ekstern.varsling.status
 
 import io.github.oshai.kotlinlogging.KotlinLogging
+import no.nav.tms.common.postgres.ConcurrentUpdateException
 import no.nav.tms.ekstern.varsling.TmsEksternVarsling
 import no.nav.tms.ekstern.varsling.status.EksternStatusUpdater.FailureReason.DuplicateStatus
-import no.nav.tms.ekstern.varsling.status.EksternStatusUpdater.FailureReason.UnknownEksternVarsling
 import no.nav.tms.ekstern.varsling.status.EksternStatusUpdater.FailureReason.HistorikkSaturated
+import no.nav.tms.ekstern.varsling.status.EksternStatusUpdater.FailureReason.UnknownEksternVarsling
 import no.nav.tms.kafka.application.JsonMessage
+import no.nav.tms.kafka.application.RetriableMessageException
 import no.nav.tms.kafka.application.SkippableMessageException
 import no.nav.tms.kafka.application.Subscriber
 import no.nav.tms.kafka.application.Subscription
@@ -46,6 +48,9 @@ class EksternVarslingStatusSubscriber(
             eksternStatusUpdater.updateEksternVarslingStatus(eksternVarslingStatus)
             log.info { "Behandlet eksternVarslingStatus" }
 
+        } catch (e: ConcurrentUpdateException) {
+            log.warn { "Klarte ikke oppdatere status på ekstern varsling grunnet parallell tilgang på rad. Forsøker igjen senere." }
+            throw ConcurrentStatusUpdateException(e)
         } catch (e: EksternStatusUpdater.StatusUpdateException) {
             when (e.failureReason) {
                 UnknownEksternVarsling -> {
@@ -75,6 +80,7 @@ class EksternVarslingStatusSubscriber(
     class UnknownSendingsIdException(): SkippableMessageException("Fant ikke fant ekstern varsling tilhørende status")
     class DuplicateStatusException(): SkippableMessageException("Statusoppdatering var duplikat")
     class HistorikkSaturatedException(): SkippableMessageException("Statusoppdatering ignorert fordi historikken var full")
+    class ConcurrentStatusUpdateException(e: Exception): RetriableMessageException("Statusoppdatering feilet grunnet parallell prosessering", e)
 }
 
 data class DoknotifikasjonStatusEvent(
