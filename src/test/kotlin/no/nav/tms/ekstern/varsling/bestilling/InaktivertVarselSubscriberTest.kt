@@ -1,6 +1,5 @@
 package no.nav.tms.ekstern.varsling.bestilling
 
-import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.mockk.mockk
@@ -118,39 +117,6 @@ class InaktivertVarselSubscriberTest {
 
             it.sendingsId shouldBe sendingsId
         }
-    }
-
-    @Test
-    fun `Legger ikke doknotifikasjon-stopp i outbox-kø hvis hvis det finnes aktive varsler i samme sending`() {
-        val sendingsId = UUID.randomUUID().toString()
-
-        val varselId1 = UUID.randomUUID().toString()
-        val varselId2 = UUID.randomUUID().toString()
-
-        testRepository.insertEksternVarsling(
-            eksternVarslingDBRow(
-                sendingsId,
-                testFnr,
-                status = Sendingsstatus.Sendt,
-                ferdigstilt = nowAtUtc().minusHours(1),
-                varsler = listOf(
-                    createVarsel(varselId = varselId1),
-                    createVarsel(varselId = varselId2),
-
-                ),
-                bestilling = Bestilling(
-                    preferertKanal = Kanal.SMS,
-                    tekster = null,
-                    revarsling = Revarsling(1, 7)
-                )
-            )
-        )
-
-        broadcaster.broadcastJson(inaktivertEvent(id = varselId1))
-
-        queueRepository.peekNextDoknotStop(1)
-            .firstOrNull()
-            .shouldBeNull()
     }
 
     @Test

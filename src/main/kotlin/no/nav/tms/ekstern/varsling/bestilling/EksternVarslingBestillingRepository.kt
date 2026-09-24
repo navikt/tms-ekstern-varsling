@@ -215,26 +215,17 @@ class EksternVarslingBestillingRepository(val database: PostgresDatabase) {
     fun findSendingForVarsel(varselId: String, aktiv: Boolean? = null): EksternVarsling? {
         return database.list {
             queryOf(
-                """
-                    with sending as (
-                        select 
-                            ev.sendingsId 
-                        from 
-                            ekstern_varsling as ev
-                            left join varsel v on ev.sendingsId = v.sendingsId
-                        where 
-                            varsler @> :varsel 
-                            or v.varselId = :varselId
-                    ) 
-                select 
+                """select 
                     ev.*,
                     ev.opprettet as ev_opprettet,
                     v.*,
                     v.opprettet as v_opprettet
                 from 
-                    sending 
-                    join ekstern_varsling as ev on sending.sendingsId = ev.sendingsId
+                    ekstern_varsling as ev 
                     left join varsel as v on ev.sendingsId = v.sendingsId
+                where 
+                    varsler @> :varsel 
+                    or v.varselId = :varselId
                 """,
                 mapOf(
                     "varsel" to varselId.toParam(aktiv),
@@ -247,7 +238,6 @@ class EksternVarslingBestillingRepository(val database: PostgresDatabase) {
             joinEksternVarslingWithVarsel(it)
         }.firstOrNull()
     }
-
 
     fun varselExists(varselId: String): Boolean {
         return database.singleOrNull {
