@@ -246,6 +246,7 @@ class EksternVarslingBestillingRepository(val database: PostgresDatabase) {
                             left join varsel v on ev.sendingsId = v.sendingsId
                         where 
                             v.varselId = :varselId
+                            and v.aktiv
                     ) 
                 select 
                     ev.*,
