@@ -213,6 +213,28 @@ class EksternVarslingBestillingRepository(val database: PostgresDatabase) {
     }
 
     fun findSendingForVarsel(varselId: String, aktiv: Boolean? = null): EksternVarsling? {
+        val sendingsIdForLegacyVarsel = database.singleOrNull {
+            queryOf(
+                """
+                    select 
+                        ev.sendingsId 
+                    from 
+                        ekstern_varsling as ev
+                    where 
+                        ev.varsler @> :varsel 
+                """,
+                mapOf(
+                    "varsel" to varselId.toParam(aktiv),
+                )
+            ).map {
+                it.string("sendingsId")
+            }
+        }
+
+        if (sendingsIdForLegacyVarsel != null) {
+            return getEksternVarsling(sendingsIdForLegacyVarsel)
+        }
+
         return database.list {
             queryOf(
                 """
@@ -223,8 +245,7 @@ class EksternVarslingBestillingRepository(val database: PostgresDatabase) {
                             ekstern_varsling as ev
                             left join varsel v on ev.sendingsId = v.sendingsId
                         where 
-                            varsler @> :varsel 
-                            or v.varselId = :varselId
+                            v.varselId = :varselId
                     ) 
                 select 
                     ev.*,
@@ -237,7 +258,6 @@ class EksternVarslingBestillingRepository(val database: PostgresDatabase) {
                     left join varsel as v on ev.sendingsId = v.sendingsId
                 """,
                 mapOf(
-                    "varsel" to varselId.toParam(aktiv),
                     "varselId" to varselId
                 )
             ).map {
@@ -250,17 +270,15 @@ class EksternVarslingBestillingRepository(val database: PostgresDatabase) {
 
 
     fun varselExists(varselId: String): Boolean {
-        return database.singleOrNull {
+        val existsLegacy = database.singleOrNull {
             queryOf(
                 """
                         select 
                             ev.sendingsId 
                         from 
                             ekstern_varsling as ev
-                            left join varsel as v on ev.sendingsId = v.sendingsId
                         where 
-                            varsler @> :varsel
-                            or v.varselId = :varselId
+                            ev.varsler @> :varsel
                     """,
                 mapOf(
                     "varsel" to varselId.toParam(),
@@ -270,6 +288,29 @@ class EksternVarslingBestillingRepository(val database: PostgresDatabase) {
                 true
             }
         } ?: false
+
+        return if (existsLegacy) {
+            true
+        } else {
+            database.singleOrNull {
+                queryOf(
+                    """
+                        select 
+                            ev.sendingsId 
+                        from 
+                            ekstern_varsling as ev
+                            left join varsel as v on ev.sendingsId = v.sendingsId
+                        where 
+                            v.varselId = :varselId
+                    """,
+                    mapOf(
+                        "varselId" to varselId
+                    )
+                ).map {
+                    true
+                }
+            } ?: false
+        }
     }
 
     private fun String.toParam(aktiv: Boolean? = null) = if (aktiv == null) {
