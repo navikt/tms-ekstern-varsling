@@ -14,7 +14,7 @@ object LocalPostgresDatabase {
 
     private val database: PostgresDatabase by lazy {
         Postgres.connectToContainer(container).also {
-            migrate(it.dataSource, expectedMigrations = 10)
+            migrate(it.dataSource, expectedMigrations = 11)
         }
     }
 
