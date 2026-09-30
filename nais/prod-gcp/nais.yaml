@@ -36,7 +36,7 @@ spec:
   gcp:
     sqlInstances:
       - name: ekstern-varsling
-        type: POSTGRES_15
+        type: POSTGRES_18
         tier: db-custom-1-3840
         diskType: SSD
         diskSize: 50
