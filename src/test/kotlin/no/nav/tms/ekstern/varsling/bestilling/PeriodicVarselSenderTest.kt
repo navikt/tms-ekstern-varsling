@@ -4,7 +4,6 @@ import io.kotest.matchers.collections.shouldBeIn
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.string.shouldContain
 import io.mockk.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -13,14 +12,14 @@ import no.nav.doknotifikasjon.schemas.Doknotifikasjon
 import no.nav.tms.common.kubernetes.PodLeaderElection
 import no.nav.tms.common.postgres.PostgresDatabase
 import no.nav.tms.ekstern.varsling.Kanal
-import no.nav.tms.ekstern.varsling.Produsent
 import no.nav.tms.ekstern.varsling.Sendingsstatus
-import no.nav.tms.ekstern.varsling.Varsel
 import no.nav.tms.ekstern.varsling.Varseltype
 import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper.nowAtUtc
-import no.nav.tms.ekstern.varsling.defaultObjectMapper
+import no.nav.tms.ekstern.varsling.common.defaultObjectMapper
 import no.nav.tms.ekstern.varsling.recordqueue.StatusOppdatertQueueRepository
-import no.nav.tms.ekstern.varsling.setup.*
+import no.nav.tms.ekstern.varsling.setup.DummySerializer
+import no.nav.tms.ekstern.varsling.setup.LocalPostgresDatabase
+import no.nav.tms.ekstern.varsling.setup.TestRepository
 import no.nav.tms.ekstern.varsling.status.EksternVarslingOppdatertProducer
 import no.nav.tms.ekstern.varsling.utsending.EksternVarslingUtsendingRepository
 import no.nav.tms.ekstern.varsling.utsending.PeriodicVarselSender

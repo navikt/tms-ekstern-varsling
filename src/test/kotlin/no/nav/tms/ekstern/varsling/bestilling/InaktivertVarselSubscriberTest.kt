@@ -1,18 +1,13 @@
 package no.nav.tms.ekstern.varsling.bestilling
 
-import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.mockk.mockk
 import kotliquery.queryOf
 import no.nav.tms.ekstern.varsling.Bestilling
 import no.nav.tms.ekstern.varsling.Kanal
-import no.nav.tms.ekstern.varsling.Produsent
 import no.nav.tms.ekstern.varsling.Revarsling
 import no.nav.tms.ekstern.varsling.Sendingsstatus
-import no.nav.tms.ekstern.varsling.Varsel
-import no.nav.tms.ekstern.varsling.Varseltype
-import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper.nowAtUtc
 import no.nav.tms.ekstern.varsling.recordqueue.DoknotStopQueueRepository
 import no.nav.tms.ekstern.varsling.setup.LocalPostgresDatabase
 import no.nav.tms.ekstern.varsling.setup.TestRepository

@@ -1,16 +1,11 @@
 package no.nav.tms.ekstern.varsling.arkiv
 
 import io.kotest.assertions.throwables.shouldThrow
-import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import io.mockk.clearMocks
-import io.mockk.coEvery
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.mockkStatic
+import io.mockk.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -20,17 +15,9 @@ import kotliquery.queryOf
 import no.nav.tms.common.kubernetes.PodLeaderElection
 import no.nav.tms.common.postgres.JsonbHelper.json
 import no.nav.tms.common.postgres.PostgresDatabase
+import no.nav.tms.ekstern.varsling.*
 import no.nav.tms.ekstern.varsling.arkiv.ArkivertVarsling.ArkiveringsBegrunnelse.BestillingForeldet
 import no.nav.tms.ekstern.varsling.arkiv.ArkivertVarsling.ArkiveringsBegrunnelse.VarslingFerdigstilt
-import no.nav.tms.ekstern.varsling.Bestilling
-import no.nav.tms.ekstern.varsling.EksternStatus
-import no.nav.tms.ekstern.varsling.EksternVarsling
-import no.nav.tms.ekstern.varsling.Kanal
-import no.nav.tms.ekstern.varsling.Produsent
-import no.nav.tms.ekstern.varsling.Sendingsstatus
-import no.nav.tms.ekstern.varsling.Tekster
-import no.nav.tms.ekstern.varsling.Varsel
-import no.nav.tms.ekstern.varsling.Varseltype
 import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper.nowAtUtc
 import no.nav.tms.ekstern.varsling.common.enum
 import no.nav.tms.ekstern.varsling.common.updateInTx
@@ -41,8 +28,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.Duration
 import java.time.ZonedDateTime
-import java.util.UUID
-import kotlin.String
+import java.util.*
 import kotlin.math.absoluteValue
 
 internal class PeriodicArchiverTest {

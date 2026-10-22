@@ -3,16 +3,11 @@ package no.nav.tms.ekstern.varsling.bestilling
 import kotliquery.Row
 import kotliquery.TransactionalSession
 import kotliquery.queryOf
-import no.nav.tms.common.postgres.JsonbHelper.json
 import no.nav.tms.common.postgres.JsonbHelper.jsonOrNull
 import no.nav.tms.common.postgres.JsonbHelper.toJsonb
 import no.nav.tms.common.postgres.PostgresDatabase
-import no.nav.tms.ekstern.varsling.EksternStatus
-import no.nav.tms.ekstern.varsling.EksternVarsling
-import no.nav.tms.ekstern.varsling.Kanal
-import no.nav.tms.ekstern.varsling.Sendingsstatus
-import no.nav.tms.ekstern.varsling.Varsel
-import no.nav.tms.ekstern.varsling.Varseltype
+import no.nav.tms.ekstern.varsling.*
+import no.nav.tms.ekstern.varsling.common.JsonAgg.Companion.jsonAgg
 import java.time.ZonedDateTime
 
 class EksternVarslingBestillingRepository(val database: PostgresDatabase) {
@@ -115,30 +110,6 @@ class EksternVarslingBestillingRepository(val database: PostgresDatabase) {
         }
     }
 
-    fun getEksternVarsling(sendingsId: String): EksternVarsling? {
-        return database.list {
-            queryOf(
-                """
-                select 
-                    ev.*,
-                    ev.opprettet as ev_opprettet,
-                    v.*,
-                    v.opprettet as v_opprettet
-                from 
-                    ekstern_varsling as ev
-                    left join varsel as v on ev.sendingsId = v.sendingsId
-                where
-                    ev.sendingsId = :sendingsId
-            """,
-                mapOf("sendingsId" to sendingsId)
-            ).map {
-                mapEksternVarsling(it) to mapVarsel(it)
-            }
-        }.let {
-            joinEksternVarslingWithVarsel(it)
-        }.firstOrNull()
-    }
-
     fun findExistingBatch(ident: String, utsendingEtter: ZonedDateTime): String? = database.singleOrNull {
         queryOf(
             """
@@ -210,37 +181,33 @@ class EksternVarslingBestillingRepository(val database: PostgresDatabase) {
     }
 
     fun findSendingForVarsel(varselId: String): EksternVarsling? {
-        return database.list {
+        return database.singleOrNull {
             queryOf(
                 """
                     with sending as (
                         select 
-                            ev.sendingsId 
+                            sendingsId 
                         from 
-                            ekstern_varsling as ev
-                            left join varsel v on ev.sendingsId = v.sendingsId
+                            varsel
                         where 
-                            v.varselId = :varselId
+                            varselId = :varselId
                     ) 
                 select 
                     ev.*,
-                    ev.opprettet as ev_opprettet,
-                    v.*,
-                    v.opprettet as v_opprettet
+                    jsonb_agg(v.*) as varsler
                 from 
                     sending 
                     join ekstern_varsling as ev on sending.sendingsId = ev.sendingsId
                     left join varsel as v on ev.sendingsId = v.sendingsId
+                group by ev.sendingsId
                 """,
                 mapOf(
                     "varselId" to varselId
                 )
             ).map {
-                mapEksternVarsling(it) to mapVarsel(it)
+                mapEksternVarsling(it)
             }
-        }.let {
-            joinEksternVarslingWithVarsel(it)
-        }.firstOrNull()
+        }
     }
 
     fun varselExists(varselId: String): Boolean {
@@ -248,7 +215,7 @@ class EksternVarslingBestillingRepository(val database: PostgresDatabase) {
             queryOf(
                 """
                     select 
-                        ev.sendingsId 
+                        ev.sendingsId
                     from 
                         ekstern_varsling as ev
                         left join varsel as v on ev.sendingsId = v.sendingsId
@@ -263,12 +230,6 @@ class EksternVarslingBestillingRepository(val database: PostgresDatabase) {
             }
         } ?: false
 
-    }
-
-    private fun String.toParam(aktiv: Boolean? = null) = if (aktiv == null) {
-        listOf(mapOf("varselId" to this)).toJsonb()
-    } else {
-        listOf(mapOf("varselId" to this, "aktiv" to aktiv)).toJsonb()
     }
 
     fun inaktiverVarsel(varselId: String, inaktivert: ZonedDateTime) {
@@ -290,34 +251,21 @@ class EksternVarslingBestillingRepository(val database: PostgresDatabase) {
         status = row.string("status").let(Sendingsstatus::valueOf),
         eksternStatus = row.jsonOrNull("eksternStatus"),
         bestilling = row.jsonOrNull("bestilling"),
-        opprettet = row.zonedDateTime("ev_opprettet"),
-        varsler = emptyList()
-    )
-
-    private fun mapVarsel(row: Row): Varsel? {
-        return if(row.stringOrNull("varselId") != null) {
-            Varsel(
-                varselId = row.string("varselId"),
-                varseltype = row.string("varseltype").let(Varseltype::valueOf),
-                preferertKanal = row.stringOrNull("preferertKanal")?.let(Kanal::valueOf),
-                smsVarslingstekst = row.stringOrNull("smsVarslingstekst"),
-                epostVarslingstittel = row.stringOrNull("epostVarslingstittel"),
-                epostVarslingstekst = row.stringOrNull("epostVarslingstekst"),
-                produsent = row.json("produsent"),
-                aktiv = row.boolean("aktiv"),
-                opprettet = row.zonedDateTime("v_opprettet"),
-                inaktivert = row.zonedDateTimeOrNull("inaktivert")
-            )
-        } else {
-            null
-        }
-    }
-
-    private fun joinEksternVarslingWithVarsel(rows: List<Pair<EksternVarsling, Varsel?>>): List<EksternVarsling> {
-        return rows
-            .groupBy({(eksternVarsling, _) -> eksternVarsling}, { (_, varsel) -> varsel })
-            .map { (eksternVarsling, varsler) ->
-                eksternVarsling.copy(varsler = eksternVarsling.varsler + varsler.filterNotNull())
+        opprettet = row.zonedDateTime("opprettet"),
+        varsler = row.jsonAgg("varsler")
+            .map { varsel ->
+                Varsel(
+                    varselId = varsel.string("varselId"),
+                    varseltype = varsel.string("varseltype").let(Varseltype::valueOf),
+                    preferertKanal = varsel.stringOrNull("preferertKanal")?.let(Kanal::valueOf),
+                    smsVarslingstekst = varsel.stringOrNull("smsVarslingstekst"),
+                    epostVarslingstittel = varsel.stringOrNull("epostVarslingstittel"),
+                    epostVarslingstekst = varsel.stringOrNull("epostVarslingstekst"),
+                    produsent = varsel.json("produsent"),
+                    aktiv = varsel.boolean("aktiv"),
+                    opprettet = varsel.zonedDateTime("opprettet"),
+                    inaktivert = varsel.zonedDateTimeOrNull("inaktivert")
+                )
             }
-    }
+    )
 }

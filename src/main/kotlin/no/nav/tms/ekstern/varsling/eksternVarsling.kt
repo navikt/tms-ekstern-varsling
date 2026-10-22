@@ -1,6 +1,5 @@
 package no.nav.tms.ekstern.varsling
 
-import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonValue
 import java.time.ZonedDateTime
 

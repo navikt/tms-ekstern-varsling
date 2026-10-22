@@ -1,16 +1,9 @@
 package no.nav.tms.ekstern.varsling.bestilling
 
-import no.nav.tms.ekstern.varsling.Bestilling
-import no.nav.tms.ekstern.varsling.EksternStatus
-import no.nav.tms.ekstern.varsling.EksternVarsling
-import no.nav.tms.ekstern.varsling.Kanal
-import no.nav.tms.ekstern.varsling.Produsent
-import no.nav.tms.ekstern.varsling.Sendingsstatus
-import no.nav.tms.ekstern.varsling.Varsel
-import no.nav.tms.ekstern.varsling.Varseltype
+import no.nav.tms.ekstern.varsling.*
 import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper.nowAtUtc
 import java.time.ZonedDateTime
-import java.util.UUID
+import java.util.*
 
 fun String?.nullableTextToJson(): String {
     return if (this == null) {
