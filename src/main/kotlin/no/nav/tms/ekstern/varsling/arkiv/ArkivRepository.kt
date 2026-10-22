@@ -146,8 +146,7 @@ class ArkivRepository(private val database: PostgresDatabase) {
                     produsent = row.json("produsent"),
                     aktiv = row.boolean("aktiv"),
                     opprettet = row.zonedDateTime("opprettet"),
-                    inaktivert = row.zonedDateTimeOrNull("inaktivert"),
-                    legacyJsonb = false
+                    inaktivert = row.zonedDateTimeOrNull("inaktivert")
                 )
             }
         }.groupBy(Pair<String, *>::first) {
@@ -183,7 +182,7 @@ class ArkivRepository(private val database: PostgresDatabase) {
             sendingsId = row.string("sendingsId"),
             ident = row.string("ident"),
             serializedData = ArkivertVarsling.SerializedData(
-                varsler = row.json("varsler"),
+                varsler = emptyList(),
                 erBatch = row.boolean("erBatch"),
                 erUtsattVarsel = row.boolean("erUtsattVarsel"),
                 utsending = row.zonedDateTimeOrNull("utsending"),

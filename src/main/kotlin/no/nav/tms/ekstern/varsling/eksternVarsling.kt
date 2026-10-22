@@ -40,8 +40,6 @@ data class Varsel(
     val aktiv: Boolean,
     val opprettet: ZonedDateTime? = null,
     val inaktivert: ZonedDateTime? = null,
-    @JsonIgnore // For å markere hvor varsel kommer fra
-    val legacyJsonb: Boolean = true,
     @Deprecated("Bruk preferert kanal")
     val prefererteKanaler: List<Kanal> = emptyList()
 )

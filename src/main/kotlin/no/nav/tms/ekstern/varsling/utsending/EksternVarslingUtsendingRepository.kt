@@ -115,7 +115,7 @@ class EksternVarslingUtsendingRepository(val database: PostgresDatabase) {
         eksternStatus = row.jsonOrNull("eksternStatus"),
         bestilling = row.jsonOrNull("bestilling"),
         opprettet = row.zonedDateTime("ev_opprettet"),
-        varsler = row.json("varsler")
+        varsler = emptyList()
     )
 
     private fun mapVarsel(row: Row): Varsel? {
@@ -130,8 +130,7 @@ class EksternVarslingUtsendingRepository(val database: PostgresDatabase) {
                 produsent = row.json("produsent"),
                 aktiv = row.boolean("aktiv"),
                 opprettet = row.zonedDateTime("v_opprettet"),
-                inaktivert = row.zonedDateTimeOrNull("inaktivert"),
-                legacyJsonb = false
+                inaktivert = row.zonedDateTimeOrNull("inaktivert")
             )
         } else {
             null

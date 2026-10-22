@@ -253,38 +253,6 @@ internal class PeriodicArchiverTest {
     }
 
     @Test
-    fun `håndterer at varsel kan ligge i legacy jsonb-kolonne og egen tabell`() = runBlocking<Unit> {
-        coEvery { leaderElection.isLeader() } returns true
-
-        val sendingsId = "id-x"
-        val legacyVarsel = varsel().copy(legacyJsonb = true)
-        val varsel = varsel()
-
-        val varsling = varsling(
-            sendingsId,
-            opprettet = nowAtUtc().minusDays(100),
-            ferdigstilt = null,
-            varsler = listOf(legacyVarsel, varsel)
-        )
-
-        testRepository.insertEksternVarslingWithLegacyVarsel(varsling)
-
-        runArchiverToCompletion(
-            opprettetThreshold = 50,
-            ferdigstiltThreshold = 50
-        )
-
-        arkivTestRepository.getAllArchivedVarsel().let {
-            it.size shouldBe 1
-
-            val archivedVarsler = it.first().serializedData.varsler
-            archivedVarsler.size shouldBe 2
-            archivedVarsler.map { it.varselId }.shouldContain(legacyVarsel.varselId)
-            archivedVarsler.map { it.varselId }.shouldContain(varsel.varselId)
-        }
-    }
-
-    @Test
     fun `does nothing when not leader`() = runBlocking<Unit> {
         coEvery { leaderElection.isLeader() } returns false
 

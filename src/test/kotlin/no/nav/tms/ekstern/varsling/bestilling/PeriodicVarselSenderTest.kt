@@ -584,49 +584,6 @@ class PeriodicVarselSenderTest {
         failingProducer.history().size shouldBe 1
         database.tellAntallSendt() shouldBe 1
     }
-
-    @Test
-    fun `håndterer at varsler kan komme fra jsonb-kolonne og egen tabell`() = runBlocking<Unit> {
-        val legacyVarsel1 = varsel(
-            varseltype = Varseltype.Oppgave,
-            legacy = true
-        )
-        val legacyVarsel2 = varsel(
-            varseltype = Varseltype.Beskjed,
-            legacy = true
-        )
-        val varsel1 = varsel(
-            varseltype = Varseltype.Oppgave,
-            legacy = false
-        )
-
-        testRepository.insertEksternVarslingWithLegacyVarsel(
-            eksternVarslingDBRow(
-                UUID.randomUUID().toString(),
-                testFnr,
-                varsler = listOf(
-                    legacyVarsel1,
-                    legacyVarsel2,
-                    varsel1
-                )
-            )
-        )
-
-        val periodicVarselSender = PeriodicVarselSender(
-            utsendingRepository, kanalDecider, doknotTopic, statusProducer,
-            "test-topic", leaderElection, interval = Duration.ofMinutes(1)
-        )
-
-        coEvery { leaderElection.isLeader() } returns true
-
-        periodicVarselSender.start()
-        delay(500)
-        doknotTopic.history().size shouldBe 1
-        doknotTopic.history().first().let {
-            it.value().smsTekst shouldContain "2 oppgave"
-            it.value().smsTekst shouldContain "1 beskjed"
-        }
-    }
 }
 
 private fun PostgresDatabase.tellAntallSendt() = singleOrNull {
@@ -662,21 +619,3 @@ private fun PostgresDatabase.tellAntallForKanal(kanal: Kanal?) = singleOrNull {
         )
     }.map { it.int("antall") }
 }
-
-private fun varsel(
-    varseltype: Varseltype,
-    legacy: Boolean
-) = Varsel(
-    varselId = UUID.randomUUID().toString(),
-    varseltype = varseltype,
-    preferertKanal = null,
-    smsVarslingstekst = null,
-    epostVarslingstittel = null,
-    epostVarslingstekst = null,
-    produsent = Produsent("cluster", "namespace", "appnavn"),
-    aktiv = true,
-    opprettet = nowAtUtc(),
-    inaktivert = null,
-    legacyJsonb = legacy,
-    prefererteKanaler = emptyList(),
-)

@@ -36,7 +36,6 @@ class EksternVarslingBestillingRepository(val database: PostgresDatabase) {
                         erBatch,
                         erUtsattVarsel,
                         utsending,
-                        varsler,
                         ferdigstilt,
                         status,
                         eksternStatus,
@@ -48,7 +47,6 @@ class EksternVarslingBestillingRepository(val database: PostgresDatabase) {
                         :erBatch,
                         :erUtsattVarsel,
                         :utsending,
-                        :varsler,
                         :ferdigstilt,
                         :status,
                         :eksternStatus,
@@ -65,8 +63,7 @@ class EksternVarslingBestillingRepository(val database: PostgresDatabase) {
                     "status" to eksternVarsling.status.name,
                     "eksternStatus" to eksternVarsling.eksternStatus.toJsonb(),
                     "bestilling" to eksternVarsling.bestilling.toJsonb(),
-                    "opprettet" to eksternVarsling.opprettet,
-                    "varsler" to emptyList<Varsel>().toJsonb()
+                    "opprettet" to eksternVarsling.opprettet
                 )
             )
         }
@@ -212,29 +209,7 @@ class EksternVarslingBestillingRepository(val database: PostgresDatabase) {
         }
     }
 
-    fun findSendingForVarsel(varselId: String, aktiv: Boolean? = null): EksternVarsling? {
-        val sendingsIdForLegacyVarsel = database.singleOrNull {
-            queryOf(
-                """
-                    select 
-                        ev.sendingsId 
-                    from 
-                        ekstern_varsling as ev
-                    where 
-                        ev.varsler @> :varsel 
-                """,
-                mapOf(
-                    "varsel" to varselId.toParam(aktiv),
-                )
-            ).map {
-                it.string("sendingsId")
-            }
-        }
-
-        if (sendingsIdForLegacyVarsel != null) {
-            return getEksternVarsling(sendingsIdForLegacyVarsel)
-        }
-
+    fun findSendingForVarsel(varselId: String): EksternVarsling? {
         return database.list {
             queryOf(
                 """
@@ -246,7 +221,6 @@ class EksternVarslingBestillingRepository(val database: PostgresDatabase) {
                             left join varsel v on ev.sendingsId = v.sendingsId
                         where 
                             v.varselId = :varselId
-                            and v.aktiv
                     ) 
                 select 
                     ev.*,
@@ -269,20 +243,19 @@ class EksternVarslingBestillingRepository(val database: PostgresDatabase) {
         }.firstOrNull()
     }
 
-
     fun varselExists(varselId: String): Boolean {
-        val existsLegacy = database.singleOrNull {
+        return database.singleOrNull {
             queryOf(
                 """
-                        select 
-                            ev.sendingsId 
-                        from 
-                            ekstern_varsling as ev
-                        where 
-                            ev.varsler @> :varsel
-                    """,
+                    select 
+                        ev.sendingsId 
+                    from 
+                        ekstern_varsling as ev
+                        left join varsel as v on ev.sendingsId = v.sendingsId
+                    where 
+                        v.varselId = :varselId
+                """,
                 mapOf(
-                    "varsel" to varselId.toParam(),
                     "varselId" to varselId
                 )
             ).map {
@@ -290,28 +263,6 @@ class EksternVarslingBestillingRepository(val database: PostgresDatabase) {
             }
         } ?: false
 
-        return if (existsLegacy) {
-            true
-        } else {
-            database.singleOrNull {
-                queryOf(
-                    """
-                        select 
-                            ev.sendingsId 
-                        from 
-                            ekstern_varsling as ev
-                            left join varsel as v on ev.sendingsId = v.sendingsId
-                        where 
-                            v.varselId = :varselId
-                    """,
-                    mapOf(
-                        "varselId" to varselId
-                    )
-                ).map {
-                    true
-                }
-            } ?: false
-        }
     }
 
     private fun String.toParam(aktiv: Boolean? = null) = if (aktiv == null) {
@@ -329,15 +280,6 @@ class EksternVarslingBestillingRepository(val database: PostgresDatabase) {
         }
     }
 
-    fun updateLegacyVarsler(sendingsId: String, varsler: List<Varsel>){
-        database.update {
-            queryOf(
-                "update ekstern_varsling set varsler = :varsler where sendingsId = :sendingsId",
-                mapOf("sendingsId" to sendingsId, "varsler" to varsler.toJsonb())
-            )
-        }
-    }
-
     private fun mapEksternVarsling(row: Row) = EksternVarsling(
         sendingsId = row.string("sendingsId"),
         ident = row.string("ident"),
@@ -349,7 +291,7 @@ class EksternVarslingBestillingRepository(val database: PostgresDatabase) {
         eksternStatus = row.jsonOrNull("eksternStatus"),
         bestilling = row.jsonOrNull("bestilling"),
         opprettet = row.zonedDateTime("ev_opprettet"),
-        varsler = row.json("varsler")
+        varsler = emptyList()
     )
 
     private fun mapVarsel(row: Row): Varsel? {
@@ -364,8 +306,7 @@ class EksternVarslingBestillingRepository(val database: PostgresDatabase) {
                 produsent = row.json("produsent"),
                 aktiv = row.boolean("aktiv"),
                 opprettet = row.zonedDateTime("v_opprettet"),
-                inaktivert = row.zonedDateTimeOrNull("inaktivert"),
-                legacyJsonb = false
+                inaktivert = row.zonedDateTimeOrNull("inaktivert")
             )
         } else {
             null
