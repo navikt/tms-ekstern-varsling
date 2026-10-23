@@ -59,7 +59,7 @@ data class EksternVarsling(
 
 data class Bestilling(
     val preferertKanal: Kanal,
-    val tekster: Tekster?,
+    val tekster: Tekster,
     val revarsling: Revarsling?
 )
 

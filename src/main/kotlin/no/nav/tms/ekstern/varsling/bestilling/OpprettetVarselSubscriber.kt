@@ -73,7 +73,8 @@ class OpprettetVarselSubscriber(
             renotifikasjon = null,
             batch = null,
             melding = null,
-            feilmelding = null
+            feilmelding = null,
+            sendtTekst = null
         ).let {
             statusProducer.eksternStatusOppdatert(it)
         }
