@@ -7,7 +7,7 @@ import no.nav.tms.ekstern.varsling.Produsent
 import no.nav.tms.ekstern.varsling.Varsel
 import no.nav.tms.ekstern.varsling.Varseltype
 import org.junit.jupiter.api.Test
-import java.util.UUID
+import java.util.*
 
 class VarseltekstValidationTest {
 

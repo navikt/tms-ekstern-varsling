@@ -3,13 +3,7 @@ package no.nav.tms.ekstern.varsling.bestilling
 import com.fasterxml.jackson.databind.JsonNode
 import io.github.oshai.kotlinlogging.KotlinLogging
 import no.nav.tms.common.logging.TeamLogs
-import no.nav.tms.ekstern.varsling.EksternStatus
-import no.nav.tms.ekstern.varsling.EksternVarsling
-import no.nav.tms.ekstern.varsling.Kanal
-import no.nav.tms.ekstern.varsling.Produsent
-import no.nav.tms.ekstern.varsling.Sendingsstatus
-import no.nav.tms.ekstern.varsling.Varsel
-import no.nav.tms.ekstern.varsling.Varseltype
+import no.nav.tms.ekstern.varsling.*
 import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper.asZonedDateTime
 import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper.nowAtUtc
 import no.nav.tms.ekstern.varsling.status.EksternStatusOppdatering

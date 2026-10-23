@@ -5,6 +5,7 @@ import no.nav.tms.ekstern.varsling.Sendingsstatus
 import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper.asZonedDateTime
 import no.nav.tms.ekstern.varsling.recordqueue.DoknotStopQueueRepository
 import no.nav.tms.kafka.application.JsonMessage
+import no.nav.tms.kafka.application.SkippableMessageException
 import no.nav.tms.kafka.application.Subscriber
 import no.nav.tms.kafka.application.Subscription
 
@@ -22,38 +23,22 @@ class InaktivertVarselSubscriber(
 
         val varselId = jsonMessage["varselId"].asText()
         val tidspunkt = jsonMessage["tidspunkt"].asZonedDateTime()
-        val eksternVarsling = repository.findSendingForVarsel(varselId, aktiv = true)
 
-        if (eksternVarsling == null) {
-            log.debug { "Fant ingen ekstern varsling tilknyttet varsel" }
-            return
+        val eksternVarsling = repository.findSendingForVarsel(varselId)
+            ?: throw SendingNotFoundException()
+
+        val varsel = eksternVarsling.varsler.first { it.varselId == varselId }
+
+        if (!varsel.aktiv) {
+            throw VarselInaktivtException()
         }
 
         log.info { "Markerer varsel som inaktivert" }
 
-        val varsel = eksternVarsling.varsler.first { it.varselId == varselId }
+        repository.inaktiverVarsel(varselId, tidspunkt)
 
-        if (varsel.legacyJsonb) {
-            eksternVarsling.varsler
-                .filter { it.legacyJsonb }
-                .map { varsel ->
-                    if (varsel.varselId == varselId) {
-                        varsel.copy(aktiv = false)
-                    } else {
-                        varsel
-                    }
-                }.let { varsler ->
-                    repository.updateLegacyVarsler(sendingsId = eksternVarsling.sendingsId, varsler)
-                }
-        } else {
-            repository.inaktiverVarsel(varselId, tidspunkt)
-        }
-
-        val alleVarslerInaktivert = eksternVarsling.varsler
-            .filter { it.varselId != varselId }
-            .all { !it.aktiv }
-
-        if (eksternVarsling.status == Sendingsstatus.Sendt && eksternVarsling.bestilling?.revarsling != null && alleVarslerInaktivert) {
+        if (eksternVarsling.status == Sendingsstatus.Sendt &&
+            eksternVarsling.bestilling?.revarsling != null) {
 
             log.info { "Forbereder doknotifikasjonstopp for sendingsId ${eksternVarsling.sendingsId}" }
 
@@ -61,3 +46,6 @@ class InaktivertVarselSubscriber(
         }
     }
 }
+
+private class SendingNotFoundException: SkippableMessageException("Fant ingen ekstern varsling tilknyttet inaktivert varsel")
+private class VarselInaktivtException: SkippableMessageException("Varsel er allerede markert inaktivt.")

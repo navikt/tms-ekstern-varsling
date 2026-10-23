@@ -4,7 +4,6 @@ import io.kotest.matchers.collections.shouldBeIn
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.string.shouldContain
 import io.mockk.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -13,14 +12,14 @@ import no.nav.doknotifikasjon.schemas.Doknotifikasjon
 import no.nav.tms.common.kubernetes.PodLeaderElection
 import no.nav.tms.common.postgres.PostgresDatabase
 import no.nav.tms.ekstern.varsling.Kanal
-import no.nav.tms.ekstern.varsling.Produsent
 import no.nav.tms.ekstern.varsling.Sendingsstatus
-import no.nav.tms.ekstern.varsling.Varsel
 import no.nav.tms.ekstern.varsling.Varseltype
 import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper.nowAtUtc
-import no.nav.tms.ekstern.varsling.defaultObjectMapper
+import no.nav.tms.ekstern.varsling.common.defaultObjectMapper
 import no.nav.tms.ekstern.varsling.recordqueue.StatusOppdatertQueueRepository
-import no.nav.tms.ekstern.varsling.setup.*
+import no.nav.tms.ekstern.varsling.setup.DummySerializer
+import no.nav.tms.ekstern.varsling.setup.LocalPostgresDatabase
+import no.nav.tms.ekstern.varsling.setup.TestRepository
 import no.nav.tms.ekstern.varsling.status.EksternVarslingOppdatertProducer
 import no.nav.tms.ekstern.varsling.utsending.EksternVarslingUtsendingRepository
 import no.nav.tms.ekstern.varsling.utsending.PeriodicVarselSender
@@ -584,49 +583,6 @@ class PeriodicVarselSenderTest {
         failingProducer.history().size shouldBe 1
         database.tellAntallSendt() shouldBe 1
     }
-
-    @Test
-    fun `håndterer at varsler kan komme fra jsonb-kolonne og egen tabell`() = runBlocking<Unit> {
-        val legacyVarsel1 = varsel(
-            varseltype = Varseltype.Oppgave,
-            legacy = true
-        )
-        val legacyVarsel2 = varsel(
-            varseltype = Varseltype.Beskjed,
-            legacy = true
-        )
-        val varsel1 = varsel(
-            varseltype = Varseltype.Oppgave,
-            legacy = false
-        )
-
-        testRepository.insertEksternVarslingWithLegacyVarsel(
-            eksternVarslingDBRow(
-                UUID.randomUUID().toString(),
-                testFnr,
-                varsler = listOf(
-                    legacyVarsel1,
-                    legacyVarsel2,
-                    varsel1
-                )
-            )
-        )
-
-        val periodicVarselSender = PeriodicVarselSender(
-            utsendingRepository, kanalDecider, doknotTopic, statusProducer,
-            "test-topic", leaderElection, interval = Duration.ofMinutes(1)
-        )
-
-        coEvery { leaderElection.isLeader() } returns true
-
-        periodicVarselSender.start()
-        delay(500)
-        doknotTopic.history().size shouldBe 1
-        doknotTopic.history().first().let {
-            it.value().smsTekst shouldContain "2 oppgave"
-            it.value().smsTekst shouldContain "1 beskjed"
-        }
-    }
 }
 
 private fun PostgresDatabase.tellAntallSendt() = singleOrNull {
@@ -662,21 +618,3 @@ private fun PostgresDatabase.tellAntallForKanal(kanal: Kanal?) = singleOrNull {
         )
     }.map { it.int("antall") }
 }
-
-private fun varsel(
-    varseltype: Varseltype,
-    legacy: Boolean
-) = Varsel(
-    varselId = UUID.randomUUID().toString(),
-    varseltype = varseltype,
-    preferertKanal = null,
-    smsVarslingstekst = null,
-    epostVarslingstittel = null,
-    epostVarslingstekst = null,
-    produsent = Produsent("cluster", "namespace", "appnavn"),
-    aktiv = true,
-    opprettet = nowAtUtc(),
-    inaktivert = null,
-    legacyJsonb = legacy,
-    prefererteKanaler = emptyList(),
-)

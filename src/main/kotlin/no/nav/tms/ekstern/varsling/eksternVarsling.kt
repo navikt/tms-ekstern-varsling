@@ -1,6 +1,5 @@
 package no.nav.tms.ekstern.varsling
 
-import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonValue
 import java.time.ZonedDateTime
 
@@ -40,8 +39,6 @@ data class Varsel(
     val aktiv: Boolean,
     val opprettet: ZonedDateTime? = null,
     val inaktivert: ZonedDateTime? = null,
-    @JsonIgnore // For å markere hvor varsel kommer fra
-    val legacyJsonb: Boolean = true,
     @Deprecated("Bruk preferert kanal")
     val prefererteKanaler: List<Kanal> = emptyList()
 )

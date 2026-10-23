@@ -8,13 +8,7 @@ import no.nav.doknotifikasjon.schemas.PrefererteKanal
 import no.nav.tms.common.kubernetes.PodLeaderElection
 import no.nav.tms.common.logging.TeamLogs
 import no.nav.tms.common.util.scheduling.PeriodicJob
-import no.nav.tms.ekstern.varsling.TmsEksternVarsling
-import no.nav.tms.ekstern.varsling.Bestilling
-import no.nav.tms.ekstern.varsling.EksternStatus
-import no.nav.tms.ekstern.varsling.EksternVarsling
-import no.nav.tms.ekstern.varsling.Kanal
-import no.nav.tms.ekstern.varsling.Revarsling
-import no.nav.tms.ekstern.varsling.Varseltype
+import no.nav.tms.ekstern.varsling.*
 import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper.nowAtUtc
 import no.nav.tms.ekstern.varsling.status.EksternStatusOppdatering
 import no.nav.tms.ekstern.varsling.status.EksternVarslingOppdatertProducer
@@ -24,7 +18,6 @@ import no.nav.tms.kafka.producer.RetriableSendException
 import org.apache.kafka.clients.producer.Producer
 import org.apache.kafka.clients.producer.ProducerRecord
 import java.time.Duration
-import kotlin.collections.forEach
 import java.time.ZonedDateTime
 
 class PeriodicVarselSender(

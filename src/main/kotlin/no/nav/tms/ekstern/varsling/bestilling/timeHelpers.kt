@@ -1,12 +1,7 @@
 package no.nav.tms.ekstern.varsling.bestilling
 
 import com.fasterxml.jackson.databind.JsonNode
-import java.time.LocalDateTime
-import java.time.LocalTime
-import java.time.OffsetTime
-import java.time.ZoneId
-import java.time.ZoneOffset
-import java.time.ZonedDateTime
+import java.time.*
 import java.time.format.DateTimeParseException
 import java.time.temporal.ChronoUnit
 
