@@ -10,6 +10,7 @@ import no.nav.tms.ekstern.varsling.Kanal
 import no.nav.tms.ekstern.varsling.Produsent
 import no.nav.tms.ekstern.varsling.Revarsling
 import no.nav.tms.ekstern.varsling.Sendingsstatus
+import no.nav.tms.ekstern.varsling.Tekster
 import no.nav.tms.ekstern.varsling.Varsel
 import no.nav.tms.ekstern.varsling.Varseltype
 import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper.nowAtUtc
@@ -105,7 +106,11 @@ class InaktivertVarselSubscriberTest {
                 varsler = listOf(createVarsel(varselId = varselId)),
                 bestilling = Bestilling(
                     preferertKanal = Kanal.SMS,
-                    tekster = null,
+                    tekster = Tekster(
+                        smsTekst = "smsTekst",
+                        epostTittel = "epostTittel",
+                        epostTekst = "epostTekst",
+                    ),
                     revarsling = Revarsling(1, 7)
                 )
             )
@@ -140,7 +145,11 @@ class InaktivertVarselSubscriberTest {
                 ),
                 bestilling = Bestilling(
                     preferertKanal = Kanal.SMS,
-                    tekster = null,
+                    tekster = Tekster(
+                        smsTekst = "smsTekst",
+                        epostTittel = "epostTittel",
+                        epostTekst = "epostTekst",
+                    ),
                     revarsling = Revarsling(1, 7)
                 )
             )

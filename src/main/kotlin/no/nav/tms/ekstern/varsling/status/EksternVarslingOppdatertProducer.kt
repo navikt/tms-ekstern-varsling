@@ -5,10 +5,12 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import io.prometheus.metrics.core.metrics.Counter
 import no.nav.tms.ekstern.varsling.EksternStatus
 import no.nav.tms.ekstern.varsling.Produsent
+import no.nav.tms.ekstern.varsling.Tekster
 import no.nav.tms.ekstern.varsling.Varseltype
 import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper.nowAtUtc
 import no.nav.tms.ekstern.varsling.defaultObjectMapper
 import no.nav.tms.ekstern.varsling.recordqueue.StatusOppdatertQueueRepository
+import kotlin.String
 
 class EksternVarslingOppdatertProducer(
     private val queueRepository: StatusOppdatertQueueRepository,
@@ -44,11 +46,23 @@ data class EksternStatusOppdatering(
     val varseltype: Varseltype,
     val produsent: Produsent,
     val melding: String?,
-    val feilmelding: String?
+    val feilmelding: String?,
+    val sendtTekst: SendtTekst?,
 ) {
     @JsonProperty("@event_name") val eventName = "eksternVarslingStatusOppdatert"
     val tidspunkt = nowAtUtc()
 }
+
+interface SendtTekst
+
+data class SendtSms(
+    val smsTekst: String
+): SendtTekst
+
+data class SendtEpost(
+    val epostTittel: String,
+    val epostTekst: String
+): SendtTekst
 
 private val EKSTERN_STATUS_OPPDATERT: Counter = Counter.builder()
     .name("tms_ekstern_varsling_v2_ekstern_varsling_status_oppdatert")
