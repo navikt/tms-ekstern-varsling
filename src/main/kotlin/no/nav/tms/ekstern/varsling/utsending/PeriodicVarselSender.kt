@@ -138,7 +138,8 @@ class PeriodicVarselSender(
                 varseltype = it.varseltype,
                 produsent = it.produsent,
                 melding = null,
-                feilmelding = null
+                feilmelding = null,
+                sendtTekst = null
             ).let { status ->
                 statusProducer.eksternStatusOppdatert(status)
             }
