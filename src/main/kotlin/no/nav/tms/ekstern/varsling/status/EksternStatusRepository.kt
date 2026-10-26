@@ -6,6 +6,7 @@ import no.nav.tms.common.postgres.JsonbHelper.json
 import no.nav.tms.common.postgres.JsonbHelper.jsonOrNull
 import no.nav.tms.common.postgres.JsonbHelper.toJsonb
 import no.nav.tms.common.postgres.PostgresDatabase
+import no.nav.tms.ekstern.varsling.Bestilling
 import no.nav.tms.ekstern.varsling.EksternStatus
 import no.nav.tms.ekstern.varsling.Produsent
 import no.nav.tms.ekstern.varsling.Varseltype
@@ -73,6 +74,17 @@ class EksternStatusRepository(val database: PostgresDatabase) {
         }
 
         return legacy + varsler
+    }
+
+    fun getBestilling(sendingsId: String): Bestilling? {
+        return database.singleOrNull {
+            queryOf(
+                "select bestilling from ekstern_varsling where sendingsId = :sendingsId",
+                mapOf("sendingsId" to sendingsId)
+            ).map {
+                it.jsonOrNull("bestilling")
+            }
+        }
     }
 
     private fun mapStatusSummary(row: Row) = EksternStatusSummary(

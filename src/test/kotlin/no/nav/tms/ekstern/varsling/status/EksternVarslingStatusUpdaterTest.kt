@@ -6,11 +6,14 @@ import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import no.nav.tms.ekstern.varsling.Bestilling
 import no.nav.tms.ekstern.varsling.bestilling.*
 import no.nav.tms.ekstern.varsling.EksternStatus.Status.Ferdigstilt
 import no.nav.tms.ekstern.varsling.EksternStatus.Status.Info
 import no.nav.tms.ekstern.varsling.EksternStatus.Status.Sendt
+import no.nav.tms.ekstern.varsling.Kanal
 import no.nav.tms.ekstern.varsling.Sendingsstatus
+import no.nav.tms.ekstern.varsling.Tekster
 import no.nav.tms.ekstern.varsling.Varsel
 import no.nav.tms.ekstern.varsling.Varseltype
 import no.nav.tms.ekstern.varsling.setup.LocalPostgresDatabase
@@ -194,11 +197,55 @@ class EksternVarslingStatusSubscriberTest {
             val ferdigstilt = output.find { it["status"].textValue() == "sendt" }!!
             ferdigstilt["@event_name"].textValue() shouldBe "eksternVarslingStatusOppdatert"
             ferdigstilt["varselId"].textValue() shouldBe oppgave.varselId
+            ferdigstilt["sendingsId"].textValue() shouldBe eksternVarsling.sendingsId
             ferdigstilt["ident"].textValue() shouldBe ident
             ferdigstilt["kanal"].textValue() shouldBe "SMS"
             ferdigstilt["renotifikasjon"].booleanValue() shouldBe false
             ferdigstilt["tidspunkt"].textValue().let { ZonedDateTime.parse(it) } shouldNotBe null
             ferdigstilt["batch"].booleanValue() shouldBe false
+        }
+    }
+
+    @Test
+    fun `sender info om hvilke tekster som ble sendt til bruker`() {
+        val sendingsId = UUID.randomUUID().toString()
+        val varselId = UUID.randomUUID().toString()
+
+        val smsTekst = "Tekst i sms"
+        val epostTittel = "Tittel på epost"
+        val epostTekst = "Tekst i epost"
+
+        val tekster = Tekster(
+            smsTekst = smsTekst,
+            epostTittel = epostTittel,
+            epostTekst = epostTekst,
+        )
+
+        val oppgave = createVarsel(varselId, Varseltype.Oppgave)
+
+        val eksternVarsling = sendtEksternVarsling(sendingsId, ident, varsler = listOf(oppgave), tekster = tekster)
+
+        testRepository.insertEksternVarsling(eksternVarsling)
+
+        testBroadcaster.broadcastJson(eksternVarslingStatus(sendingsId, FERDIGSTILT, kanal = "SMS"))
+        testBroadcaster.broadcastJson(eksternVarslingStatus(sendingsId, FERDIGSTILT, kanal = "EPOST"))
+
+        queueRepository.verifyQueueContents { output ->
+            output.find { it["status"].textValue() == "sendt" && it["kanal"].textValue() == "SMS"}.let { smsSendt ->
+                smsSendt.shouldNotBeNull()
+                smsSendt["sendtTekst"].shouldNotBeNull()
+                smsSendt["sendtTekst"]["smsTekst"].textValue() shouldBe smsTekst
+                smsSendt["sendtTekst"]["epostTittel"].shouldBeNull()
+                smsSendt["sendtTekst"]["epostTekst"].shouldBeNull()
+            }
+
+            output.find { it["status"].textValue() == "sendt" && it["kanal"].textValue() == "EPOST"}.let { smsSendt ->
+                smsSendt.shouldNotBeNull()
+                smsSendt["sendtTekst"].shouldNotBeNull()
+                smsSendt["sendtTekst"]["smsTekst"].shouldBeNull()
+                smsSendt["sendtTekst"]["epostTittel"].textValue() shouldBe epostTittel
+                smsSendt["sendtTekst"]["epostTekst"].textValue() shouldBe epostTekst
+            }
         }
     }
 
@@ -223,6 +270,7 @@ class EksternVarslingStatusSubscriberTest {
             output.find { it["varselId"].textValue() == varselId1 }.let {
                 it.shouldNotBeNull()
                 it["@event_name"].textValue() shouldBe "eksternVarslingStatusOppdatert"
+                it["sendingsId"].textValue() shouldBe sendingsId
                 it["status"].textValue() shouldBe "sendt"
                 it["batch"].booleanValue() shouldBe true
             }
@@ -230,6 +278,7 @@ class EksternVarslingStatusSubscriberTest {
             output.find { it["varselId"].textValue() == varselId2 }.let {
                 it.shouldNotBeNull()
                 it["@event_name"].textValue() shouldBe "eksternVarslingStatusOppdatert"
+                it["sendingsId"].textValue() shouldBe sendingsId
                 it["status"].textValue() shouldBe "sendt"
                 it["batch"].booleanValue() shouldBe true
             }
@@ -485,12 +534,22 @@ class EksternVarslingStatusSubscriberTest {
         sendingsId: String,
         ident: String,
         varsler: List<Varsel> = listOf(createVarsel()),
-        sendingsstatus: Sendingsstatus = Sendingsstatus.Sendt
+        sendingsstatus: Sendingsstatus = Sendingsstatus.Sendt,
+        tekster: Tekster = Tekster(
+            smsTekst = "sms",
+            epostTittel = "epost-tittel",
+            epostTekst = "epost"
+        )
     ) = eksternVarslingDBRow(
         sendingsId = sendingsId,
         ident = ident,
         status = sendingsstatus,
-        varsler = varsler
+        varsler = varsler,
+        bestilling = Bestilling(
+            tekster = tekster,
+            preferertKanal = Kanal.SMS,
+            revarsling = null
+        )
     )
 
 }
