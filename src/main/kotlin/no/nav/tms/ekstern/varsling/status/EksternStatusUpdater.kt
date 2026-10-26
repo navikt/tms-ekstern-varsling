@@ -133,6 +133,7 @@ class EksternStatusUpdater(
                 kanal = newEntry.kanal,
                 varseltype = varsel.varseltype,
                 varselId = varsel.varselId,
+                sendingsId = varsling.sendingsId,
                 ident = varsling.ident,
                 renotifikasjon = newEntry.renotifikasjon,
                 melding = if (newEntry.status == Info || newEntry.status == Ferdigstilt) newEntry.melding else null,

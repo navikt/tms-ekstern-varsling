@@ -197,6 +197,7 @@ class EksternVarslingStatusSubscriberTest {
             val ferdigstilt = output.find { it["status"].textValue() == "sendt" }!!
             ferdigstilt["@event_name"].textValue() shouldBe "eksternVarslingStatusOppdatert"
             ferdigstilt["varselId"].textValue() shouldBe oppgave.varselId
+            ferdigstilt["sendingsId"].textValue() shouldBe eksternVarsling.sendingsId
             ferdigstilt["ident"].textValue() shouldBe ident
             ferdigstilt["kanal"].textValue() shouldBe "SMS"
             ferdigstilt["renotifikasjon"].booleanValue() shouldBe false
@@ -269,6 +270,7 @@ class EksternVarslingStatusSubscriberTest {
             output.find { it["varselId"].textValue() == varselId1 }.let {
                 it.shouldNotBeNull()
                 it["@event_name"].textValue() shouldBe "eksternVarslingStatusOppdatert"
+                it["sendingsId"].textValue() shouldBe sendingsId
                 it["status"].textValue() shouldBe "sendt"
                 it["batch"].booleanValue() shouldBe true
             }
@@ -276,6 +278,7 @@ class EksternVarslingStatusSubscriberTest {
             output.find { it["varselId"].textValue() == varselId2 }.let {
                 it.shouldNotBeNull()
                 it["@event_name"].textValue() shouldBe "eksternVarslingStatusOppdatert"
+                it["sendingsId"].textValue() shouldBe sendingsId
                 it["status"].textValue() shouldBe "sendt"
                 it["batch"].booleanValue() shouldBe true
             }

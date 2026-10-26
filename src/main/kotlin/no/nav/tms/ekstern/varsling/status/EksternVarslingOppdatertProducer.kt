@@ -39,6 +39,7 @@ class EksternVarslingOppdatertProducer(
 data class EksternStatusOppdatering(
     val status: EksternStatus.Status,
     val varselId: String,
+    val sendingsId: String,
     val ident: String,
     val kanal: String?,
     val renotifikasjon: Boolean?,

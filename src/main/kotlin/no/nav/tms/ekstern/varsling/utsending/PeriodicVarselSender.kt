@@ -131,6 +131,7 @@ class PeriodicVarselSender(
             EksternStatusOppdatering(
                 status = EksternStatus.Status.Kansellert,
                 varselId = it.varselId,
+                sendingsId = varsling.sendingsId,
                 ident = varsling.ident,
                 kanal = null,
                 renotifikasjon = null,
