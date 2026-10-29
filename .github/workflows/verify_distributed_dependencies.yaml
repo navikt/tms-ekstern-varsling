@@ -17,18 +17,18 @@ jobs:
       packages: write
     steps:
       - name: Sjekk ut branch
-        uses: 'actions/checkout@v4'
+        uses: 'actions/checkout@v7'
         with:
           fetch-depth: 2
 
       - name: Sett opp java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           java-version: 21
           distribution: 'temurin'
 
       - name: Sett opp gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Bygg og kjør tester for å sjekke at nye versjoner er kompatible
         run: ./gradlew build
@@ -46,7 +46,7 @@ jobs:
 
       - name: Deploy-er til dev-gcp for å sjekke viability
         if: env.CAN_DEPLOY_DEV == 'true'
-        uses: nais/deploy/actions/deploy@v2
+        uses: nais/deploy/actions/deploy@v3
         env:
           REF: ${{ github.sha }}
           CLUSTER: dev-gcp
@@ -59,7 +59,7 @@ jobs:
 
       - name: Deploy-er til prod-gcp for å sjekke viability
         if: env.CAN_DEPLOY_PROD == 'true'
-        uses: nais/deploy/actions/deploy@v2
+        uses: nais/deploy/actions/deploy@v3
         env:
           CLUSTER: prod-gcp
           RESOURCE: ./nais/prod-gcp/nais.yaml
@@ -82,7 +82,7 @@ jobs:
       pull-requests: write
     steps:
       - name: 'Åpner PR for manuell behandling'
-        uses: actions/github-script@v6
+        uses: actions/github-script@v9
         with:
           script: |
             const { repo, owner } = context.repo;

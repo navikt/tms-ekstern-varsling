@@ -22,16 +22,16 @@ jobs:
       image: ${{ steps.docker-build-push.outputs.image }}
     steps:
       - name: Sjekk ut prosjekt
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Sett opp java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           java-version: 21
           distribution: 'temurin'
 
       - name: Sett opp gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Bygg prosjekt
         run: ./gradlew assemble
@@ -53,10 +53,10 @@ jobs:
       id-token: write
     steps:
       - name: Sjekk ut prosjekt
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: 'Deploy til ${{ inputs.cluster }}'
-        uses: nais/deploy/actions/deploy@v2
+        uses: nais/deploy/actions/deploy@v3
         env:
           CLUSTER: ${{ inputs.cluster }}
           RESOURCE: ./nais/${{ inputs.cluster }}/nais.yaml

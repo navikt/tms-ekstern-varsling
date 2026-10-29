@@ -21,18 +21,18 @@ jobs:
       image: ${{ steps.docker-build-push.outputs.image }}
     steps:
       - name: Sjekk ut commit
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ env.COMMIT_SHA }}
 
       - name: Sett opp java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           java-version: 21
           distribution: 'temurin'
 
       - name: Sett opp gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Bygg prosjekt
         run: ./gradlew assemble
@@ -57,12 +57,12 @@ jobs:
         cluster: ${{ github.event.client_payload.clusters }}
     steps:
       - name: Sjekk ut commit
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ env.COMMIT_SHA }}
 
       - name: 'Deploy til ${{ inputs.cluster }}'
-        uses: nais/deploy/actions/deploy@v2
+        uses: nais/deploy/actions/deploy@v3
         env:
           CLUSTER: ${{ matrix.CLUSTER }}
           RESOURCE: ./nais/${{ matrix.CLUSTER }}/nais.yaml
