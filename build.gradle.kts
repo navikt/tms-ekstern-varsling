@@ -4,7 +4,7 @@ plugins {
     // Apply the Kotlin JVM plugin to add support for Kotlin on the JVM.
     kotlin("jvm").version(Kotlin.version)
 
-    id(TmsJarBundling.plugin)
+    id("no.nav.tms.jarBundling") version "0.1.0"
 
     // Apply the application plugin to add support for building a CLI application.
     application
@@ -14,6 +14,11 @@ kotlin {
     jvmToolchain {
         languageVersion.set(JavaLanguageVersion.of(21))
     }
+}
+
+jarBundling {
+    applicationName = "app"
+    outputDirectory = "libs"
 }
 
 repositories {
