@@ -124,6 +124,7 @@ class PeriodicVarselSender(
             EksternStatusOppdatering(
                 status = EksternStatus.Status.Kansellert,
                 varselId = it.varselId,
+                sendingsId = varsling.sendingsId,
                 ident = varsling.ident,
                 kanal = null,
                 renotifikasjon = null,
@@ -131,7 +132,8 @@ class PeriodicVarselSender(
                 varseltype = it.varseltype,
                 produsent = it.produsent,
                 melding = null,
-                feilmelding = null
+                feilmelding = null,
+                sendtTekst = null
             ).let { status ->
                 statusProducer.eksternStatusOppdatert(status)
             }

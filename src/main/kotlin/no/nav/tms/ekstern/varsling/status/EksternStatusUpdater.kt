@@ -105,19 +105,6 @@ class EksternStatusUpdater(
         return Duration.between(previous, statusEvent.tidspunkt)
     }
 
-    private fun buildOppdatering(ident: String, newEntry: EksternStatus.HistorikkEntry, varsel: EksternStatusRepository.VarselSummary, batch: Boolean) = EksternStatusOppdatering(
-        status = newEntry.status,
-        kanal = newEntry.kanal,
-        varseltype = varsel.varseltype,
-        varselId = varsel.varselId,
-        ident = ident,
-        renotifikasjon = newEntry.renotifikasjon,
-        melding = if (newEntry.status == Info || newEntry.status == Ferdigstilt) newEntry.melding else null,
-        feilmelding = if (newEntry.status == Feilet) newEntry.melding else null,
-        batch = batch,
-        produsent = varsel.produsent
-    )
-
     private fun determineInternalStatus(statusEvent: DoknotifikasjonStatusEvent): EksternStatus.Status {
         return when(statusEvent.status) {
             DoknotifikasjonStatusEnum.FERDIGSTILT.name -> if (statusEvent.kanal.isNullOrBlank()) Ferdigstilt else Sendt
@@ -133,6 +120,12 @@ class EksternStatusUpdater(
 
         val batch = varsler.size > 1
 
+        val sendtTekst = if (newEntry.status == Sendt) {
+            sendtTekst(varsling, newEntry)
+        } else {
+            null
+        }
+
         varsler.forEach { varsel ->
 
             val oppdatering = EksternStatusOppdatering(
@@ -140,15 +133,38 @@ class EksternStatusUpdater(
                 kanal = newEntry.kanal,
                 varseltype = varsel.varseltype,
                 varselId = varsel.varselId,
+                sendingsId = varsling.sendingsId,
                 ident = varsling.ident,
                 renotifikasjon = newEntry.renotifikasjon,
                 melding = if (newEntry.status == Info || newEntry.status == Ferdigstilt) newEntry.melding else null,
                 feilmelding = if (newEntry.status == Feilet) newEntry.melding else null,
                 batch = batch,
-                produsent = varsel.produsent
+                produsent = varsel.produsent,
+                sendtTekst = sendtTekst
             )
 
             eksternVarslingOppdatertProducer.eksternStatusOppdatert(oppdatering)
+        }
+    }
+
+    private fun sendtTekst(varsling: EksternStatusSummary, newEntry: EksternStatus.HistorikkEntry): SendtTekst? {
+        val bestilling = repository.getBestilling(varsling.sendingsId)
+
+        if (bestilling == null) {
+            log.warn { "Fant ikke bestilling for ekstern varsling" }
+            return null
+        }
+
+        return when (newEntry.kanal?.lowercase()) {
+            "sms" -> SendtSms(bestilling.tekster.smsTekst)
+            "epost" -> SendtEpost(
+                epostTittel = bestilling.tekster.epostTittel,
+                epostTekst = bestilling.tekster.epostTekst
+            )
+            else -> {
+                log.warn { "Klarte ikke bestemme tekst i statusOppdatering. Ukjent kanal '${newEntry.kanal}'" }
+                null
+            }
         }
     }
 

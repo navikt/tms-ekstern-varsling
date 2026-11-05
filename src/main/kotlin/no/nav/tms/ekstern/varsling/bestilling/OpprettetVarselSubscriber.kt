@@ -59,12 +59,13 @@ class OpprettetVarselSubscriber(
             throw DuplicateVarselException()
         }
 
-        findExistingBatch(jsonMessage)
-            ?.let { addToExistingBatch(varsel, it) }
+        val sendingsId = findPendingBatch(jsonMessage)
+            ?.also { addToPendingBatch(varsel, it) }
             ?: createNewEksternVarsling(varsel, jsonMessage)
 
         EksternStatusOppdatering(
             status = EksternStatus.Status.Venter,
+            sendingsId = sendingsId,
             varselId = varsel.varselId,
             ident = jsonMessage["ident"].asText(),
             varseltype = varsel.varseltype,
@@ -73,7 +74,8 @@ class OpprettetVarselSubscriber(
             renotifikasjon = null,
             batch = null,
             melding = null,
-            feilmelding = null
+            feilmelding = null,
+            sendtTekst = null
         ).let {
             statusProducer.eksternStatusOppdatert(it)
         }
@@ -94,15 +96,15 @@ class OpprettetVarselSubscriber(
         return repository.varselExists(varsel.varselId)
     }
 
-    private fun addToExistingBatch(varsel: Varsel, existingBatch: String) {
+    private fun addToPendingBatch(varsel: Varsel, sendingsId: String) {
         log.info { "Legger til varsel i eksisterende varsling" }
         repository.addVarsel(
-            sendingsId = existingBatch,
+            sendingsId = sendingsId,
             varsel = varsel
         )
     }
 
-    private fun createNewEksternVarsling(varsel: Varsel, jsonMessage: JsonMessage) {
+    private fun createNewEksternVarsling(varsel: Varsel, jsonMessage: JsonMessage): String {
         val kanBatches = if (enableBatch) {
             jsonMessage["eksternVarslingBestilling"]["kanBatches"].asBooleanOrNull() ?: false
         } else {
@@ -141,9 +143,11 @@ class OpprettetVarselSubscriber(
 
         log.info { "Oppretter ny varsling for varsel" }
         repository.insertEksternVarsling(eksternVarsling)
+
+        return sendingsId
     }
 
-    private fun findExistingBatch(jsonMessage: JsonMessage): String? {
+    private fun findPendingBatch(jsonMessage: JsonMessage): String? {
         val kanBatches = if (enableBatch) {
             jsonMessage["eksternVarslingBestilling"]["kanBatches"].asBooleanOrNull() ?: false
         } else {
