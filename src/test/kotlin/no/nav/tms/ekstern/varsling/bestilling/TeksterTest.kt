@@ -1,11 +1,7 @@
 package no.nav.tms.ekstern.varsling.bestilling
 
 import io.kotest.matchers.shouldBe
-import no.nav.tms.ekstern.varsling.EksternVarsling
-import no.nav.tms.ekstern.varsling.Produsent
-import no.nav.tms.ekstern.varsling.Sendingsstatus
-import no.nav.tms.ekstern.varsling.Varsel
-import no.nav.tms.ekstern.varsling.Varseltype
+import no.nav.tms.ekstern.varsling.*
 import no.nav.tms.ekstern.varsling.utsending.bestemTekster
 import org.junit.jupiter.api.Test
 

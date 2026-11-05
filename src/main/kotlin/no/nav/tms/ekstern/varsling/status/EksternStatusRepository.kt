@@ -43,16 +43,7 @@ class EksternStatusRepository(val database: PostgresDatabase) {
     }
 
     fun getAffectedVarsler(sendingsId: String): List<VarselSummary> {
-        val legacy: List<VarselSummary> = database.single {
-            queryOf(
-                "select varsler from ekstern_varsling where sendingsId = :sendingsId",
-                mapOf("sendingsId" to sendingsId)
-            ).map {
-                it.json("varsler")
-            }
-        }
-
-        val varsler = database.list {
+        return database.list {
             queryOf(
                 """
                     select
@@ -71,8 +62,6 @@ class EksternStatusRepository(val database: PostgresDatabase) {
                 )
             }
         }
-
-        return legacy + varsler
     }
 
     private fun mapStatusSummary(row: Row) = EksternStatusSummary(

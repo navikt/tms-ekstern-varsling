@@ -7,19 +7,13 @@ import no.nav.tms.common.postgres.JsonbHelper.json
 import no.nav.tms.common.postgres.JsonbHelper.jsonOrNull
 import no.nav.tms.common.postgres.JsonbHelper.toJsonb
 import no.nav.tms.common.postgres.PostgresDatabase
-import no.nav.tms.ekstern.varsling.Bestilling
-import no.nav.tms.ekstern.varsling.EksternStatus
-import no.nav.tms.ekstern.varsling.Kanal
-import no.nav.tms.ekstern.varsling.Sendingsstatus
-import no.nav.tms.ekstern.varsling.Varsel
-import no.nav.tms.ekstern.varsling.Varseltype
+import no.nav.tms.ekstern.varsling.*
 import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper
 import no.nav.tms.ekstern.varsling.common.batchUpdateInTx
 import no.nav.tms.ekstern.varsling.common.enum
 import no.nav.tms.ekstern.varsling.common.transaction
 import no.nav.tms.ekstern.varsling.common.updateInTx
 import java.time.ZonedDateTime
-import kotlin.collections.map
 
 class ArkivRepository(private val database: PostgresDatabase) {
 
@@ -146,8 +140,7 @@ class ArkivRepository(private val database: PostgresDatabase) {
                     produsent = row.json("produsent"),
                     aktiv = row.boolean("aktiv"),
                     opprettet = row.zonedDateTime("opprettet"),
-                    inaktivert = row.zonedDateTimeOrNull("inaktivert"),
-                    legacyJsonb = false
+                    inaktivert = row.zonedDateTimeOrNull("inaktivert")
                 )
             }
         }.groupBy(Pair<String, *>::first) {
@@ -183,7 +176,7 @@ class ArkivRepository(private val database: PostgresDatabase) {
             sendingsId = row.string("sendingsId"),
             ident = row.string("ident"),
             serializedData = ArkivertVarsling.SerializedData(
-                varsler = row.json("varsler"),
+                varsler = emptyList(),
                 erBatch = row.boolean("erBatch"),
                 erUtsattVarsel = row.boolean("erUtsattVarsel"),
                 utsending = row.zonedDateTimeOrNull("utsending"),

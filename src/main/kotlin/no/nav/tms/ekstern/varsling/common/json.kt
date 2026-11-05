@@ -1,4 +1,4 @@
-package no.nav.tms.ekstern.varsling
+package no.nav.tms.ekstern.varsling.common
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.DeserializationFeature

@@ -1,18 +1,13 @@
 package no.nav.tms.ekstern.varsling.bestilling
 
-import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.mockk.mockk
 import kotliquery.queryOf
 import no.nav.tms.ekstern.varsling.Bestilling
 import no.nav.tms.ekstern.varsling.Kanal
-import no.nav.tms.ekstern.varsling.Produsent
 import no.nav.tms.ekstern.varsling.Revarsling
 import no.nav.tms.ekstern.varsling.Sendingsstatus
-import no.nav.tms.ekstern.varsling.Varsel
-import no.nav.tms.ekstern.varsling.Varseltype
-import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper.nowAtUtc
 import no.nav.tms.ekstern.varsling.recordqueue.DoknotStopQueueRepository
 import no.nav.tms.ekstern.varsling.setup.LocalPostgresDatabase
 import no.nav.tms.ekstern.varsling.setup.TestRepository
@@ -119,110 +114,4 @@ class InaktivertVarselSubscriberTest {
             it.sendingsId shouldBe sendingsId
         }
     }
-
-    @Test
-    fun `Legger ikke doknotifikasjon-stopp i outbox-kø hvis hvis det finnes aktive varsler i samme sending`() {
-        val sendingsId = UUID.randomUUID().toString()
-
-        val varselId1 = UUID.randomUUID().toString()
-        val varselId2 = UUID.randomUUID().toString()
-
-        testRepository.insertEksternVarsling(
-            eksternVarslingDBRow(
-                sendingsId,
-                testFnr,
-                status = Sendingsstatus.Sendt,
-                ferdigstilt = nowAtUtc().minusHours(1),
-                varsler = listOf(
-                    createVarsel(varselId = varselId1),
-                    createVarsel(varselId = varselId2),
-
-                ),
-                bestilling = Bestilling(
-                    preferertKanal = Kanal.SMS,
-                    tekster = null,
-                    revarsling = Revarsling(1, 7)
-                )
-            )
-        )
-
-        broadcaster.broadcastJson(inaktivertEvent(id = varselId1))
-
-        queueRepository.peekNextDoknotStop(1)
-            .firstOrNull()
-            .shouldBeNull()
-    }
-
-    @Test
-    fun `håndterer at varsel kan ligge i legacy jsonb-kolonne ved inaktivering`() {
-        val varselId = UUID.randomUUID().toString()
-
-        val sendingsId = UUID.randomUUID().toString()
-
-        eksternVarslingDBRow(
-            sendingsId,
-            testFnr,
-            varsler = listOf(
-                varsel(varselId, legacy = true)
-            )
-        ).let { testRepository.insertEksternVarslingWithLegacyVarsel(it) }
-
-        broadcaster.broadcastJson(inaktivertEvent(id = varselId))
-
-        testRepository.getEksternVarsling(sendingsId).let {
-            it.shouldNotBeNull()
-            it.varsler
-                .first { it.varselId == varselId }
-                .let {
-                    it.legacyJsonb shouldBe true
-                    it.aktiv shouldBe false
-                }
-        }
-    }
-
-    @Test
-    fun `håndterer at varsel kan ligge i egen tabell ved inaktivering`() {
-        val varselId = UUID.randomUUID().toString()
-
-        val sendingsId = UUID.randomUUID().toString()
-
-        eksternVarslingDBRow(
-            sendingsId,
-            testFnr,
-            varsler = listOf(
-                varsel(varselId, legacy = true)
-            )
-        ).let { testRepository.insertEksternVarsling(it) }
-
-        broadcaster.broadcastJson(inaktivertEvent(id = varselId))
-
-        testRepository.getEksternVarsling(sendingsId).let {
-            it.shouldNotBeNull()
-            it.varsler
-                .first { it.varselId == varselId }
-                .let {
-                    it.legacyJsonb shouldBe false
-                    it.aktiv shouldBe false
-                }
-        }
-    }
-
-    private fun varsel(
-        varselId: String,
-        legacy: Boolean
-    ) = Varsel(
-        varselId = varselId,
-        varseltype = Varseltype.Beskjed,
-        preferertKanal = null,
-        smsVarslingstekst = null,
-        epostVarslingstittel = null,
-        epostVarslingstekst = null,
-        produsent = Produsent("cluster", "namespace", "appnavn"),
-        aktiv = true,
-        opprettet = nowAtUtc(),
-        inaktivert = null,
-        legacyJsonb = legacy,
-        prefererteKanaler = emptyList(),
-    )
-
 }

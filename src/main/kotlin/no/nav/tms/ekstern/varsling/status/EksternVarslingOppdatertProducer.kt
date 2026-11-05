@@ -7,7 +7,7 @@ import no.nav.tms.ekstern.varsling.EksternStatus
 import no.nav.tms.ekstern.varsling.Produsent
 import no.nav.tms.ekstern.varsling.Varseltype
 import no.nav.tms.ekstern.varsling.bestilling.ZonedDateTimeHelper.nowAtUtc
-import no.nav.tms.ekstern.varsling.defaultObjectMapper
+import no.nav.tms.ekstern.varsling.common.defaultObjectMapper
 import no.nav.tms.ekstern.varsling.recordqueue.StatusOppdatertQueueRepository
 
 class EksternVarslingOppdatertProducer(

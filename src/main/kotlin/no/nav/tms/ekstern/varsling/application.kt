@@ -8,7 +8,9 @@ import no.nav.tms.common.postgres.Postgres
 import no.nav.tms.common.util.config.StringEnvVar.getEnvVar
 import no.nav.tms.ekstern.varsling.arkiv.ArkivRepository
 import no.nav.tms.ekstern.varsling.arkiv.PeriodicArchiver
-import no.nav.tms.ekstern.varsling.bestilling.*
+import no.nav.tms.ekstern.varsling.bestilling.EksternVarslingBestillingRepository
+import no.nav.tms.ekstern.varsling.bestilling.InaktivertVarselSubscriber
+import no.nav.tms.ekstern.varsling.bestilling.OpprettetVarselSubscriber
 import no.nav.tms.ekstern.varsling.recordqueue.DoknotStopQueueRepository
 import no.nav.tms.ekstern.varsling.recordqueue.PeriodicDoknotStoppQueueProcessor
 import no.nav.tms.ekstern.varsling.recordqueue.PeriodicStatusOppdatertQueueProcessor
