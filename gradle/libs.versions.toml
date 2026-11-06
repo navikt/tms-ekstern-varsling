@@ -1,4 +1,4 @@
 [libraries]
 doknotifikasjonAvro = { group = "no.nav.teamdokumenthandtering", name = "teamdokumenthandtering-avro-schemas", version = "1.1.6" }
 avroSerializer = { group = "io.confluent", name = "kafka-avro-serializer", version = "6.2.1" }
-ktor-server-auth-jwt = { group = "io.ktor", name =  "ktor-server-auth-jwt", version = "3.6.0" }
+ktor-server-auth-jwt = { group = "io.ktor", name =  "ktor-server-auth-jwt", version = "3.6.1" }
