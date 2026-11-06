@@ -10,6 +10,7 @@ on:
       - .github/workflows/**
       - README.md
       - howto.md
+      - .github/dependabot.yml
 
 jobs:
   build-branch:
