@@ -1,12 +1,8 @@
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 
 plugins {
-    // Apply the Kotlin JVM plugin to add support for Kotlin on the JVM.
-    kotlin("jvm").version(Kotlin.version)
-
-    id("no.nav.tms.jarBundling") version "0.1.0"
-
-    // Apply the application plugin to add support for building a CLI application.
+    alias(adminLib.plugins.kotlin)
+    alias(adminLib.plugins.tms.jarBundling)
     application
 }
 
@@ -31,43 +27,46 @@ repositories {
 }
 
 dependencies {
-    implementation(Avro.avroSerializer)
-    implementation(Doknotifikasjon.schemas)
-    implementation(Flyway.core)
-    implementation(Flyway.postgres)
-    implementation(Hikari.cp)
-    implementation(JacksonDatatype.datatypeJsr310)
-    implementation(JacksonDatatype.moduleKotlin)
-    implementation(Kafka.clients)
-    implementation(KotliQuery.kotliquery)
-    implementation(KotlinLogging.logging)
-    implementation(Ktor.Server.core)
-    implementation(Ktor.Server.netty)
-    implementation(Ktor.Server.htmlDsl)
-    implementation(Ktor.Server.statusPages)
-    implementation(Ktor.Server.auth)
-    implementation(Ktor.Server.authJwt)
-    implementation(Ktor.Client.contentNegotiation)
-    implementation(Ktor.Client.apache5)
-    implementation(Ktor.Serialization.jackson)
-    implementation(Logstash.logbackEncoder)
-    implementation(Postgresql.postgresql)
-    implementation(TmsCommonLib.utils)
-    implementation(TmsCommonLib.kubernetes)
-    implementation(TmsCommonLib.observability)
-    implementation(TmsCommonLib.postgres)
-    implementation(TmsCommonLib.teamLogger)
-    implementation(TmsKafkaTools.kafkaApplication)
-    implementation(TmsKafkaTools.kafkaProducerUtils)
-    implementation(Prometheus.metricsCore)
+    runtimeOnly(libs.ktor.server.auth.jwt)
 
-    testImplementation(JunitPlatform.launcher)
-    testImplementation(JunitJupiter.api)
-    testImplementation(JunitJupiter.engine)
-    testImplementation(Mockk.mockk)
-    testImplementation(TestContainers.postgresql)
-    testImplementation(Kotest.runnerJunit5)
-    testImplementation(Kotest.assertionsCore)
+    runtimeOnly(adminLib.kotlinLogging)
+    runtimeOnly(adminLib.ktor.server.core)
+    runtimeOnly(adminLib.ktor.server.statusPages)
+    runtimeOnly(adminLib.ktor.server.auth)
+    runtimeOnly(adminLib.ktor.client.contentNegotiation)
+    runtimeOnly(adminLib.ktor.serialization.jackson)
+
+    implementation(libs.avroSerializer)
+    implementation(libs.doknotifikasjonAvro)
+
+    implementation(adminLib.flyway.core)
+    implementation(adminLib.flyway.postgres)
+    implementation(adminLib.hikariCp)
+    implementation(adminLib.jackson.datatypeJsr310)
+    implementation(adminLib.kafka.clients)
+    implementation(adminLib.kotliQuery)
+    implementation(adminLib.ktor.server.netty)
+    implementation(adminLib.ktor.server.html)
+    implementation(adminLib.ktor.client.apache5)
+    implementation(adminLib.logback.encoder)
+    implementation(adminLib.postgresql)
+    implementation(adminLib.tms.commonLib.utils)
+    implementation(adminLib.tms.commonLib.kubernetes)
+    implementation(adminLib.tms.commonLib.observability)
+    implementation(adminLib.tms.commonLib.postgres)
+    implementation(adminLib.tms.commonLib.teamLogger)
+    implementation(adminLib.tms.kafka.application)
+    implementation(adminLib.tms.kafka.producerUtils)
+    implementation(adminLib.prometheus.metric.core)
+    implementation(adminLib.jackson.moduleKotlin)
+
+    testImplementation(adminLib.junit.launcher)
+    testImplementation(adminLib.junit.api)
+    testImplementation(adminLib.junit.engine)
+    testImplementation(adminLib.mockk)
+    testImplementation(adminLib.testContainers.postgresql)
+    testImplementation(adminLib.kotest.runner)
+    testImplementation(adminLib.kotest.assertion)
 }
 
 application {
