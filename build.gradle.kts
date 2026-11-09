@@ -57,7 +57,7 @@ dependencies {
     implementation(adminLib.tms.commonLib.teamLogger)
     implementation(adminLib.tms.kafka.application)
     implementation(adminLib.tms.kafka.producerUtils)
-    implementation(adminLib.prometheus.metric.core)
+    implementation(adminLib.prometheus.metricsCore)
     implementation(adminLib.jackson.moduleKotlin)
 
     testImplementation(adminLib.junit.launcher)
