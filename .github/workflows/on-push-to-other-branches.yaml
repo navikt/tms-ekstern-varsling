@@ -12,22 +12,9 @@ on:
       - howto.md
       - .github/dependabot.yml
 
+permissions:
+  contents: read
+
 jobs:
   build-branch:
-    runs-on: ubuntu-latest
-    steps:
-
-      - name: Sjekk ut koden
-        uses: actions/checkout@v7
-
-      - name: Sett opp java
-        uses: actions/setup-java@v6
-        with:
-          java-version: 21
-          distribution: 'temurin'
-
-      - name: Sett opp gradle
-        uses: gradle/actions/setup-gradle@v6
-
-      - name: Bygg og test prosjekt
-        run: ./gradlew build
+    uses: navikt/tms-backend-deploy/.github/workflows/reusable-build-and-test.yml@main
