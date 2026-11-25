@@ -38,7 +38,7 @@ jobs:
         run: ./gradlew assemble
 
       - name: Build og push docker-image
-        uses: nais/docker-build-push@v0
+        uses: nais/docker-build-push@v1
         id: docker-build-push
         with:
           team: min-side
