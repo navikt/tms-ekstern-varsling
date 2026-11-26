@@ -1,0 +1,29 @@
+name: Create dependabot labels
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/create-labels.yaml'
+jobs:
+  create-labels:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: 'Label Creator'
+        uses: cssnr/label-creator-action@v1
+        with:
+          data: |
+            github-actions:
+              color: '2d2d2d'
+              description: Github actions update
+            gradle-dependency:
+              color: '4dc9c0'
+              description: Gradle dependency update
+            tms-backend:
+              color: '003153'
+              description: Navikt min side backend
