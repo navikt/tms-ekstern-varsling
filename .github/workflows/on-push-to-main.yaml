@@ -8,7 +8,6 @@ on:
       - .github/workflows/**
       - .github/dependabot.yml
       - README.md
-      - howto.md
 
 permissions:
   contents: read

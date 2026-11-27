@@ -9,7 +9,6 @@ on:
     paths-ignore:
       - .github/workflows/**
       - README.md
-      - howto.md
       - .github/dependabot.yml
 
 permissions:
